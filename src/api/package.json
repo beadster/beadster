@@ -1,0 +1,20 @@
+{
+  "name": "beadster-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create beadster-db",
+    "db:migrate": "wrangler d1 execute beadster-db --file=schema.sql",
+    "db:migrate:local": "wrangler d1 execute beadster-db --local --file=schema.sql"
+  },
+  "dependencies": {
+    "hono": "^4.6.11"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241022.0",
+    "wrangler": "^4.40.0"
+  }
+}

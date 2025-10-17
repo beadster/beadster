@@ -1,0 +1,24 @@
+{
+  "name": "beadster-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-10-17",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "account_id": "497c361ec2693b656492eccf2a43849a",
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "beadster-db",
+      "database_id": ""  // will be filled after: wrangler d1 create beadster-db
+    }
+  ],
+
+  "vars": {
+    "ENVIRONMENT": "development"
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}
