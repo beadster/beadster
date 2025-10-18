@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Shared
+
 import AppKit
 
 @MainActor

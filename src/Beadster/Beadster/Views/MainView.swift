@@ -394,7 +394,7 @@ struct IssueRow: View {
                     .font(.body)
                     .strikethrough(issue.status == "closed")
 
-                if let description = issue.description, !description.isEmpty {
+                if let description = issue.body, !description.isEmpty {
                     Text(description)
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -548,7 +548,7 @@ struct IssueDetailView: View {
                     }
 
                     // Description
-                    if let description = issue.description, !description.isEmpty {
+                    if let description = issue.body, !description.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Description")
                                 .font(.headline)
@@ -674,7 +674,7 @@ struct IssueEditSheet: View {
                     projectPath: project.path,
                     issueId: issue.id,
                     title: title != issue.title ? title : nil,
-                    description: description != issue.description ? description : nil,
+                    description: description != issue.body ? description : nil,
                     status: nil,
                     priority: priority != issue.priority ? priority : nil
                 )

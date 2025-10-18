@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Shared
+
 
 @MainActor
 class IssueStore: ObservableObject {
@@ -105,7 +105,7 @@ class IssueStore: ObservableObject {
             let search = searchText.lowercased()
             filtered = filtered.filter { issue in
                 issue.title.lowercased().contains(search) ||
-                issue.description?.lowercased().contains(search) == true ||
+                issue.body?.lowercased().contains(search) == true ||
                 issue.id.lowercased().contains(search)
             }
         }
@@ -218,7 +218,7 @@ class IssueStore: ObservableObject {
             updated.title = title
         }
         if let description = description {
-            updated.description = description
+            updated.body = description
         }
         if let status = status {
             updated.status = status

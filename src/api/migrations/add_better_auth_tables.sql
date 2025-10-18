@@ -6,15 +6,15 @@ ALTER TABLE users ADD COLUMN name TEXT;
 ALTER TABLE users ADD COLUMN image TEXT;
 ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0;
 
--- Add GitHub OAuth fields to users table
-ALTER TABLE users ADD COLUMN github_id INTEGER UNIQUE;
+-- Add GitHub OAuth fields to users table (without UNIQUE - will add index instead)
+ALTER TABLE users ADD COLUMN github_id INTEGER;
 ALTER TABLE users ADD COLUMN github_login TEXT;
 ALTER TABLE users ADD COLUMN github_name TEXT;
 ALTER TABLE users ADD COLUMN github_email TEXT;
 ALTER TABLE users ADD COLUMN github_avatar_url TEXT;
 
--- Create indexes for new fields
-CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id);
+-- Create unique index for github_id (allows NULL values)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id) WHERE github_id IS NOT NULL;
 
 -- Better Auth sessions table
 CREATE TABLE IF NOT EXISTS sessions (

@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Shared
+
 
 class JSONLManager {
     // Read issues from .beads/issues.jsonl
