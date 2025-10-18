@@ -45,7 +45,8 @@ struct Issue: Identifiable, Codable, Hashable {
     var closedAt: Date?
 
     enum CodingKeys: String, CodingKey {
-        case id, title, description, status, priority, labels, assignee
+        case id, title, status, priority, labels, assignee
+        case description = "body"  // API/DB uses "body" not "description"
         case issueType = "issue_type"
         case design
         case acceptanceCriteria = "acceptance_criteria"
