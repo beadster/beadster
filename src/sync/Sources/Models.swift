@@ -29,12 +29,12 @@ struct Issue: Codable {
 
     enum CodingKeys: String, CodingKey {
         case id, title, body, status, priority, labels
-        case beadsId = "beads_id"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-        case sessionId = "session_id"
+        case beadsId
+        case createdAt
+        case updatedAt
+        case sessionId
         case client
-        case projectName = "project_name"
+        case projectName
     }
 
     init(from decoder: Decoder) throws {

@@ -20,6 +20,62 @@ class ProjectStore: ObservableObject {
     init() {
         loadProjects()
         print("ProjectStore: Loaded \(projects.count) projects")
+
+        // register any projects without sourceId
+        Task {
+            await registerUnregisteredProjects()
+        }
+    }
+
+    private func registerUnregisteredProjects() async {
+        var needsSave = false
+
+        for (index, project) in projects.enumerated() where project.sourceId == nil {
+            print("ProjectStore: Auto-registering project: \(project.name)")
+
+            // generate source ID
+            let sourceId = "src_\(UUID().uuidString.prefix(12))"
+
+            // resolve bookmark
+            var isStale = false
+            guard let projectURL = try? URL(
+                resolvingBookmarkData: project.bookmark,
+                options: .withSecurityScope,
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ) else {
+                print("ProjectStore: Failed to resolve bookmark for \(project.name)")
+                continue
+            }
+
+            // create updated project with sourceId
+            let updatedProject = ProjectInfo(
+                id: project.id,
+                name: project.name,
+                path: project.path,
+                bookmark: project.bookmark,
+                lastSync: project.lastSync,
+                sourceId: sourceId
+            )
+
+            // register with cloud
+            do {
+                _ = try await registerProjectSource(project: updatedProject, projectURL: projectURL)
+                print("ProjectStore: Auto-registered source: \(sourceId)")
+
+                // update in array
+                await MainActor.run {
+                    projects[index] = updatedProject
+                }
+                needsSave = true
+            } catch {
+                print("ProjectStore: WARNING - Auto-registration failed for \(project.name): \(error)")
+            }
+        }
+
+        if needsSave {
+            saveProjects()
+        }
     }
 
     // MARK: - Project Discovery
@@ -149,26 +205,72 @@ class ProjectStore: ObservableObject {
             relativeTo: nil
         ) else {
             print("ProjectStore: ERROR - Failed to create project bookmark")
-            errorMessage = "Failed to create bookmark for \(projectURL.lastPathComponent)"
+            await MainActor.run {
+                errorMessage = "Failed to create bookmark for \(projectURL.lastPathComponent)"
+            }
             return
         }
 
-        let project = ProjectInfo(
+        // generate source ID
+        let sourceId = "src_\(UUID().uuidString.prefix(12))"
+
+        var project = ProjectInfo(
             id: UUID().uuidString,
             name: projectURL.lastPathComponent,
             path: projectURL.path,
             bookmark: bookmark,
             lastSync: nil,
-            sourceId: nil
+            sourceId: sourceId
         )
 
-        projects.append(project)
+        // register source with cloud
+        print("ProjectStore: Registering source with cloud...")
+        do {
+            _ = try await registerProjectSource(project: project, projectURL: projectURL)
+            print("ProjectStore: Source registered successfully: \(sourceId)")
+        } catch {
+            print("ProjectStore: WARNING - Source registration failed: \(error)")
+            // Continue anyway - will try to register on first sync
+        }
+
+        await MainActor.run {
+            projects.append(project)
+        }
         print("ProjectStore: Added project, now have \(projects.count) total")
         saveProjects()
 
         // start watching this project
         print("ProjectStore: Starting file watcher for \(project.name)")
         SyncDaemon.shared.startWatching(project: project)
+    }
+
+    private func registerProjectSource(project: ProjectInfo, projectURL: URL) async throws -> String {
+        guard let sourceId = project.sourceId else {
+            throw NSError(domain: "ProjectStore", code: 1, userInfo: [NSLocalizedDescriptionKey: "No source ID"])
+        }
+
+        // access security scoped resource
+        guard projectURL.startAccessingSecurityScopedResource() else {
+            throw NSError(domain: "ProjectStore", code: 2, userInfo: [NSLocalizedDescriptionKey: "Access denied"])
+        }
+        defer { projectURL.stopAccessingSecurityScopedResource() }
+
+        // read issues from database
+        let db = BeadsDatabase(beadsDir: projectURL)
+        try db.open()
+        defer { db.close() }
+
+        let issues = try db.getAllIssues()
+
+        // register with API
+        let sourcePayload = SourcePayload(
+            id: sourceId,
+            name: project.name,
+            type: "local",
+            path: project.path
+        )
+
+        return try await APIClient.shared.registerSource(source: sourcePayload, issues: issues)
     }
 
     // MARK: - Persistence

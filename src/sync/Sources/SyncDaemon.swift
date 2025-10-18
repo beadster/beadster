@@ -109,12 +109,14 @@ class SyncDaemon {
         try db.open()
         defer { db.close() }
 
+        print("  🔍 Checking issue: beadsId=\(issue.beadsId), id=\(issue.id)")
         let existsLocally = try db.issueExists(beadsId: issue.beadsId)
+        print("  🔍 Exists locally: \(existsLocally)")
 
         // Only sync updates to existing local issues
         // Skip creating new issues from cloud (would create ID mismatch)
         guard existsLocally else {
-            print("  ⊘ Skipping new issue from cloud: \(issue.title) (\(issue.beadsId))")
+            print("  ⊘ Skipping new issue from cloud: \(issue.title) (beadsId=\(issue.beadsId))")
             return
         }
 
