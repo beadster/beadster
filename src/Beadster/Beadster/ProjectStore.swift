@@ -81,15 +81,30 @@ class ProjectStore: ObservableObject {
         }
 
         print("ProjectStore: Scanning for .beads directories...")
-        // scan for .beads directories
+
+        var found = 0
+
+        // check root folder itself first
+        let rootBeadsDir = rootURL.appendingPathComponent(".beads")
+        if FileManager.default.fileExists(atPath: rootBeadsDir.path) {
+            print("ProjectStore: Found .beads at root: \(rootURL.path)")
+            await addProject(rootURL)
+            found += 1
+        }
+
+        // then scan subdirectories
         let enumerator = FileManager.default.enumerator(
             at: rootURL,
             includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
+            options: [] // don't skip hidden files since .beads is hidden
         )
 
-        var found = 0
         while let url = enumerator?.nextObject() as? URL {
+            // skip the .beads directory itself and other dot directories
+            if url.lastPathComponent.hasPrefix(".") {
+                continue
+            }
+
             let beadsDir = url.appendingPathComponent(".beads")
             if FileManager.default.fileExists(atPath: beadsDir.path) {
                 print("ProjectStore: Found .beads at \(url.path)")
