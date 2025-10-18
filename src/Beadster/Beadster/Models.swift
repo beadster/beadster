@@ -55,6 +55,37 @@ struct Issue: Identifiable, Codable, Hashable {
         case updatedAt = "updated_at"
         case closedAt = "closed_at"
     }
+
+    // Custom decoder to handle priority as either Int or String
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        status = try container.decode(String.self, forKey: .status)
+
+        // Handle priority as Int or String
+        if let priorityInt = try? container.decode(Int.self, forKey: .priority) {
+            priority = priorityInt
+        } else if let priorityString = try? container.decode(String.self, forKey: .priority),
+                  let priorityInt = Int(priorityString) {
+            priority = priorityInt
+        } else {
+            priority = 1 // default
+        }
+
+        issueType = try container.decode(String.self, forKey: .issueType)
+        labels = try container.decodeIfPresent([String].self, forKey: .labels)
+        assignee = try container.decodeIfPresent(String.self, forKey: .assignee)
+        design = try container.decodeIfPresent(String.self, forKey: .design)
+        acceptanceCriteria = try container.decodeIfPresent(String.self, forKey: .acceptanceCriteria)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        dueAt = try container.decodeIfPresent(Int.self, forKey: .dueAt)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        closedAt = try container.decodeIfPresent(Date.self, forKey: .closedAt)
+    }
 }
 
 // MARK: - Dependency
