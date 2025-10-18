@@ -118,8 +118,7 @@ class IssueStore: ObservableObject {
         // filter by labels
         if !selectedLabels.isEmpty {
             filtered = filtered.filter { issue in
-                guard let labels = issue.labels else { return false }
-                return !selectedLabels.isDisjoint(with: labels)
+                !selectedLabels.isDisjoint(with: issue.labels)
             }
         }
 
@@ -129,9 +128,7 @@ class IssueStore: ObservableObject {
     func allLabels() -> [String] {
         var labels = Set<String>()
         for issue in issues {
-            if let issueLabels = issue.labels {
-                labels.formUnion(issueLabels)
-            }
+            labels.formUnion(issue.labels)
         }
         return labels.sorted()
     }
@@ -148,9 +145,9 @@ class IssueStore: ObservableObject {
 
         var updated = issue
         updated.status = issue.status == "closed" ? "open" : "closed"
-        updated.updatedAt = Date()
+        updated.updatedAt = Int(Date().timeIntervalSince1970)
         if updated.status == "closed" {
-            updated.closedAt = Date()
+            updated.closedAt = Int(Date().timeIntervalSince1970)
         } else {
             updated.closedAt = nil
         }
@@ -172,23 +169,25 @@ class IssueStore: ObservableObject {
         let newId = "\(projectName)-\(nextNumber)"
 
         // create new issue
-        let now = Date()
+        let now = Int(Date().timeIntervalSince1970)
         let newIssue = Issue(
             id: newId,
             title: title,
-            description: description,
+            body: description,
             status: "open",
             priority: priority,
             issueType: "task",
-            labels: labels.isEmpty ? nil : labels,
+            labels: labels,
             assignee: nil,
             design: nil,
             acceptanceCriteria: nil,
             notes: nil,
-            dueAt: nil,
             createdAt: now,
             updatedAt: now,
-            closedAt: nil
+            closedAt: nil,
+            sessionId: nil,
+            client: nil,
+            projectName: nil
         )
 
         // append to issues and write
@@ -223,13 +222,13 @@ class IssueStore: ObservableObject {
         if let status = status {
             updated.status = status
             if status == "closed" && updated.closedAt == nil {
-                updated.closedAt = Date()
+                updated.closedAt = Int(Date().timeIntervalSince1970)
             }
         }
         if let priority = priority {
             updated.priority = priority
         }
-        updated.updatedAt = Date()
+        updated.updatedAt = Int(Date().timeIntervalSince1970)
 
         allIssues[index] = updated
 

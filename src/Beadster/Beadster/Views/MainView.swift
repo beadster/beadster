@@ -383,10 +383,8 @@ struct IssueRow: View {
 
                     PriorityBadge(priority: issue.priority)
 
-                    if let labels = issue.labels {
-                        ForEach(labels, id: \.self) { label in
-                            LabelBadge(label: label)
-                        }
+                    ForEach(issue.labels, id: \.self) { label in
+                        LabelBadge(label: label)
                     }
                 }
 
@@ -504,7 +502,7 @@ struct IssueDetailView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
 
-                            Text(issue.createdAt.formatted(.relative(presentation: .named)))
+                            Text(Date(timeIntervalSince1970: TimeInterval(issue.createdAt)).formatted(.relative(presentation: .named)))
                                 .font(.caption)
                         }
 
@@ -513,7 +511,7 @@ struct IssueDetailView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
 
-                            Text(issue.updatedAt.formatted(.relative(presentation: .named)))
+                            Text(Date(timeIntervalSince1970: TimeInterval(issue.updatedAt)).formatted(.relative(presentation: .named)))
                                 .font(.caption)
                         }
 
@@ -523,7 +521,7 @@ struct IssueDetailView: View {
                                     .font(.caption)
                                     .foregroundColor(.secondary)
 
-                                Text(closedAt.formatted(.relative(presentation: .named)))
+                                Text(Date(timeIntervalSince1970: TimeInterval(closedAt)).formatted(.relative(presentation: .named)))
                                     .font(.caption)
                             }
                         }
@@ -532,13 +530,13 @@ struct IssueDetailView: View {
                     Divider()
 
                     // Labels
-                    if let labels = issue.labels, !labels.isEmpty {
+                    if !issue.labels.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Labels")
                                 .font(.headline)
 
                             FlowLayout(spacing: 4) {
-                                ForEach(labels, id: \.self) { label in
+                                ForEach(issue.labels, id: \.self) { label in
                                     LabelBadge(label: label)
                                 }
                             }
@@ -610,7 +608,7 @@ struct IssueEditSheet: View {
         self.onDismiss = onDismiss
 
         _title = State(initialValue: issue?.title ?? "")
-        _description = State(initialValue: issue?.description ?? "")
+        _description = State(initialValue: issue?.body ?? "")
         _priority = State(initialValue: issue?.priority ?? 2)
     }
 
