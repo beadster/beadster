@@ -54,10 +54,12 @@ struct MainView: View {
                 // Footer
                 footer
             }
+            .background(Color.white)
 
             // App Header (in titlebar area)
             appHeader
         }
+        .background(Color.white)
         .background(WindowAccessor(isHovering: $isHoveringWindow))
         .onChange(of: projectStore.selectedProject) { oldValue, newValue in
             if let project = newValue {
@@ -74,6 +76,19 @@ struct MainView: View {
             if !projectStore.projects.isEmpty {
                 // Select first project
                 projectStore.selectedProject = projectStore.projects.first
+                contentMode = .issuesList
+            } else {
+                // Show onboarding
+                contentMode = .onboarding
+            }
+        }
+        .onChange(of: projectStore.projects.count) { oldCount, newCount in
+            // When first project is added, select it and switch to issues list
+            if newCount > 0 && contentMode == .onboarding {
+                Task { @MainActor in
+                    projectStore.selectedProject = projectStore.projects.first
+                    contentMode = .issuesList
+                }
             }
         }
     }
