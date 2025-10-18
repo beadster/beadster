@@ -132,30 +132,143 @@ struct ProjectRow: View {
 struct IssuesListView: View {
     @ObservedObject var issueStore: IssueStore
     let selectedProject: ProjectInfo?
+    @State private var showFilters = false
 
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             if let project = selectedProject {
                 // Header
-                HStack {
-                    Text(project.name)
-                        .font(.title2)
+                VStack(spacing: 0) {
+                    HStack {
+                        Text(project.name)
+                            .font(.title2)
 
-                    Spacer()
+                        Spacer()
 
-                    Picker("Filter", selection: $issueStore.filter) {
-                        ForEach(IssueFilter.allCases, id: \.self) { filter in
-                            Text(filter.rawValue).tag(filter)
+                        // Status filter
+                        Picker("Filter", selection: $issueStore.filter) {
+                            ForEach(IssueFilter.allCases, id: \.self) { filter in
+                                Text(filter.rawValue).tag(filter)
+                            }
                         }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 250)
+                        .pickerStyle(.segmented)
+                        .frame(width: 250)
 
-                    Text("\(issueStore.filteredIssues().count) issues")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        Text("\(issueStore.filteredIssues().count) issues")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+
+                    // Search bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+
+                        TextField("Search issues...", text: $issueStore.searchText)
+                            .textFieldStyle(.plain)
+
+                        if !issueStore.searchText.isEmpty {
+                            Button(action: {
+                                issueStore.searchText = ""
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        Button(action: {
+                            showFilters.toggle()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "line.3.horizontal.decrease.circle")
+                                if issueStore.selectedPriority != nil || !issueStore.selectedLabels.isEmpty {
+                                    Image(systemName: "circle.fill")
+                                        .font(.system(size: 6))
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .help("Advanced filters")
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+
+                    // Advanced filters (when expanded)
+                    if showFilters {
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Priority filter
+                            HStack {
+                                Text("Priority:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+
+                                ForEach(0..<5) { priority in
+                                    Button(action: {
+                                        if issueStore.selectedPriority == priority {
+                                            issueStore.selectedPriority = nil
+                                        } else {
+                                            issueStore.selectedPriority = priority
+                                        }
+                                    }) {
+                                        Text("P\(priority)")
+                                            .font(.caption)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(issueStore.selectedPriority == priority ? Color.blue : Color.gray.opacity(0.2))
+                                            .foregroundColor(issueStore.selectedPriority == priority ? .white : .primary)
+                                            .cornerRadius(4)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+
+                                Spacer()
+                            }
+
+                            // Label filter
+                            if !issueStore.allLabels().isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Labels:")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+
+                                    FlowLayout(spacing: 4) {
+                                        ForEach(issueStore.allLabels(), id: \.self) { label in
+                                            Button(action: {
+                                                if issueStore.selectedLabels.contains(label) {
+                                                    issueStore.selectedLabels.remove(label)
+                                                } else {
+                                                    issueStore.selectedLabels.insert(label)
+                                                }
+                                            }) {
+                                                Text(label)
+                                                    .font(.caption)
+                                                    .padding(.horizontal, 8)
+                                                    .padding(.vertical, 4)
+                                                    .background(issueStore.selectedLabels.contains(label) ? Color.blue : Color.gray.opacity(0.2))
+                                                    .foregroundColor(issueStore.selectedLabels.contains(label) ? .white : .primary)
+                                                    .cornerRadius(4)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Clear filters button
+                            if issueStore.selectedPriority != nil || !issueStore.selectedLabels.isEmpty {
+                                Button("Clear Filters") {
+                                    issueStore.clearFilters()
+                                }
+                                .font(.caption)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                    }
                 }
-                .padding()
 
                 Divider()
 
@@ -270,6 +383,52 @@ struct LabelBadge: View {
             .background(Color.blue.opacity(0.2))
             .foregroundColor(.blue)
             .cornerRadius(4)
+    }
+}
+
+// MARK: - FlowLayout Helper
+
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = arrangeViews(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = arrangeViews(proposal: proposal, subviews: subviews)
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y), proposal: .unspecified)
+        }
+    }
+
+    private func arrangeViews(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        var maxWidth: CGFloat = 0
+
+        let proposalWidth = proposal.width ?? .infinity
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            if currentX + size.width > proposalWidth && currentX > 0 {
+                // Move to next line
+                currentX = 0
+                currentY += lineHeight + spacing
+                lineHeight = 0
+            }
+
+            positions.append(CGPoint(x: currentX, y: currentY))
+            currentX += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+            maxWidth = max(maxWidth, currentX)
+        }
+
+        return (CGSize(width: maxWidth, height: currentY + lineHeight), positions)
     }
 }
 

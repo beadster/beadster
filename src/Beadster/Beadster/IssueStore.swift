@@ -12,6 +12,9 @@ class IssueStore: ObservableObject {
     @Published var issues: [Issue] = []
     @Published var isLoading = false
     @Published var filter: IssueFilter = .all
+    @Published var searchText: String = ""
+    @Published var selectedPriority: Int? = nil
+    @Published var selectedLabels: Set<String> = []
 
     func loadIssues(for project: ProjectInfo) async {
         print("IssueStore: Loading issues for \(project.name)")
@@ -84,14 +87,59 @@ class IssueStore: ObservableObject {
     }
 
     func filteredIssues() -> [Issue] {
+        var filtered = issues
+
+        // filter by status
         switch filter {
         case .all:
-            return issues
+            break
         case .open:
-            return issues.filter { $0.status == "open" || $0.status == "in_progress" }
+            filtered = filtered.filter { $0.status == "open" || $0.status == "in_progress" }
         case .closed:
-            return issues.filter { $0.status == "closed" }
+            filtered = filtered.filter { $0.status == "closed" }
         }
+
+        // filter by search text
+        if !searchText.isEmpty {
+            let search = searchText.lowercased()
+            filtered = filtered.filter { issue in
+                issue.title.lowercased().contains(search) ||
+                issue.description?.lowercased().contains(search) == true ||
+                issue.id.lowercased().contains(search)
+            }
+        }
+
+        // filter by priority
+        if let priority = selectedPriority {
+            filtered = filtered.filter { $0.priority == priority }
+        }
+
+        // filter by labels
+        if !selectedLabels.isEmpty {
+            filtered = filtered.filter { issue in
+                guard let labels = issue.labels else { return false }
+                return !selectedLabels.isDisjoint(with: labels)
+            }
+        }
+
+        return filtered
+    }
+
+    func allLabels() -> [String] {
+        var labels = Set<String>()
+        for issue in issues {
+            if let issueLabels = issue.labels {
+                labels.formUnion(issueLabels)
+            }
+        }
+        return labels.sorted()
+    }
+
+    func clearFilters() {
+        searchText = ""
+        selectedPriority = nil
+        selectedLabels.removeAll()
+        filter = .all
     }
 
     func toggleIssueStatus(_ issue: Issue) {
