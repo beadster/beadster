@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { ulid } from 'ulid';
 
 type Bindings = {
   DB: D1Database;
@@ -70,121 +71,196 @@ app.post('/api/sync/push', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  const { source, issues } = await c.req.json();
+  const { source, issues, device_id, client } = await c.req.json();
   console.log('Push request:', JSON.stringify({ source, issueCount: issues.length, firstIssue: issues[0] }));
-  const now = Date.now();
 
-  // Upsert source
-  await c.env.DB.prepare(`
-    INSERT INTO sources (id, user_id, name, type, path, last_sync, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      last_sync = excluded.last_sync,
-      updated_at = excluded.updated_at
-  `).bind(
-    source.id,
-    user.id,
-    source.name,
-    source.type || 'local',
-    source.path,
-    now,
-    now,
-    now
-  ).run();
+  const syncLogId = ulid();
+  const startTime = Date.now();
+  const now = startTime;
 
-  // Upsert issues
-  for (const issue of issues) {
-    // First, check if issue exists by beads_id
-    const existing = await c.env.DB.prepare(`
-      SELECT id FROM issues WHERE source_id = ? AND beads_id = ?
-    `).bind(source.id, issue.beads_id).first();
+  let createdCount = 0;
+  let updatedCount = 0;
+  const issueIds: string[] = [];
 
-    if (existing) {
-      // Update existing issue
-      await c.env.DB.prepare(`
-        UPDATE issues SET
-          title = ?,
-          body = ?,
-          status = ?,
-          priority = ?,
-          labels = ?,
-          session_id = ?,
-          client = ?,
-          project_name = ?,
-          synced_at = ?,
-          updated_at = ?
-        WHERE source_id = ? AND beads_id = ?
-      `).bind(
-        issue.title,
-        issue.body || null,
-        issue.status,
-        issue.priority || null,
-        JSON.stringify(issue.labels || []),
-        issue.session_id || null,
-        issue.client || null,
-        issue.project_name || null,
-        now,
-        issue.updated_at,
-        source.id,
-        issue.beads_id
-      ).run();
-    } else {
-      // Insert new issue
-      await c.env.DB.prepare(`
-        INSERT INTO issues (
-          id, user_id, source_id, beads_id, title, body,
-          status, priority, labels,
-          session_id, client, project_name,
-          synced_at, created_at, updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        issue.id,
-        user.id,
-        source.id,
-        issue.beads_id,
-        issue.title,
-        issue.body || null,
-        issue.status,
-        issue.priority || null,
-        JSON.stringify(issue.labels || []),
-        issue.session_id || null,
-        issue.client || null,
-        issue.project_name || null,
-        now,
-        issue.created_at,
-        issue.updated_at
-      ).run();
+  try {
+    // Upsert source
+    await c.env.DB.prepare(`
+      INSERT INTO sources (id, user_id, name, type, path, last_sync, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        last_sync = excluded.last_sync,
+        updated_at = excluded.updated_at
+    `).bind(
+      source.id,
+      user.id,
+      source.name,
+      source.type || 'local',
+      source.path,
+      now,
+      now,
+      now
+    ).run();
+
+    // Upsert issues
+    for (const issue of issues) {
+      issueIds.push(issue.id);
+
+      // First, check if issue exists by beads_id
+      const existing = await c.env.DB.prepare(`
+        SELECT id FROM issues WHERE source_id = ? AND beads_id = ?
+      `).bind(source.id, issue.beads_id).first();
+
+      if (existing) {
+        // Update existing issue
+        await c.env.DB.prepare(`
+          UPDATE issues SET
+            title = ?,
+            body = ?,
+            status = ?,
+            priority = ?,
+            labels = ?,
+            session_id = ?,
+            client = ?,
+            project_name = ?,
+            synced_at = ?,
+            updated_at = ?
+          WHERE source_id = ? AND beads_id = ?
+        `).bind(
+          issue.title,
+          issue.body || null,
+          issue.status,
+          issue.priority || null,
+          JSON.stringify(issue.labels || []),
+          issue.session_id || null,
+          issue.client || null,
+          issue.project_name || null,
+          now,
+          issue.updated_at,
+          source.id,
+          issue.beads_id
+        ).run();
+        updatedCount++;
+      } else {
+        // Insert new issue
+        await c.env.DB.prepare(`
+          INSERT INTO issues (
+            id, user_id, source_id, beads_id, title, body,
+            status, priority, labels,
+            session_id, client, project_name,
+            synced_at, created_at, updated_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          issue.id,
+          user.id,
+          source.id,
+          issue.beads_id,
+          issue.title,
+          issue.body || null,
+          issue.status,
+          issue.priority || null,
+          JSON.stringify(issue.labels || []),
+          issue.session_id || null,
+          issue.client || null,
+          issue.project_name || null,
+          now,
+          issue.created_at,
+          issue.updated_at
+        ).run();
+        createdCount++;
+      }
+
+      // Update session tracking
+      if (issue.session_id) {
+        await c.env.DB.prepare(`
+          INSERT INTO sessions (
+            id, user_id, source_id, client, project_name,
+            first_issue_at, last_issue_at, issue_count,
+            created_at, updated_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+            last_issue_at = excluded.last_issue_at,
+            issue_count = issue_count + 1,
+            updated_at = excluded.updated_at
+        `).bind(
+          issue.session_id,
+          user.id,
+          source.id,
+          issue.client || 'unknown',
+          issue.project_name || null,
+          issue.created_at,
+          issue.created_at,
+          now,
+          now
+        ).run();
+      }
     }
 
-    // Update session tracking
-    if (issue.session_id) {
-      await c.env.DB.prepare(`
-        INSERT INTO sessions (
-          id, user_id, source_id, client, project_name,
-          first_issue_at, last_issue_at, issue_count,
-          created_at, updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-          last_issue_at = excluded.last_issue_at,
-          issue_count = issue_count + 1,
-          updated_at = excluded.updated_at
-      `).bind(
-        issue.session_id,
-        user.id,
-        source.id,
-        issue.client || 'unknown',
-        issue.project_name || null,
-        issue.created_at,
-        issue.created_at,
-        now,
-        now
-      ).run();
-    }
+    const completedAt = Date.now();
+    const duration = completedAt - startTime;
+
+    // Log successful sync
+    await c.env.DB.prepare(`
+      INSERT INTO sync_logs (
+        id, user_id, source_id, device_id,
+        operation, direction, client,
+        issue_count, issues_created, issues_updated,
+        issue_ids, status, duration_ms,
+        started_at, completed_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      syncLogId,
+      user.id,
+      source.id,
+      device_id || null,
+      'push',
+      'up',
+      client || null,
+      issues.length,
+      createdCount,
+      updatedCount,
+      JSON.stringify(issueIds),
+      'success',
+      duration,
+      startTime,
+      completedAt,
+      completedAt
+    ).run();
+
+    return c.json({ synced: issues.length, sync_log_id: syncLogId });
+  } catch (error: any) {
+    const completedAt = Date.now();
+    const duration = completedAt - startTime;
+
+    // Log failed sync
+    await c.env.DB.prepare(`
+      INSERT INTO sync_logs (
+        id, user_id, source_id, device_id,
+        operation, direction, client,
+        issue_count, status, error_message, error_code,
+        duration_ms, started_at, completed_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      syncLogId,
+      user.id,
+      source.id,
+      device_id || null,
+      'push',
+      'up',
+      client || null,
+      issues.length,
+      'failed',
+      error.message || 'Unknown error',
+      error.code || null,
+      duration,
+      startTime,
+      completedAt,
+      completedAt
+    ).run();
+
+    throw error;
   }
-
-  return c.json({ synced: issues.length });
 });
 
 // Sync: Pull changes from cloud
@@ -198,24 +274,90 @@ app.get('/api/sync/pull', async (c) => {
 
   const sourceId = c.req.query('source_id');
   const since = parseInt(c.req.query('since') || '0');
+  const deviceId = c.req.query('device_id');
+  const client = c.req.query('client');
 
   if (!sourceId) {
     return c.json({ error: 'source_id required' }, 400);
   }
 
-  const changes = await c.env.DB.prepare(`
-    SELECT * FROM issues
-    WHERE source_id = ? AND user_id = ? AND updated_at > ?
-    ORDER BY updated_at ASC
-  `).bind(sourceId, user.id, since).all();
+  const syncLogId = ulid();
+  const startTime = Date.now();
 
-  // Parse labels JSON for each issue
-  const parsedIssues = changes.results.map((issue: any) => ({
-    ...issue,
-    labels: issue.labels ? JSON.parse(issue.labels) : []
-  }));
+  try {
+    const changes = await c.env.DB.prepare(`
+      SELECT * FROM issues
+      WHERE source_id = ? AND user_id = ? AND updated_at > ?
+      ORDER BY updated_at ASC
+    `).bind(sourceId, user.id, since).all();
 
-  return c.json(parsedIssues);
+    // Parse labels JSON for each issue
+    const parsedIssues = changes.results.map((issue: any) => ({
+      ...issue,
+      labels: issue.labels ? JSON.parse(issue.labels) : []
+    }));
+
+    const completedAt = Date.now();
+    const duration = completedAt - startTime;
+    const issueIds = parsedIssues.map((issue: any) => issue.id);
+
+    // Log successful pull
+    await c.env.DB.prepare(`
+      INSERT INTO sync_logs (
+        id, user_id, source_id, device_id,
+        operation, direction, client,
+        issue_count, issue_ids, status, duration_ms,
+        started_at, completed_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      syncLogId,
+      user.id,
+      sourceId,
+      deviceId || null,
+      'pull',
+      'down',
+      client || null,
+      parsedIssues.length,
+      JSON.stringify(issueIds),
+      'success',
+      duration,
+      startTime,
+      completedAt,
+      completedAt
+    ).run();
+
+    return c.json(parsedIssues);
+  } catch (error: any) {
+    const completedAt = Date.now();
+    const duration = completedAt - startTime;
+
+    // Log failed pull
+    await c.env.DB.prepare(`
+      INSERT INTO sync_logs (
+        id, user_id, source_id, device_id,
+        operation, direction, client,
+        status, error_message, error_code,
+        duration_ms, started_at, completed_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      syncLogId,
+      user.id,
+      sourceId,
+      deviceId || null,
+      'pull',
+      'down',
+      client || null,
+      'failed',
+      error.message || 'Unknown error',
+      error.code || null,
+      duration,
+      startTime,
+      completedAt,
+      completedAt
+    ).run();
+
+    throw error;
+  }
 });
 
 // Web: List all issues

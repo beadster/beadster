@@ -11,7 +11,8 @@
     "db:migrate:local": "wrangler d1 execute beadster-db --local --file=schema.sql"
   },
   "dependencies": {
-    "hono": "^4.6.11"
+    "hono": "^4.6.11",
+    "ulid": "^3.0.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241022.0",
