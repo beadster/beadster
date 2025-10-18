@@ -12,7 +12,7 @@ class APIClient {
 
     // POC: hardcoded dev API token (from D1: anton@beadster.dev)
     private let apiToken = "C9F2A5A2-5E3E-41BF-8C9A-436B55AB5A8A"
-    private let baseURL = "https://beadster-dev-app.systemoperator.workers.dev"
+    private let baseURL = "https://beadster-dev-api.systemoperator.workers.dev"
 
     private init() {}
 
