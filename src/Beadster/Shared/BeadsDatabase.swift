@@ -3,7 +3,7 @@ import SQLite3
 
 /// Reads from beads.db (beads core tables)
 /// Note: beads.db is rebuilt from JSONL by beads automatically
-/// Path: .beads/beads.db
+/// Path: .beads/beads.db (NOT beadster.db!)
 public class BeadsDatabase {
     private let dbPath: String
     private var db: OpaquePointer?
