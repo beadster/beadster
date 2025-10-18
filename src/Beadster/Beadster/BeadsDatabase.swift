@@ -47,7 +47,10 @@ class BeadsDatabase {
         """
 
         var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(db, query, -1, &statement, nil) == SQLITE_OK else {
+        let prepareResult = sqlite3_prepare_v2(db, query, -1, &statement, nil)
+        guard prepareResult == SQLITE_OK else {
+            let errorMessage = String(cString: sqlite3_errmsg(db))
+            print("❌ getAllIssues query prepare failed: \(errorMessage) (code: \(prepareResult))")
             throw DatabaseError.queryFailed
         }
 
