@@ -3,7 +3,7 @@
   "compatibility_date": "2025-10-17",
   "compatibility_flags": ["nodejs_compat"],
   "account_id": "497c361ec2693b656492eccf2a43849a",
-  "main": "dist/_worker.js/index.js",
+  "main": "dist/_worker.js",
   "observability": {
     "enabled": true
   },
