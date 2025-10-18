@@ -1,16 +1,16 @@
 import Foundation
 
-class FileWatcher {
+public class FileWatcher {
     private let path: String
     private let callback: () -> Void
     private var streamRef: FSEventStreamRef?
 
-    init(path: String, callback: @escaping () -> Void) {
+    public init(path: String, callback: @escaping () -> Void) {
         self.path = path
         self.callback = callback
     }
 
-    func start() {
+    public func start() {
         let pathsToWatch = ["\(path)/.beads"] as CFArray
         var context = FSEventStreamContext(
             version: 0,
@@ -40,7 +40,7 @@ class FileWatcher {
         FSEventStreamStart(streamRef)
     }
 
-    func stop() {
+    public func stop() {
         guard let streamRef = streamRef else { return }
         FSEventStreamStop(streamRef)
         FSEventStreamInvalidate(streamRef)

@@ -1,21 +1,21 @@
 import Foundation
 
 struct SessionInfo {
-    let sessionId: String
-    let client: String
-    let projectName: String?
-    let timestamp: Date
+    public let sessionId: String
+    public let client: String
+    public let projectName: String?
+    public let timestamp: Date
 }
 
-class SessionTracker {
+public class SessionTracker {
     private let homeDir: String
 
-    init() {
+    public init() {
         self.homeDir = FileManager.default.homeDirectoryForCurrentUser.path
     }
 
     /// Get current session ID from statsig file
-    func getCurrentSession() -> SessionInfo? {
+    public func getCurrentSession() -> SessionInfo? {
         let statsigPath = "\(homeDir)/.claude/statsig"
 
         guard let files = try? FileManager.default.contentsOfDirectory(atPath: statsigPath) else {
@@ -50,7 +50,7 @@ class SessionTracker {
     }
 
     /// Find session for a given issue creation time by checking project logs
-    func findSessionForIssue(createdAt: Int, issueTitle: String) -> SessionInfo? {
+    public func findSessionForIssue(createdAt: Int, issueTitle: String) -> SessionInfo? {
         let projectsPath = "\(homeDir)/.claude/projects"
 
         guard let projectDirs = try? FileManager.default.contentsOfDirectory(atPath: projectsPath) else {
@@ -131,7 +131,7 @@ class SessionTracker {
     }
 
     /// Add session labels to issue
-    func addSessionLabels(to issue: Issue, beadsDir: String) -> Issue {
+    public func addSessionLabels(to issue: Issue, beadsDir: String) -> Issue {
         // Check if issue already has session labels
         if issue.labels.contains(where: { $0.hasPrefix("-x-session:") }) {
             return issue // Already has session info
@@ -160,7 +160,6 @@ class SessionTracker {
         // Create new issue with updated labels and session metadata
         return Issue(
             id: issue.id,
-            beadsId: issue.beadsId,
             title: issue.title,
             body: issue.body,
             status: issue.status,

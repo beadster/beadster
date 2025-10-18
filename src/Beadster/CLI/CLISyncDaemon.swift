@@ -1,4 +1,5 @@
 import Foundation
+import Shared
 
 /// CLI-specific sync daemon
 /// Reads config from file and syncs sources

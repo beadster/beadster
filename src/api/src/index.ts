@@ -1,16 +1,57 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { ulid } from 'ulid';
+import { createAuth } from './lib/auth';
+import type { Auth } from './lib/auth';
 
 type Bindings = {
   DB: D1Database;
   ENVIRONMENT: string;
+  BASE_URL: string;
+  GITHUB_CLIENT_ID: string;
+  GITHUB_CLIENT_SECRET: string;
+  BETTER_AUTH_SECRET: string;
 };
 
-const app = new Hono<{ Bindings: Bindings }>();
+type Variables = {
+  auth: Auth;
+  user: any | null;
+};
+
+const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 // CORS
 app.use('/*', cors());
+
+// Initialize Better Auth
+app.use('/*', async (c, next) => {
+  const auth = createAuth(
+    c.env.DB,
+    c.env.BETTER_AUTH_SECRET,
+    c.env.BASE_URL,
+    c.env.GITHUB_CLIENT_ID,
+    c.env.GITHUB_CLIENT_SECRET
+  );
+  c.set('auth', auth);
+  await next();
+});
+
+// Better Auth routes
+app.use('/api/auth/*', async (c) => {
+  const auth = c.get('auth');
+  return await auth.handler(c.req.raw);
+});
+
+// Get current user info
+app.get('/api/auth/me', async (c) => {
+  const user = await authenticate(c);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  return c.json({ user });
+});
 
 // Health check
 app.get('/', (c) => {
@@ -64,8 +105,7 @@ app.post('/api/auth/register', async (c) => {
 
 // Sync: Push issues from daemon
 app.post('/api/sync/push', async (c) => {
-  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -265,8 +305,7 @@ app.post('/api/sync/push', async (c) => {
 
 // Sync: Pull changes from cloud
 app.get('/api/sync/pull', async (c) => {
-  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -362,8 +401,7 @@ app.get('/api/sync/pull', async (c) => {
 
 // Web: List all issues
 app.get('/api/issues', async (c) => {
-  const apiKey = c.req.query('api_key');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -390,8 +428,7 @@ app.get('/api/issues', async (c) => {
 
 // Web: List sources/projects
 app.get('/api/sources', async (c) => {
-  const apiKey = c.req.query('api_key');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -409,8 +446,7 @@ app.get('/api/sources', async (c) => {
 
 // Web: Get single issue
 app.get('/api/issues/:id', async (c) => {
-  const apiKey = c.req.query('api_key');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -442,8 +478,7 @@ app.get('/api/issues/:id', async (c) => {
 
 // Web: Get sessions
 app.get('/api/sessions', async (c) => {
-  const apiKey = c.req.query('api_key');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -465,8 +500,7 @@ app.get('/api/sessions', async (c) => {
 
 // Web: Get issues for session
 app.get('/api/sessions/:id/issues', async (c) => {
-  const apiKey = c.req.query('api_key');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -495,8 +529,7 @@ app.get('/api/sessions/:id/issues', async (c) => {
 
 // Device: Register device
 app.post('/api/devices/register', async (c) => {
-  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -545,8 +578,7 @@ app.post('/api/devices/register', async (c) => {
 
 // Device Issue Tracking: Record that device saw issue
 app.post('/api/device-tracking/record', async (c) => {
-  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -568,8 +600,7 @@ app.post('/api/device-tracking/record', async (c) => {
 
 // Device Issue Tracking: Get tracking for issue
 app.get('/api/device-tracking/:issue_id', async (c) => {
-  const apiKey = c.req.query('api_key') || c.req.header('Authorization')?.replace('Bearer ', '');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -595,8 +626,7 @@ app.get('/api/device-tracking/:issue_id', async (c) => {
 
 // Source Sequences: Get next beads_id for source
 app.post('/api/sources/:source_id/next-id', async (c) => {
-  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -628,16 +658,19 @@ app.post('/api/sources/:source_id/next-id', async (c) => {
     RETURNING next_beads_id - 1 as beads_id_num
   `).bind(sourceId).first();
 
+  if (!result) {
+    return c.json({ error: 'Failed to generate beads_id' }, 500);
+  }
+
   return c.json({
-    beads_id: `bd-${result.beads_id_num}`,
-    beads_id_num: result.beads_id_num
+    beads_id: `bd-${(result as any).beads_id_num}`,
+    beads_id_num: (result as any).beads_id_num
   });
 });
 
 // Source Sequences: Update sequence (when desktop syncs higher IDs)
 app.post('/api/sources/:source_id/update-sequence', async (c) => {
-  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -668,8 +701,7 @@ app.post('/api/sources/:source_id/update-sequence', async (c) => {
 
 // Sync Logs: Get sync history with filters
 app.get('/api/sync-logs', async (c) => {
-  const apiKey = c.req.query('api_key') || c.req.header('Authorization')?.replace('Bearer ', '');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -723,8 +755,7 @@ app.get('/api/sync-logs', async (c) => {
 
 // Sync Logs: Get single sync log by ID
 app.get('/api/sync-logs/:id', async (c) => {
-  const apiKey = c.req.query('api_key') || c.req.header('Authorization')?.replace('Bearer ', '');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -752,8 +783,7 @@ app.get('/api/sync-logs/:id', async (c) => {
 
 // Sync Stats: Get sync statistics
 app.get('/api/sync-stats', async (c) => {
-  const apiKey = c.req.query('api_key') || c.req.header('Authorization')?.replace('Bearer ', '');
-  const user = await authenticate(c.env.DB, apiKey);
+  const user = await authenticate(c);
 
   if (!user) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -819,8 +849,13 @@ app.get('/api/sync-stats', async (c) => {
     ORDER BY count DESC
   `).bind(...params).all();
 
-  const successRate = stats.total_syncs > 0
-    ? (stats.successful_syncs / stats.total_syncs * 100).toFixed(2)
+  if (!stats) {
+    return c.json({ error: 'Failed to get stats' }, 500);
+  }
+
+  const statsAny = stats as any;
+  const successRate = statsAny.total_syncs > 0
+    ? (statsAny.successful_syncs / statsAny.total_syncs * 100).toFixed(2)
     : 0;
 
   return c.json({
@@ -832,17 +867,30 @@ app.get('/api/sync-stats', async (c) => {
   });
 });
 
-// Helper: Authenticate user by API key
-async function authenticate(db: D1Database, apiKey: string | undefined) {
-  if (!apiKey) {
-    return null;
+// Helper: Authenticate user by session or API key
+async function authenticate(c: any): Promise<any | null> {
+  const auth = c.get('auth');
+
+  // Try session authentication first (from cookies)
+  try {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (session?.user) {
+      return session.user;
+    }
+  } catch (error) {
+    // Session auth failed, try API key
   }
 
-  const user = await db.prepare(`
-    SELECT * FROM users WHERE api_key = ?
-  `).bind(apiKey).first();
+  // Try API key authentication (for CLI/MCP)
+  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '') || c.req.query('api_key');
+  if (apiKey) {
+    const user = await c.env.DB.prepare(`
+      SELECT * FROM users WHERE api_key = ?
+    `).bind(apiKey).first();
+    return user;
+  }
 
-  return user;
+  return null;
 }
 
 export default app;

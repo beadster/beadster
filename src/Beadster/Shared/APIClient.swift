@@ -7,7 +7,7 @@
 
 import Foundation
 
-class APIClient {
+public class APIClient {
     static let shared = APIClient()
 
     // POC: hardcoded dev API token (from remote D1: anton@systemoperator.com)
@@ -18,7 +18,7 @@ class APIClient {
 
     // MARK: - Sources
 
-    func getSources() async throws -> [Source] {
+    public func getSources() async throws -> [Source] {
         let url = URL(string: "\(baseURL)/api/sources")!
         var request = URLRequest(url: url)
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
@@ -30,7 +30,7 @@ class APIClient {
 
     // MARK: - Pull Changes
 
-    func pullChanges(sourceId: String, since: Int) async throws -> [Issue] {
+    public func pullChanges(sourceId: String, since: Int) async throws -> [Issue] {
         let urlString = "\(baseURL)/api/sync/pull?source_id=\(sourceId)&since=\(since)"
         guard let url = URL(string: urlString) else {
             throw APIError.syncFailed
@@ -49,7 +49,7 @@ class APIClient {
 
     // MARK: - Push Issues
 
-    func pushIssues(source: SourcePayload, issues: [Issue]) async throws {
+    public func pushIssues(source: SourcePayload, issues: [Issue]) async throws {
         let url = URL(string: "\(baseURL)/api/sync/push")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -63,13 +63,13 @@ class APIClient {
                 "beads_id": issue.id,              // beadster-1, beadster-2, etc
                 "title": issue.title,
                 "status": issue.status,
-                "labels": issue.labels ?? [],
-                "created_at": Int(issue.createdAt.timeIntervalSince1970),
-                "updated_at": Int(issue.updatedAt.timeIntervalSince1970)
+                "labels": issue.labels,
+                "created_at": issue.createdAt,
+                "updated_at": issue.updatedAt
             ]
 
             // Add optional fields only if they exist
-            if let description = issue.description { dict["body"] = description }
+            if let body = issue.body { dict["body"] = body }
             if issue.priority > 0 { dict["priority"] = issue.priority }
 
             return dict
@@ -106,7 +106,7 @@ class APIClient {
 
     // MARK: - Device Registration
 
-    func registerDevice(deviceId: String, hardwareUUID: String, deviceName: String, deviceType: String, platform: String, platformVersion: String) async throws {
+    public func registerDevice(deviceId: String, hardwareUUID: String, deviceName: String, deviceType: String, platform: String, platformVersion: String) async throws {
         let url = URL(string: "\(baseURL)/api/devices/register")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -134,7 +134,7 @@ class APIClient {
 
     // MARK: - Device Tracking
 
-    func recordDeviceTracking(issueId: String, deviceId: String, client: String) async throws {
+    public func recordDeviceTracking(issueId: String, deviceId: String, client: String) async throws {
         let url = URL(string: "\(baseURL)/api/device-tracking/record")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -157,7 +157,7 @@ class APIClient {
         }
     }
 
-    func getDeviceTracking(issueId: String) async throws -> [DeviceTracking] {
+    public func getDeviceTracking(issueId: String) async throws -> [DeviceTracking] {
         let url = URL(string: "\(baseURL)/api/device-tracking/\(issueId)")!
         var request = URLRequest(url: url)
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
@@ -168,35 +168,23 @@ class APIClient {
     }
 }
 
-// MARK: - Source Payload
-
-struct SourcePayload: Codable {
-    let id: String
-    let name: String
-    let type: String
-    let path: String
-}
+// SourcePayload moved to Models.swift
 
 // MARK: - Device Tracking Models
 
 struct DeviceTracking: Codable {
-    let issueId: String
-    let deviceId: String
-    let client: String
-    let firstSeen: Int
-    let lastSeen: Int
-    let deviceName: String?
-    let deviceType: String?
-    let platform: String?
+    public let issueId: String
+    public let deviceId: String
+    public let client: String
+    public let firstSeen: Int
+    public let lastSeen: Int
+    public let deviceName: String?
+    public let deviceType: String?
+    public let platform: String?
 }
 
 struct DeviceTrackingResponse: Codable {
-    let tracking: [DeviceTracking]
+    public let tracking: [DeviceTracking]
 }
 
-enum APIError: Error {
-    case registrationFailed
-    case syncFailed
-    case deviceRegistrationFailed
-    case trackingFailed
-}
+// APIError moved to Models.swift to avoid duplication

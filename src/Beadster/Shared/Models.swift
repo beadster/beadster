@@ -2,25 +2,25 @@ import Foundation
 
 // MARK: - Config (CLI)
 
-struct Config: Codable {
-    let apiKey: String
-    let apiUrl: String
-    let sources: [SourceConfig]
+public struct Config: Codable {
+    public let apiKey: String
+    public let apiUrl: String
+    public let sources: [SourceConfig]
 }
 
-struct SourceConfig: Codable {
-    let name: String
-    let path: String
+public struct SourceConfig: Codable {
+    public let name: String
+    public let path: String
 }
 
 // MARK: - Source (Project)
 
-struct Source: Identifiable, Codable, Hashable {
-    let id: String
-    let name: String
-    let type: String // "local-git", "local-no-git", "virtual"
-    let path: String?
-    var lastSync: Int?
+public struct Source: Identifiable, Codable, Hashable {
+    public let id: String
+    public let name: String
+    public let type: String // "local-git", "local-no-git", "virtual"
+    public let path: String?
+    public var lastSync: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, name, type, path
@@ -29,40 +29,40 @@ struct Source: Identifiable, Codable, Hashable {
 }
 
 // Payload for API requests
-struct SourcePayload: Codable {
-    let id: String
-    let name: String
-    let type: String
-    let path: String?
+public struct SourcePayload: Codable {
+    public let id: String
+    public let name: String
+    public let type: String
+    public let path: String?
 }
 
 // MARK: - Issue
 
-struct Issue: Identifiable, Codable, Hashable {
-    let id: String
-    var title: String
-    var body: String? // using "body" for API compatibility
-    var status: String // "open", "in_progress", "blocked", "closed"
-    var priority: Int // 0-4
-    var issueType: String? // "bug", "feature", "task", "epic"
-    var labels: [String]
-    var assignee: String?
+public struct Issue: Identifiable, Codable, Hashable {
+    public let id: String
+    public var title: String
+    public var body: String? // using "body" for API compatibility
+    public var status: String // "open", "in_progress", "blocked", "closed"
+    public var priority: Int // 0-4
+    public var issueType: String? // "bug", "feature", "task", "epic"
+    public var labels: [String]
+    public var assignee: String?
 
-    var design: String?
-    var acceptanceCriteria: String?
-    var notes: String?
+    public var design: String?
+    public var acceptanceCriteria: String?
+    public var notes: String?
 
-    var createdAt: Int // unix timestamp
-    var updatedAt: Int // unix timestamp
-    var closedAt: Int?
+    public var createdAt: Int // unix timestamp
+    public var updatedAt: Int // unix timestamp
+    public var closedAt: Int?
 
     // Session metadata (from labels)
-    var sessionId: String?
-    var client: String?
-    var projectName: String?
+    public var sessionId: String?
+    public var client: String?
+    public var projectName: String?
 
     // For sync compatibility
-    var beadsId: String { id } // local beads ID (bd-1, bd-2)
+    public var beadsId: String { id } // local beads ID (bd-1, bd-2)
 
     enum CodingKeys: String, CodingKey {
         case id, title, status, priority, labels, assignee
@@ -79,7 +79,7 @@ struct Issue: Identifiable, Codable, Hashable {
         case projectName = "project_name"
     }
 
-    init(id: String, title: String, body: String?, status: String, priority: Int,
+    public init(id: String, title: String, body: String?, status: String, priority: Int,
          issueType: String? = nil, labels: [String] = [], assignee: String? = nil,
          design: String? = nil, acceptanceCriteria: String? = nil, notes: String? = nil,
          createdAt: Int, updatedAt: Int, closedAt: Int? = nil,
@@ -103,7 +103,7 @@ struct Issue: Identifiable, Codable, Hashable {
         self.projectName = projectName
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         id = try container.decode(String.self, forKey: .id)
@@ -156,10 +156,10 @@ struct Issue: Identifiable, Codable, Hashable {
 
 // MARK: - Dependency
 
-struct Dependency: Codable, Hashable {
-    let issueId: String
-    let dependsOnId: String
-    let type: String // "blocks", "related", "parent-child", "discovered-from"
+public struct Dependency: Codable, Hashable {
+    public let issueId: String
+    public let dependsOnId: String
+    public let type: String // "blocks", "related", "parent-child", "discovered-from"
 
     enum CodingKeys: String, CodingKey {
         case issueId = "issue_id"
@@ -170,9 +170,9 @@ struct Dependency: Codable, Hashable {
 
 // MARK: - API Response Types
 
-struct SyncResponse: Codable {
-    let synced: Int
-    let syncLogId: String?
+public struct SyncResponse: Codable {
+    public let synced: Int
+    public let syncLogId: String?
 
     enum CodingKeys: String, CodingKey {
         case synced
@@ -180,25 +180,31 @@ struct SyncResponse: Codable {
     }
 }
 
-struct SourcesResponse: Codable {
-    let sources: [Source]
+public struct SourcesResponse: Codable {
+    public let sources: [Source]
 }
 
-struct IssuesResponse: Codable {
-    let issues: [Issue]
+public struct IssuesResponse: Codable {
+    public let issues: [Issue]
 }
 
 // MARK: - Errors
 
-enum DatabaseError: Error {
+public enum DatabaseError: Error {
     case cantOpen
     case queryFailed
     case updateFailed
+    case locked
 }
 
-enum APIError: Error {
+public enum APIError: Error {
     case pushFailed
     case pullFailed
     case invalidResponse
     case networkError
+    case registrationFailed
+    case syncFailed
+    case deviceRegistrationFailed
+    case trackingFailed
+    case unauthorized
 }

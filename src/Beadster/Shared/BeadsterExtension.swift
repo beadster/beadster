@@ -3,16 +3,16 @@ import SQLite3
 
 /// Manages beadster extension tables in .beads/beads.db
 /// Following beads EXTENDING.md pattern: add custom tables with beadster_ prefix
-class BeadsterExtension {
+public class BeadsterExtension {
     private let dbPath: String
     private var db: OpaquePointer?
 
-    init(beadsDir: String) {
+    public init(beadsDir: String) {
         self.dbPath = "\(beadsDir)/.beads/beads.db"
     }
 
     /// Initialize beadster extension tables in beads.db
-    func initialize() throws {
+    public func initialize() throws {
         guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
             throw ExtensionError.cantOpen
         }
@@ -62,7 +62,7 @@ class BeadsterExtension {
     }
 
     /// Get sync info for an issue
-    func getSyncInfo(issueId: String) throws -> SyncInfo? {
+    public func getSyncInfo(issueId: String) throws -> SyncInfo? {
         guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
             throw ExtensionError.cantOpen
         }
@@ -107,7 +107,7 @@ class BeadsterExtension {
     }
 
     /// Record that issue was synced
-    func recordSync(issueId: String, cloudId: String, localUpdatedAt: Int, cloudUpdatedAt: Int) throws {
+    public func recordSync(issueId: String, cloudId: String, localUpdatedAt: Int, cloudUpdatedAt: Int) throws {
         guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
             throw ExtensionError.cantOpen
         }
@@ -149,12 +149,12 @@ class BeadsterExtension {
     }
 
     /// Get cloud ID for local issue ID
-    func getCloudId(issueId: String) throws -> String? {
+    public func getCloudId(issueId: String) throws -> String? {
         return try getSyncInfo(issueId: issueId)?.cloudId
     }
 
     /// Get issues that need syncing (modified since last sync)
-    func getUnsyncedIssues() throws -> [String] {
+    public func getUnsyncedIssues() throws -> [String] {
         guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
             throw ExtensionError.cantOpen
         }
@@ -186,7 +186,7 @@ class BeadsterExtension {
     }
 
     /// Update source-level metadata
-    func updateSourceMeta(sourceId: String, lastPull: Int? = nil, lastPush: Int? = nil) throws {
+    public func updateSourceMeta(sourceId: String, lastPull: Int? = nil, lastPush: Int? = nil) throws {
         guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
             throw ExtensionError.cantOpen
         }
@@ -249,7 +249,7 @@ class BeadsterExtension {
     }
 
     /// Get last pull timestamp for incremental sync
-    func getLastPull() throws -> Int? {
+    public func getLastPull() throws -> Int? {
         guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
             throw ExtensionError.cantOpen
         }
@@ -278,12 +278,12 @@ class BeadsterExtension {
 // MARK: - Models
 
 struct SyncInfo {
-    let issueId: String
-    let cloudId: String
-    let syncedAt: Int
-    let cloudUpdatedAt: Int?
-    let localUpdatedAt: Int?
-    let syncStatus: String
+    public let issueId: String
+    public let cloudId: String
+    public let syncedAt: Int
+    public let cloudUpdatedAt: Int?
+    public let localUpdatedAt: Int?
+    public let syncStatus: String
 }
 
 // MARK: - Errors

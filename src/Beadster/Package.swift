@@ -14,7 +14,7 @@ let package = Package(
     targets: [
         // Shared code (used by both CLI and macOS app)
         .target(
-            name: "BeadsterShared",
+            name: "Shared",
             dependencies: [],
             path: "Shared"
         ),
@@ -22,7 +22,7 @@ let package = Package(
         // CLI sync daemon
         .executableTarget(
             name: "BeadsterCLI",
-            dependencies: ["BeadsterShared"],
+            dependencies: ["Shared"],
             path: "CLI",
             sources: ["main.swift", "CLISyncDaemon.swift"]
         )

@@ -4,21 +4,21 @@ import SQLite3
 /// Reads from beads.db (beads core tables)
 /// Note: beads.db is rebuilt from JSONL by beads automatically
 /// Path: .beads/beads.db (NOT beadster.db!)
-class BeadsDatabase {
+public class BeadsDatabase {
     private let dbPath: String
     private var db: OpaquePointer?
 
     // Init with String path (for CLI)
-    init(beadsDir: String) {
+    public init(beadsDir: String) {
         self.dbPath = "\(beadsDir)/.beads/beads.db"
     }
 
     // Init with URL (for macOS app)
-    init(beadsDir: URL) {
+    public init(beadsDir: URL) {
         self.dbPath = beadsDir.appendingPathComponent(".beads/beads.db").path
     }
 
-    func open() throws {
+    public func open() throws {
         guard sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
             throw DatabaseError.cantOpen
         }
@@ -27,11 +27,11 @@ class BeadsDatabase {
         sqlite3_busy_timeout(db, 5000)
     }
 
-    func close() {
+    public func close() {
         sqlite3_close(db)
     }
 
-    func getAllIssues() throws -> [Issue] {
+    public func getAllIssues() throws -> [Issue] {
         // retry up to 3 times on database locked errors
         var lastError: Error?
         for attempt in 0..<3 {
@@ -122,7 +122,7 @@ class BeadsDatabase {
         return issues
     }
 
-    func getIssues(ids: [String]) throws -> [Issue] {
+    public func getIssues(ids: [String]) throws -> [Issue] {
         guard !ids.isEmpty else { return [] }
 
         var issues: [Issue] = []
@@ -197,7 +197,7 @@ class BeadsDatabase {
         return issues
     }
 
-    func issueExists(beadsId: String) throws -> Bool {
+    public func issueExists(beadsId: String) throws -> Bool {
         let query = "SELECT COUNT(*) FROM issues WHERE id = ?"
 
         var statement: OpaquePointer?
