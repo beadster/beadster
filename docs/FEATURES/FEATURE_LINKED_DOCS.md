@@ -89,23 +89,45 @@ no schema changes, searchable with grep
 - doc is source of work items
 - example: tasks from "docs/TODO.md"
 
-## cli usage
+## implementation (extending bd)
+
+beads only supports extending the database, not the CLI. so we use custom tables:
+
+```sql
+-- beadster adds this table to .beads/*.db
+CREATE TABLE IF NOT EXISTS beadster_issue_docs (
+  issue_id TEXT NOT NULL,
+  doc_path TEXT NOT NULL,
+  doc_section TEXT,
+  link_type TEXT NOT NULL,
+  created_at INTEGER,
+  PRIMARY KEY (issue_id, doc_path),
+  FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_beadster_issue_docs_issue ON beadster_issue_docs(issue_id);
+CREATE INDEX idx_beadster_issue_docs_path ON beadster_issue_docs(doc_path);
+```
+
+then beadster provides its own tools (not bd):
 
 ```bash
-# create issue with linked doc
-bd create "implement sync" --doc docs/SYNC_AND_CONFLICTS.md
+# beadster cli (separate from bd)
+beadster link-doc bd-46 docs/SYNC_AND_CONFLICTS.md --section "device_issue_tracking"
 
-# create with section link
-bd create "implement device_issue_tracking" \
-  --doc docs/SYNC_AND_CONFLICTS.md \
-  --section "device_issue_tracking table"
+# or via mcp
+mcp link_doc --issue bd-46 --doc docs/SYNC_AND_CONFLICTS.md
 
-# show issues for doc
-bd list --doc docs/SYNC_AND_CONFLICTS.md
-
-# show doc links for issue
-bd show bd-46 --include-docs
+# query linked docs
+sqlite3 .beads/myapp.db "
+  SELECT i.id, i.title, d.doc_path, d.doc_section
+  FROM issues i
+  JOIN beadster_issue_docs d ON i.id = d.issue_id
+  WHERE d.doc_path = 'docs/SYNC_AND_CONFLICTS.md'
+"
 ```
+
+use bd as-is, beadster extends the database
 
 ## agent workflow
 
@@ -200,15 +222,25 @@ for issue_doc in issue_docs:
     notify "doc ${doc_path} changed since beadster-${issue_id} was created"
 ```
 
-## mcp tools
+## beadster mcp tools
+
+beadster mcp server (not bd) provides:
 
 ```typescript
 tools: [
-  'link_doc',      // link doc to issue
-  'unlink_doc',    // remove doc link
-  'list_doc_issues', // get issues for doc
-  'update_doc_hash'  // refresh git hash after doc update
+  'beadster_link_doc',      // link doc to issue
+  'beadster_unlink_doc',    // remove doc link
+  'beadster_list_doc_issues', // get issues for doc
+  'beadster_update_doc_hash'  // refresh git hash after doc update
 ]
+
+// usage
+await mcp.beadster_link_doc({
+  issue_id: 'bd-46',
+  doc_path: 'docs/SYNC_AND_CONFLICTS.md',
+  doc_section: 'device_issue_tracking table',
+  link_type: 'implements'
+});
 ```
 
 ## example session
@@ -219,30 +251,34 @@ User: read docs/SYNC_AND_CONFLICTS.md and create implementation tasks
 Agent: [reads doc]
 Agent: I'll create tasks for the main implementation sections:
 
+# use bd to create issues
 bd create "implement source_sequences table" \
-  --doc docs/SYNC_AND_CONFLICTS.md \
-  --section "web/mobile issue creation" \
+  -d "See docs/SYNC_AND_CONFLICTS.md web/mobile issue creation section" \
   -p 1 -t task
+
+# then link via beadster
+beadster link-doc bd-46 docs/SYNC_AND_CONFLICTS.md \
+  --section "web/mobile issue creation" \
+  --type implements
 
 bd create "implement device_issue_tracking table" \
-  --doc docs/SYNC_AND_CONFLICTS.md \
-  --section "device_issue_tracking table" \
+  -d "See docs/SYNC_AND_CONFLICTS.md device_issue_tracking section" \
   -p 1 -t task
 
-bd create "implement basic sync daemon" \
-  --doc docs/SYNC_AND_CONFLICTS.md \
-  --section "sync flow" \
-  -p 1 -t task
+beadster link-doc bd-47 docs/SYNC_AND_CONFLICTS.md \
+  --section "device_issue_tracking table" \
+  --type implements
 
 All tasks linked to docs/SYNC_AND_CONFLICTS.md for easy reference.
 
 User: show me issues for that doc
 
-Agent: bd list --doc docs/SYNC_AND_CONFLICTS.md
+Agent: beadster list-doc-issues docs/SYNC_AND_CONFLICTS.md
 
 beadster-46: implement source_sequences table (P1, open)
+  section: web/mobile issue creation
 beadster-47: implement device_issue_tracking table (P1, open)
-beadster-48: implement basic sync daemon (P1, open)
+  section: device_issue_tracking table
 ```
 
 ## benefits
@@ -264,12 +300,25 @@ beadster-48: implement basic sync daemon (P1, open)
 
 ## recommendation
 
-start with **option 3 (text reference)** - simple, works now:
+**immediately: option 3 (text reference)** - works with bd today:
+```bash
+bd create "implement sync" \
+  -d "See docs/SYNC_AND_CONFLICTS.md for design"
+```
 - include doc path in issue description
 - use markdown links with sections
 - searchable with bd and grep
 
-later add **option 2 (table)** when need:
-- programmatic doc → issue navigation
-- automated doc change detection
-- rich UI features
+**later: option 2 (custom table)** - extend bd database:
+```sql
+CREATE TABLE beadster_issue_docs (...);
+```
+- beadster adds table to .beads/*.db
+- beadster CLI/MCP manages links
+- bd continues to work as-is
+- query across both with SQL joins
+
+**never: option 1 (modify bd)** - not supported:
+- cannot add `--doc` flag to bd CLI
+- cannot modify bd schema
+- bd is maintained by beads project
