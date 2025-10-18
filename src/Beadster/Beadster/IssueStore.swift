@@ -11,7 +11,7 @@ import Foundation
 class IssueStore: ObservableObject {
     @Published var issues: [Issue] = []
     @Published var isLoading = false
-    @Published var filter: IssueFilter = .all
+    @Published var filter: IssueFilter = .open
     @Published var searchText: String = ""
     @Published var selectedPriority: Int? = nil
     @Published var selectedLabels: Set<String> = []
@@ -294,7 +294,7 @@ enum IssueEditError: LocalizedError {
 }
 
 enum IssueFilter: String, CaseIterable {
-    case all = "All"
     case open = "Open"
+    case all = "All"
     case closed = "Closed"
 }
