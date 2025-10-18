@@ -209,7 +209,13 @@ app.get('/api/sync/pull', async (c) => {
     ORDER BY updated_at ASC
   `).bind(sourceId, user.id, since).all();
 
-  return c.json(changes.results);
+  // Parse labels JSON for each issue
+  const parsedIssues = changes.results.map((issue: any) => ({
+    ...issue,
+    labels: issue.labels ? JSON.parse(issue.labels) : []
+  }));
+
+  return c.json(parsedIssues);
 });
 
 // Web: List all issues
