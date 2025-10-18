@@ -11,7 +11,7 @@ class FileWatcher {
     }
 
     func start() {
-        let pathsToWatch = ["\(path)/.beads/issues"] as CFArray
+        let pathsToWatch = ["\(path)/.beads"] as CFArray
         var context = FSEventStreamContext(
             version: 0,
             info: Unmanaged.passUnretained(self).toOpaque(),

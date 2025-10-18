@@ -93,42 +93,68 @@ app.post('/api/sync/push', async (c) => {
 
   // Upsert issues
   for (const issue of issues) {
-    await c.env.DB.prepare(`
-      INSERT INTO issues (
-        id, user_id, source_id, beads_id, title, body,
-        status, priority, labels,
-        session_id, client, project_name,
-        synced_at, created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        title = excluded.title,
-        body = excluded.body,
-        status = excluded.status,
-        priority = excluded.priority,
-        labels = excluded.labels,
-        session_id = excluded.session_id,
-        client = excluded.client,
-        project_name = excluded.project_name,
-        synced_at = excluded.synced_at,
-        updated_at = excluded.updated_at
-    `).bind(
-      issue.id,
-      user.id,
-      source.id,
-      issue.beads_id,
-      issue.title,
-      issue.body || null,
-      issue.status,
-      issue.priority || null,
-      JSON.stringify(issue.labels || []),
-      issue.session_id || null,
-      issue.client || null,
-      issue.project_name || null,
-      now,
-      issue.created_at,
-      issue.updated_at
-    ).run();
+    // First, check if issue exists by beads_id
+    const existing = await c.env.DB.prepare(`
+      SELECT id FROM issues WHERE source_id = ? AND beads_id = ?
+    `).bind(source.id, issue.beads_id).first();
+
+    if (existing) {
+      // Update existing issue
+      await c.env.DB.prepare(`
+        UPDATE issues SET
+          title = ?,
+          body = ?,
+          status = ?,
+          priority = ?,
+          labels = ?,
+          session_id = ?,
+          client = ?,
+          project_name = ?,
+          synced_at = ?,
+          updated_at = ?
+        WHERE source_id = ? AND beads_id = ?
+      `).bind(
+        issue.title,
+        issue.body || null,
+        issue.status,
+        issue.priority || null,
+        JSON.stringify(issue.labels || []),
+        issue.session_id || null,
+        issue.client || null,
+        issue.project_name || null,
+        now,
+        issue.updated_at,
+        source.id,
+        issue.beads_id
+      ).run();
+    } else {
+      // Insert new issue
+      await c.env.DB.prepare(`
+        INSERT INTO issues (
+          id, user_id, source_id, beads_id, title, body,
+          status, priority, labels,
+          session_id, client, project_name,
+          synced_at, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        issue.id,
+        user.id,
+        source.id,
+        issue.beads_id,
+        issue.title,
+        issue.body || null,
+        issue.status,
+        issue.priority || null,
+        JSON.stringify(issue.labels || []),
+        issue.session_id || null,
+        issue.client || null,
+        issue.project_name || null,
+        now,
+        issue.created_at,
+        issue.updated_at
+      ).run();
+    }
 
     // Update session tracking
     if (issue.session_id) {

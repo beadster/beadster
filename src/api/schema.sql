@@ -62,6 +62,9 @@ CREATE INDEX idx_issues_status ON issues(status);
 CREATE INDEX idx_issues_session ON issues(session_id);
 CREATE INDEX idx_issues_client ON issues(client);
 
+-- Ensure beads_id is unique per source
+CREATE UNIQUE INDEX idx_issues_source_beads_id ON issues(source_id, beads_id);
+
 -- Sessions for grouping
 CREATE TABLE sessions (
   id TEXT PRIMARY KEY,
