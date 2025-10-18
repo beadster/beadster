@@ -133,6 +133,8 @@ struct IssuesListView: View {
     @ObservedObject var issueStore: IssueStore
     let selectedProject: ProjectInfo?
     @State private var showFilters = false
+    @State private var showCreateIssue = false
+    @State private var editingIssue: Issue?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -144,6 +146,13 @@ struct IssuesListView: View {
                             .font(.title2)
 
                         Spacer()
+
+                        // Create issue button
+                        Button(action: {
+                            showCreateIssue = true
+                        }) {
+                            Label("New Issue", systemImage: "plus")
+                        }
 
                         // Status filter
                         Picker("Filter", selection: $issueStore.filter) {
@@ -285,6 +294,22 @@ struct IssuesListView: View {
                 } else {
                     List(issueStore.filteredIssues()) { issue in
                         IssueRow(issue: issue, issueStore: issueStore)
+                            .contextMenu {
+                                Button("Edit") {
+                                    editingIssue = issue
+                                }
+                                Divider()
+                                Button("Delete", role: .destructive) {
+                                    Task {
+                                        do {
+                                            try await issueStore.deleteIssue(projectPath: project.path, issueId: issue.id)
+                                            await issueStore.loadIssues(for: project)
+                                        } catch {
+                                            print("Failed to delete issue: \(error)")
+                                        }
+                                    }
+                                }
+                            }
                     }
                 }
             } else {
@@ -293,6 +318,28 @@ struct IssuesListView: View {
                     "No Project Selected",
                     systemImage: "folder.badge.questionmark",
                     description: Text("Select a project from the sidebar or add a new one")
+                )
+            }
+        }
+        .sheet(isPresented: $showCreateIssue) {
+            if let project = selectedProject {
+                IssueEditSheet(
+                    project: project,
+                    issueStore: issueStore,
+                    isPresented: $showCreateIssue
+                )
+            }
+        }
+        .sheet(item: $editingIssue) { issue in
+            if let project = selectedProject {
+                IssueEditSheet(
+                    project: project,
+                    issue: issue,
+                    issueStore: issueStore,
+                    isPresented: .constant(true),
+                    onDismiss: {
+                        editingIssue = nil
+                    }
                 )
             }
         }
@@ -383,6 +430,122 @@ struct LabelBadge: View {
             .background(Color.blue.opacity(0.2))
             .foregroundColor(.blue)
             .cornerRadius(4)
+    }
+}
+
+// MARK: - Issue Edit Sheet
+
+struct IssueEditSheet: View {
+    let project: ProjectInfo
+    var issue: Issue?
+    @ObservedObject var issueStore: IssueStore
+    @Binding var isPresented: Bool
+    var onDismiss: (() -> Void)?
+
+    @State private var title: String
+    @State private var description: String
+    @State private var priority: Int
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    init(project: ProjectInfo, issue: Issue? = nil, issueStore: IssueStore, isPresented: Binding<Bool>, onDismiss: (() -> Void)? = nil) {
+        self.project = project
+        self.issue = issue
+        self.issueStore = issueStore
+        self._isPresented = isPresented
+        self.onDismiss = onDismiss
+
+        _title = State(initialValue: issue?.title ?? "")
+        _description = State(initialValue: issue?.description ?? "")
+        _priority = State(initialValue: issue?.priority ?? 2)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Details") {
+                    TextField("Title", text: $title)
+
+                    TextField("Description (optional)", text: $description, axis: .vertical)
+                        .lineLimit(5...10)
+
+                    Picker("Priority", selection: $priority) {
+                        ForEach(0..<5) { p in
+                            Text("P\(p)").tag(p)
+                        }
+                    }
+                }
+
+                if let error = errorMessage {
+                    Section {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                }
+            }
+            .navigationTitle(issue == nil ? "New Issue" : "Edit Issue")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(issue == nil ? "Create" : "Save") {
+                        Task {
+                            await save()
+                        }
+                    }
+                    .disabled(title.isEmpty || isSaving)
+                }
+            }
+        }
+        .frame(width: 500, height: 400)
+    }
+
+    private func save() async {
+        isSaving = true
+        errorMessage = nil
+
+        do {
+            if let issue = issue {
+                // Update existing issue
+                try await issueStore.updateIssue(
+                    projectPath: project.path,
+                    issueId: issue.id,
+                    title: title != issue.title ? title : nil,
+                    description: description != issue.description ? description : nil,
+                    status: nil,
+                    priority: priority != issue.priority ? priority : nil
+                )
+            } else {
+                // Create new issue
+                try await issueStore.createIssue(
+                    projectPath: project.path,
+                    title: title,
+                    description: description.isEmpty ? nil : description,
+                    priority: priority,
+                    labels: []
+                )
+            }
+
+            // Reload issues
+            await issueStore.loadIssues(for: project)
+
+            // Dismiss
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isSaving = false
+    }
+
+    private func dismiss() {
+        isPresented = false
+        onDismiss?()
     }
 }
 

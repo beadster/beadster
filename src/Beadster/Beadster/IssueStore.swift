@@ -156,6 +156,87 @@ class IssueStore: ObservableObject {
 
         issues[index] = updated
     }
+
+    // MARK: - Issue Editing (via bd CLI)
+
+    func createIssue(projectPath: String, title: String, description: String?, priority: Int, labels: [String]) async throws {
+        var command = "cd \"\(projectPath)\" && bd create \"\(escapeForShell(title))\" --priority=\(priority)"
+
+        if let desc = description, !desc.isEmpty {
+            command += " --description=\"\(escapeForShell(desc))\""
+        }
+
+        if !labels.isEmpty {
+            let labelsStr = labels.map { escapeForShell($0) }.joined(separator: ",")
+            command += " --labels=\"\(labelsStr)\""
+        }
+
+        try await runBdCommand(command)
+    }
+
+    func updateIssue(projectPath: String, issueId: String, title: String?, description: String?, status: String?, priority: Int?) async throws {
+        var command = "cd \"\(projectPath)\" && bd update \(issueId)"
+
+        if let title = title {
+            command += " --title=\"\(escapeForShell(title))\""
+        }
+
+        if let description = description {
+            command += " --description=\"\(escapeForShell(description))\""
+        }
+
+        if let status = status {
+            command += " --status=\(status)"
+        }
+
+        if let priority = priority {
+            command += " --priority=\(priority)"
+        }
+
+        try await runBdCommand(command)
+    }
+
+    func deleteIssue(projectPath: String, issueId: String) async throws {
+        let command = "cd \"\(projectPath)\" && bd delete \(issueId)"
+        try await runBdCommand(command)
+    }
+
+    private func runBdCommand(_ command: String) async throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", command]
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        try process.run()
+        process.waitUntilExit()
+
+        if process.terminationStatus != 0 {
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let errorOutput = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+            throw IssueEditError.commandFailed(errorOutput)
+        }
+    }
+
+    private func escapeForShell(_ str: String) -> String {
+        return str.replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "$", with: "\\$")
+            .replacingOccurrences(of: "`", with: "\\`")
+    }
+}
+
+enum IssueEditError: LocalizedError {
+    case commandFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .commandFailed(let error):
+            return "bd command failed: \(error)"
+        }
+    }
 }
 
 enum IssueFilter: String, CaseIterable {
