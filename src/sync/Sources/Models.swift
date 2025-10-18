@@ -36,6 +36,54 @@ struct Issue: Codable {
         case client
         case projectName = "project_name"
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(String.self, forKey: .id)
+        beadsId = try container.decode(String.self, forKey: .beadsId)
+        title = try container.decode(String.self, forKey: .title)
+        body = try container.decodeIfPresent(String.self, forKey: .body)
+        status = try container.decode(String.self, forKey: .status)
+        priority = try container.decodeIfPresent(String.self, forKey: .priority)
+        createdAt = try container.decode(Int.self, forKey: .createdAt)
+        updatedAt = try container.decode(Int.self, forKey: .updatedAt)
+        sessionId = try container.decodeIfPresent(String.self, forKey: .sessionId)
+        client = try container.decodeIfPresent(String.self, forKey: .client)
+        projectName = try container.decodeIfPresent(String.self, forKey: .projectName)
+
+        // Labels can be either a string (JSON) or an array
+        if let labelsString = try? container.decode(String.self, forKey: .labels) {
+            // Parse JSON string to array
+            if let data = labelsString.data(using: .utf8),
+               let array = try? JSONDecoder().decode([String].self, from: data) {
+                labels = array
+            } else {
+                labels = []
+            }
+        } else if let labelsArray = try? container.decode([String].self, forKey: .labels) {
+            labels = labelsArray
+        } else {
+            labels = []
+        }
+    }
+
+    init(id: String, beadsId: String, title: String, body: String?, status: String,
+         priority: String?, labels: [String], createdAt: Int, updatedAt: Int,
+         sessionId: String?, client: String?, projectName: String?) {
+        self.id = id
+        self.beadsId = beadsId
+        self.title = title
+        self.body = body
+        self.status = status
+        self.priority = priority
+        self.labels = labels
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.sessionId = sessionId
+        self.client = client
+        self.projectName = projectName
+    }
 }
 
 enum DatabaseError: Error {
