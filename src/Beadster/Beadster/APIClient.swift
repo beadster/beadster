@@ -41,7 +41,7 @@ class APIClient {
 
         let (data, _) = try await URLSession.shared.data(for: request)
         let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        // Don't use convertFromSnakeCase - Issue model CodingKeys already handle snake_case mapping
         decoder.dateDecodingStrategy = .secondsSince1970
         let issues = try decoder.decode([Issue].self, from: data)
         return issues
