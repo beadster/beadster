@@ -20,5 +20,12 @@
 
   "observability": {
     "enabled": true
-  }
+  },
+
+  "routes": [
+    {
+      "pattern": "api.beadster.ai",
+      "custom_domain": true,
+    },
+  ],
 }

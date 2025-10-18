@@ -10,16 +10,18 @@ Following the EXTENDING.md guidelines, beadster adds orchestration layers WITHOU
 
 ```
 .beads/
-├── issues/              # JSONL files (Beads manages)
-├── beads.db             # SQLite database (Beads rebuilds)
+├── issues/              # JSONL files (Beads manages) - SOURCE OF TRUTH
+├── beads.db             # SQLite database (Beads rebuilds from JSONL)
 └── config.toml          # Beads config
 ```
 
-**Beads tables:**
+**Beads tables (in beads.db, rebuilt from JSONL):**
 - `issues` - Core issue tracking
 - `dependencies` - Blocks, parent-child relationships
 - `events` - Issue history
 - `audit` - Change tracking
+
+**IMPORTANT:** beads.db is a CACHE, rebuilt from JSONL. Never committed to git.
 
 ## What beadster Adds
 

@@ -138,9 +138,9 @@ each .beads/ has registration info:
 
 ```
 ~/projects/main-app/.beads/
-├── issues/
-├── beads.db
-└── beadster.json    # registration metadata
+├── issues/           # beads JSONL files (source of truth)
+├── beads.db          # beads cache + beadster extension tables
+└── beadster.json     # registration metadata
 ```
 
 beadster.json:

@@ -519,9 +519,10 @@ app.get('/share/:token', async (c) => {
 
 ### Capturing Log Context
 
-**Store log references in beadster extension table:**
+**Store log references in beadster extension table (in .beads/beads.db):**
 
 ```sql
+-- in .beads/beads.db (beadster extension table)
 CREATE TABLE beadster_context (
   id TEXT PRIMARY KEY,
   issue_id TEXT NOT NULL,

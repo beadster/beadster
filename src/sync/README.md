@@ -62,13 +62,17 @@ swift run
 
 1. reads config from ~/.beadster/config.json
 2. for each source:
-   - opens .beads/beads.db (read-only)
-   - extracts all issues
+   - opens .beads/beads.db
+   - reads issues from beads core tables (rebuilt from JSONL by beads)
+   - reads sync metadata from beadster_sync extension table
    - extracts session metadata from labels
-   - pushes to cloud api
-3. watches .beads/issues/ for changes
-4. polls cloud every 10s for changes
-5. applies cloud changes via bd cli
+   - pushes changed issues to cloud api (incremental sync)
+   - records sync timestamps in beadster_sync table
+3. watches .beads/issues/ for changes (JSONL files)
+4. polls cloud every 10s for changes (incremental pull using since timestamp)
+5. applies cloud changes via bd cli (writes to JSONL, beads rebuilds db)
+
+see ../docs/BEADSTER_SYNC_IMPLEMENTATION.md for detailed implementation guide
 
 ## session tracking
 

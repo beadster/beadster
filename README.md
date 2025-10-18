@@ -38,7 +38,10 @@ swift build
 
 Local .beads DB → Sync Daemon → Cloud API → D1 Database → Web UI
 
-1. Create issues locally with `bd create`
-2. Sync daemon reads .beads/beadster.db
-3. Pushes to cloud via API
-4. Web UI queries D1 directly
+1. Create issues locally with `bd create` → writes to `.beads/issues/*.jsonl`
+2. Beads rebuilds `.beads/beads.db` from JSONL (source of truth)
+3. Sync daemon reads `.beads/beads.db` (beads core tables + beadster_sync extension)
+4. Pushes to cloud via API
+5. Web UI queries D1 directly
+
+see docs/SOURCE_OF_TRUTH.md for details on what gets committed to git vs rebuilt
