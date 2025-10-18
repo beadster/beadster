@@ -37,12 +37,10 @@ guidance for claude code when working with beadster project
 - in wrangler.jsonc use: "main": "dist/_worker.js/index.js" (not "dist/_worker.js")
 - if deployed worker returns [object Object] instead of HTML, check that main points to index.js file
 
-build and deploy:
+deploy:
 ```bash
-npm run deploy     # ALWAYS use this - builds then deploys
-# never use wrangler deploy directly - it skips the build step
+npm run deploy     # ALWAYS AND ONLY USE THIS
 ```
 
-if [object Object] appears after deploy:
-- means you deployed without rebuilding astro
-- fix: cd src/web && npm run deploy (not wrangler deploy)
+NEVER use `wrangler deploy` directly - it will break the site with [object Object]
+NEVER use `astro build` alone - always use full `npm run deploy`
