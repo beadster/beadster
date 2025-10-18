@@ -33,22 +33,22 @@ class SyncDaemon {
         print("👀 Watching \(config.sources.count) source(s)")
         print("")
 
-        // Pull changes every 10 seconds
+        // Keep running and pull changes every 10 seconds
         print("⏱  Starting pull loop (every 10s)...")
-        Task {
-            while true {
+        print("✅ Daemon running!")
+        print("")
+
+        while true {
+            do {
                 try await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
                 print("🔽 Checking for cloud changes...")
                 for source in config.sources {
                     await pullChanges(source)
                 }
+            } catch {
+                // Sleep interrupted, continue
             }
         }
-
-        // Keep running
-        print("✅ Daemon running!")
-        print("")
-        RunLoop.main.run()
     }
 
     func syncSource(_ source: Source) async {
