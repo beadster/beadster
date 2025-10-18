@@ -20,6 +20,10 @@ class BeadsDatabase {
         guard sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
             throw DatabaseError.cantOpen
         }
+
+        // set busy timeout to 5 seconds (5000 milliseconds)
+        // this makes SQLite wait instead of immediately returning SQLITE_BUSY
+        sqlite3_busy_timeout(db, 5000)
     }
 
     func close() {
@@ -27,6 +31,23 @@ class BeadsDatabase {
     }
 
     func getAllIssues() throws -> [Issue] {
+        // retry up to 3 times on database locked errors
+        var lastError: Error?
+        for attempt in 0..<3 {
+            do {
+                return try getAllIssuesInternal()
+            } catch DatabaseError.locked {
+                lastError = DatabaseError.locked
+                if attempt < 2 {
+                    print("⏳ Database locked, retry \(attempt + 1)/3...")
+                    Thread.sleep(forTimeInterval: 0.5) // wait 500ms before retry
+                }
+            }
+        }
+        throw lastError ?? DatabaseError.queryFailed
+    }
+
+    private func getAllIssuesInternal() throws -> [Issue] {
         var issues: [Issue] = []
 
         // Get all issues with their labels
@@ -51,6 +72,11 @@ class BeadsDatabase {
         guard prepareResult == SQLITE_OK else {
             let errorMessage = String(cString: sqlite3_errmsg(db))
             print("❌ getAllIssues query prepare failed: \(errorMessage) (code: \(prepareResult))")
+
+            // check if it's a locking error
+            if prepareResult == SQLITE_BUSY || prepareResult == SQLITE_LOCKED {
+                throw DatabaseError.locked
+            }
             throw DatabaseError.queryFailed
         }
 
@@ -140,4 +166,5 @@ class BeadsDatabase {
 enum DatabaseError: Error {
     case cantOpen
     case queryFailed
+    case locked
 }
