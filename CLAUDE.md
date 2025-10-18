@@ -5,7 +5,7 @@ guidance for claude code when working with beadster project
 ## important
 
 - always use bd track for tasks and todos, never use todowrite tool
-- after you complete task use bd to mark it done and commit changes
+- after you complete task use bd to mark it done and commit changes and use closed beads issues ids in the commit message
 - when writing markdown keep it simple and readable, don't use bold or italic formatting unless really necessary
 - when writing docs keep them minimal unless asked to expand. no water please. docs shouldn't be more than 100 lines in most cases
 - in markdown use list with one liners by default and not sections with headers

@@ -87,6 +87,26 @@ class BeadsDatabase {
         return issues
     }
 
+    func issueExists(beadsId: String) throws -> Bool {
+        let query = "SELECT COUNT(*) FROM issues WHERE id = ?"
+
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, query, -1, &statement, nil) == SQLITE_OK else {
+            throw DatabaseError.queryFailed
+        }
+
+        defer { sqlite3_finalize(statement) }
+
+        sqlite3_bind_text(statement, 1, (beadsId as NSString).utf8String, -1, nil)
+
+        if sqlite3_step(statement) == SQLITE_ROW {
+            let count = sqlite3_column_int(statement, 0)
+            return count > 0
+        }
+
+        return false
+    }
+
     private func extractLabel(from labels: [String], prefix: String) -> String? {
         return labels.first { $0.hasPrefix(prefix) }?
             .replacingOccurrences(of: prefix, with: "")

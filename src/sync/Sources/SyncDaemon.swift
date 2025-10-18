@@ -89,13 +89,35 @@ class SyncDaemon {
     }
 
     func applyChange(source: Source, issue: Issue) throws {
-        // Use bd CLI to update issue (lets Beads handle JSONL + DB consistency)
+        // Check if issue exists locally
+        let db = BeadsDatabase(beadsDir: source.path)
+        try db.open()
+        defer { db.close() }
+
+        let existsLocally = try db.issueExists(beadsId: issue.beadsId)
+
         let escapedTitle = issue.title.replacingOccurrences(of: "\"", with: "\\\"")
-        let command = """
-        cd "\(source.path)" && bd update \(issue.beadsId) \
-        --title="\(escapedTitle)" \
-        --status=\(issue.status)
-        """
+        let escapedBody = (issue.body ?? "").replacingOccurrences(of: "\"", with: "\\\"")
+
+        let command: String
+        if existsLocally {
+            // Update existing issue
+            command = """
+            cd "\(source.path)" && bd update \(issue.beadsId) \
+            --title="\(escapedTitle)" \
+            --status=\(issue.status) \
+            --priority=\(issue.priority ?? "1")
+            """
+        } else {
+            // Create new issue with specific ID
+            // Note: bd doesn't support setting custom ID, so we need to use JSONL directly
+            command = """
+            cd "\(source.path)" && bd create "\(escapedTitle)" \
+            --description="\(escapedBody)" \
+            --priority=\(issue.priority ?? "1") \
+            --status=\(issue.status)
+            """
+        }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
@@ -105,7 +127,8 @@ class SyncDaemon {
         process.waitUntilExit()
 
         if process.terminationStatus == 0 {
-            print("  ✓ Applied: \(issue.title)")
+            let action = existsLocally ? "Updated" : "Created"
+            print("  ✓ \(action): \(issue.title)")
         }
     }
 
