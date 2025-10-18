@@ -1,5 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+const apiKey = Astro.locals.runtime.env.BEADSTER_API_KEY;
+const apiUrl = Astro.locals.runtime.env.BEADSTER_API_URL;
+
+let sources: any[] = [];
+let error: string | null = null;
+
+try {
+  const response = await fetch(`${apiUrl}/api/sources?api_key=${apiKey}`);
+  if (!response.ok) throw new Error('Failed to load sources');
+  const data = await response.json();
+  sources = data.sources || [];
+} catch (e) {
+  error = e instanceof Error ? e.message : 'Unknown error';
+}
 ---
 
 <Layout title="new issue">
@@ -8,11 +23,32 @@ import Layout from '../layouts/Layout.astro';
     <a href="/" class="back-link">← back to issues</a>
   </div>
 
-  <form id="issue-form" class="issue-form">
-    <div class="form-group">
-      <label for="title">title</label>
-      <input type="text" id="title" name="title" required autofocus>
+  {error && (
+    <div class="error">{error}</div>
+  )}
+
+  {!error && sources.length === 0 && (
+    <div class="error">
+      no projects/sources found. run sync daemon first to create a source.
     </div>
+  )}
+
+  {!error && sources.length > 0 && (
+    <form id="issue-form" class="issue-form">
+      <div class="form-group">
+        <label for="source">project</label>
+        <select id="source" name="source" required>
+          <option value="">select project...</option>
+          {sources.map(source => (
+            <option value={source.id}>{source.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="title">title</label>
+        <input type="text" id="title" name="title" required autofocus>
+      </div>
 
     <div class="form-group">
       <label for="body">description</label>
@@ -43,8 +79,9 @@ import Layout from '../layouts/Layout.astro';
       <a href="/" class="btn-secondary">cancel</a>
     </div>
 
-    <div id="error" class="error" style="display: none;"></div>
-  </form>
+      <div id="error" class="error" style="display: none;"></div>
+    </form>
+  )}
 </Layout>
 
 <style>
@@ -165,6 +202,7 @@ import Layout from '../layouts/Layout.astro';
 
     const formData = new FormData(form);
     const data = {
+      source_id: formData.get('source'),
       title: formData.get('title'),
       body: formData.get('body') || null,
       priority: parseInt(formData.get('priority') as string),

@@ -11,7 +11,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { title, body, priority, status } = data;
+    const { title, body, priority, status, source_id } = data;
 
     if (!title) {
       return new Response(JSON.stringify({ error: 'Title required' }), {
@@ -20,23 +20,48 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    if (!source_id) {
+      return new Response(JSON.stringify({ error: 'Source required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Generate IDs
     const id = crypto.randomUUID();
-    const beadsId = `web-${Date.now()}`;
     const now = Math.floor(Date.now() / 1000);
 
-    // Get first available user and source (for demo)
+    // Get user (first available for demo)
     const user = await db.prepare('SELECT id FROM users LIMIT 1').first();
-    const source = await db.prepare('SELECT id FROM sources LIMIT 1').first();
-
-    if (!user || !source) {
+    if (!user) {
       return new Response(JSON.stringify({
-        error: 'No user or source found. Sync daemon needs to run first to create user and source.'
+        error: 'No user found. Sync daemon needs to run first.'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    // Get source and increment issue number
+    const source: any = await db.prepare(`
+      SELECT id, name, last_issue_number FROM sources WHERE id = ? AND user_id = ?
+    `).bind(source_id, user.id).first();
+
+    if (!source) {
+      return new Response(JSON.stringify({ error: 'Source not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Generate beads_id using source name as prefix
+    const issueNumber = (source.last_issue_number || 0) + 1;
+    const beadsId = `${source.name}-${issueNumber}`;
+
+    // Update source's last_issue_number
+    await db.prepare(`
+      UPDATE sources SET last_issue_number = ?, updated_at = ? WHERE id = ?
+    `).bind(issueNumber, now, source.id).run();
 
     const result = await db.prepare(`
       INSERT INTO issues (

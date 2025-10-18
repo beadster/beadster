@@ -1,0 +1,377 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const { id } = Astro.params;
+const apiKey = Astro.locals.runtime.env.BEADSTER_API_KEY;
+const apiUrl = Astro.locals.runtime.env.BEADSTER_API_URL;
+
+let issue: any = null;
+let error: string | null = null;
+
+try {
+  const response = await fetch(`${apiUrl}/api/issues/${id}?api_key=${apiKey}`);
+  if (!response.ok) {
+    throw new Error('Failed to load issue');
+  }
+  const data = await response.json();
+  issue = data.issue;
+} catch (e) {
+  error = e instanceof Error ? e.message : 'Unknown error';
+}
+---
+
+<Layout title={issue ? issue.title : 'issue'}>
+  {error && (
+    <div class="error">{error}</div>
+  )}
+
+  {issue && (
+    <div class="issue-detail">
+      <div class="issue-header">
+        <div>
+          <span class="issue-id">{issue.beads_id}</span>
+          <h1 class="issue-title">{issue.title}</h1>
+        </div>
+        <div class="issue-meta">
+          <span class={`badge status ${issue.status}`}>{issue.status}</span>
+          {issue.priority && (
+            <span class={`badge priority p${issue.priority.replace('P', '')}`}>
+              {issue.priority}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {issue.body && (
+        <div class="issue-body">
+          {issue.body}
+        </div>
+      )}
+
+      {issue.labels && issue.labels.length > 0 && (
+        <div class="labels-section">
+          <h3>labels</h3>
+          <div class="labels-list">
+            {issue.labels.map((label: string) => (
+              <span class="badge label">{label}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div class="metadata-section">
+        <h3>metadata</h3>
+        <div class="metadata-grid">
+          <div class="metadata-item">
+            <span class="metadata-label">created</span>
+            <span class="metadata-value">
+              {new Date(issue.created_at * 1000).toLocaleDateString()}
+            </span>
+          </div>
+          <div class="metadata-item">
+            <span class="metadata-label">updated</span>
+            <span class="metadata-value">
+              {new Date(issue.updated_at * 1000).toLocaleDateString()}
+            </span>
+          </div>
+          {issue.session_id && (
+            <div class="metadata-item">
+              <span class="metadata-label">session</span>
+              <span class="metadata-value">
+                <a href={`/sessions/${issue.session_id}`}>{issue.session_id.substring(0, 8)}</a>
+              </span>
+            </div>
+          )}
+          {issue.client && (
+            <div class="metadata-item">
+              <span class="metadata-label">client</span>
+              <span class="metadata-value">{issue.client}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div class="actions-section">
+        <h3>actions</h3>
+        <form id="update-form" class="update-form">
+          <div class="form-group">
+            <label for="title">title</label>
+            <input type="text" id="title" name="title" value={issue.title} required />
+          </div>
+
+          <div class="form-group">
+            <label for="body">description</label>
+            <textarea id="body" name="body" rows="5">{issue.body || ''}</textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="status">status</label>
+              <select id="status" name="status">
+                <option value="open" selected={issue.status === 'open'}>open</option>
+                <option value="closed" selected={issue.status === 'closed'}>closed</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="priority">priority</label>
+              <input type="text" id="priority" name="priority" value={issue.priority || ''} placeholder="P0, P1, P2..." />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">update issue</button>
+            <button type="button" class="btn btn-danger" id="close-btn">close issue</button>
+            <a href="/" class="btn btn-secondary">cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  )}
+</Layout>
+
+<style>
+  .error {
+    padding: 20px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    color: #c00;
+  }
+
+  .issue-detail {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .issue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #eee;
+  }
+
+  .issue-id {
+    font-family: monospace;
+    color: #666;
+    font-size: 14px;
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .issue-title {
+    font-size: 32px;
+    margin: 0;
+  }
+
+  .issue-meta {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .issue-body {
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    margin-bottom: 30px;
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+
+  .labels-section,
+  .metadata-section,
+  .actions-section {
+    margin-bottom: 30px;
+  }
+
+  .labels-section h3,
+  .metadata-section h3,
+  .actions-section h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #666;
+  }
+
+  .labels-list {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .badge.label {
+    background: #e8f4ff;
+    color: #0066cc;
+  }
+
+  .metadata-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+  }
+
+  .metadata-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .metadata-label {
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .metadata-value {
+    font-size: 14px;
+    color: #333;
+  }
+
+  .metadata-value a {
+    color: #0066cc;
+    text-decoration: none;
+  }
+
+  .metadata-value a:hover {
+    text-decoration: underline;
+  }
+
+  .update-form {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 6px;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+
+  .form-group textarea {
+    resize: vertical;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-primary {
+    background: #0066cc;
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: #0052a3;
+  }
+
+  .btn-danger {
+    background: #cc0000;
+    color: #fff;
+  }
+
+  .btn-danger:hover {
+    background: #990000;
+  }
+
+  .btn-secondary {
+    background: #f0f0f0;
+    color: #333;
+  }
+
+  .btn-secondary:hover {
+    background: #e0e0e0;
+  }
+</style>
+
+<script>
+  const form = document.getElementById('update-form') as HTMLFormElement;
+  const closeBtn = document.getElementById('close-btn');
+  const issueId = window.location.pathname.split('/').pop();
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch(`/api/issues/${issueId}/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: formData.get('title'),
+          body: formData.get('body'),
+          status: formData.get('status'),
+          priority: formData.get('priority'),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update issue');
+      }
+
+      alert('Issue updated successfully');
+      window.location.reload();
+    } catch (error) {
+      alert('Failed to update issue');
+    }
+  });
+
+  closeBtn?.addEventListener('click', async () => {
+    if (!confirm('Close this issue?')) return;
+
+    try {
+      const response = await fetch(`/api/issues/${issueId}/close`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to close issue');
+      }
+
+      window.location.href = '/';
+    } catch (error) {
+      alert('Failed to close issue');
+    }
+  });
+</script>

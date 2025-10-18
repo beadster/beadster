@@ -18,6 +18,7 @@ CREATE TABLE sources (
   type TEXT NOT NULL,  -- 'local', 'virtual', 'inbox'
   path TEXT,
   last_sync INTEGER,
+  last_issue_number INTEGER DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id)

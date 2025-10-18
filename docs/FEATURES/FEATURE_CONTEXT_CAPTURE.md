@@ -123,9 +123,17 @@ claude haiku is perfect for this:
 - cheap: ~$0.0001 per issue
 - good quality for structured extraction
 
-**authentication: reuse claude code oauth token**
+**authentication: automatic fallback chain**
 
-no setup required! extract oauth token from claude code:
+sync daemon tries in order:
+
+1. **claude code oauth token** (if available)
+2. **manual api key** (if configured)
+3. **skip ai enrichment** (still capture raw context)
+
+**option 1: claude code token (recommended)**
+
+no setup required! automatically extracts oauth token:
 
 **macOS:**
 ```bash
@@ -145,8 +153,9 @@ credentials format:
   "claudeAiOauth": {
     "accessToken": "sk-ant-oat01-...",
     "refreshToken": "sk-ant-ort01-...",
-    "expiresAt": 1748276587173,
-    "scopes": ["user:inference", "user:profile"]
+    "expiresAt": 1760804454572,
+    "scopes": ["user:inference", "user:profile"],
+    "subscriptionType": "max"
   }
 }
 ```
@@ -155,19 +164,36 @@ benefits:
 - zero setup (uses existing claude code auth)
 - uses user's claude pro/max subscription
 - no separate api key needed
-- token managed by claude code
+- automatic token refresh
 - same auth as claude code
 
 **token expiration:**
 
-your token expires at: `1760804454572` (unix timestamp in milliseconds)
+access tokens typically last ~54 days (max subscription) or 8-12 hours (pro)
 
-that's approximately: **~54 days from now** (dec 2025)
+refresh automatically using refresh token:
+- sync daemon checks expiration before each call
+- if expired, calls refresh endpoint to get new token
+- updates credentials automatically
+- seamless operation
 
-access tokens typically expire in 8-12 hours, but refresh happens automatically:
-- claude code auto-refreshes using refresh token
-- sync daemon should check expiration before each call
-- if expired, wait for claude code to refresh or trigger manual refresh
+**option 2: manual api key**
+
+if no claude code token found, falls back to manual api key:
+
+```bash
+# configure anthropic api key
+beadster config set anthropic_api_key sk-ant-api01-...
+```
+
+get api key from: https://console.anthropic.com/settings/keys
+
+benefits:
+- works without claude code installed
+- direct api access
+- user controls billing
+
+use case: servers, ci/cd, or users who don't have claude code
 
 ```typescript
 async function getClaudeCodeToken() {
@@ -235,7 +261,35 @@ async function refreshClaudeCodeToken(refreshToken: string) {
   return newCreds.accessToken;
 }
 
+async function getAuthToken() {
+  // try 1: claude code oauth token
+  try {
+    const token = await getClaudeCodeToken();
+    console.log('using claude code oauth token');
+    return token;
+  } catch (err) {
+    console.log('claude code token not available:', err.message);
+  }
+
+  // try 2: manual api key
+  const apiKey = await getConfig('anthropic_api_key');
+  if (apiKey) {
+    console.log('using manual api key');
+    return apiKey;
+  }
+
+  // try 3: no auth available
+  console.log('no authentication available - skipping ai enrichment');
+  return null;
+}
+
 async function enrichIssueContext(issue, contextWindow) {
+  const token = await getAuthToken();
+  if (!token) {
+    // skip ai enrichment, but still capture raw context
+    return null;
+  }
+
   const prompt = `
 analyze this conversation where an issue was created:
 
@@ -259,8 +313,6 @@ extract:
 return as json.
 `;
 
-  // reuse claude code oauth token
-  const token = await getClaudeCodeToken();
   const anthropic = new Anthropic({ apiKey: token });
 
   const result = await anthropic.messages.create({

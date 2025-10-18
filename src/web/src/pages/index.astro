@@ -86,7 +86,7 @@ function getPriorityClass(priority: number | null): string {
           <div class="issue-header">
             <div>
               <span class="issue-id">{issue.beads_id}</span>
-              <span class="issue-title">{issue.title}</span>
+              <a href={`/issues/${issue.id}`} class="issue-title">{issue.title}</a>
             </div>
             <div class="issue-actions">
               <button class="btn-close" data-id={issue.id}>✓ close</button>

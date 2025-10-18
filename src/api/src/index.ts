@@ -213,6 +213,58 @@ app.get('/api/issues', async (c) => {
   return c.json({ issues: parsedIssues });
 });
 
+// Web: List sources/projects
+app.get('/api/sources', async (c) => {
+  const apiKey = c.req.query('api_key');
+  const user = await authenticate(c.env.DB, apiKey);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const sources = await c.env.DB.prepare(`
+    SELECT id, name, type, last_issue_number
+    FROM sources
+    WHERE user_id = ?
+    ORDER BY name ASC
+  `).bind(user.id).all();
+
+  return c.json({ sources: sources.results });
+});
+
+// Web: Get single issue
+app.get('/api/issues/:id', async (c) => {
+  const apiKey = c.req.query('api_key');
+  const user = await authenticate(c.env.DB, apiKey);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const issueId = c.req.param('id');
+
+  const issue = await c.env.DB.prepare(`
+    SELECT
+      i.*,
+      s.name as source_name
+    FROM issues i
+    JOIN sources s ON s.id = i.source_id
+    WHERE i.user_id = ? AND i.id = ?
+  `).bind(user.id, issueId).first();
+
+  if (!issue) {
+    return c.json({ error: 'Issue not found' }, 404);
+  }
+
+  // Parse labels JSON
+  const parsedIssue = {
+    ...issue,
+    labels: issue.labels ? JSON.parse(issue.labels as string) : []
+  };
+
+  return c.json({ issue: parsedIssue });
+});
+
 // Web: Get sessions
 app.get('/api/sessions', async (c) => {
   const apiKey = c.req.query('api_key');

@@ -81,7 +81,7 @@ function getPriorityClass(priority: number | null): string {
         <li class="issue-item">
           <div class="issue-header">
             <span class="issue-id">{issue.beads_id}</span>
-            <span class="issue-title">{issue.title}</span>
+            <a href={`/issues/${issue.id}`} class="issue-title">{issue.title}</a>
           </div>
           <div class="issue-meta">
             <span class={`badge status ${issue.status}`}>{issue.status}</span>
