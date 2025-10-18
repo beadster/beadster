@@ -42,6 +42,7 @@ class APIClient {
         let (data, _) = try await URLSession.shared.data(for: request)
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .secondsSince1970
         let issues = try decoder.decode([Issue].self, from: data)
         return issues
     }
