@@ -24,7 +24,17 @@ class JSONLManager {
         print("JSONLManager: Found \(lines.count) lines")
 
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        // use custom date formatter that handles timezone offset
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+            if let date = dateFormatter.date(from: dateString) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateString)")
+        }
 
         var issues: [Issue] = []
         for (index, line) in lines.enumerated() {
