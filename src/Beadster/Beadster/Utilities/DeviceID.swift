@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Shared
 import IOKit
 
 class DeviceID {

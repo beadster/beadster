@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Shared
 
 class SourceIDGenerator {
     /// Generates a deterministic source ID from a file path
