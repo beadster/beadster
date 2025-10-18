@@ -78,7 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       title,
       body || null,
       status || 'open',
-      priority !== undefined ? priority : 1,
+      priority !== undefined ? String(Math.floor(priority)) : '1',
       '[]',
       now,
       now,

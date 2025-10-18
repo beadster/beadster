@@ -50,8 +50,16 @@ class ProjectStore: ObservableObject {
 
     func scanFolder(_ rootURL: URL) async {
         print("ProjectStore: Starting scan of \(rootURL.path)")
-        isScanning = true
-        defer { isScanning = false }
+
+        await MainActor.run {
+            isScanning = true
+        }
+
+        defer {
+            Task { @MainActor in
+                isScanning = false
+            }
+        }
 
         // create security bookmark
         print("ProjectStore: Creating security bookmark...")
@@ -62,7 +70,9 @@ class ProjectStore: ObservableObject {
         ) else {
             let error = "Failed to create security bookmark for \(rootURL.path)"
             print("ProjectStore: ERROR - \(error)")
-            errorMessage = error
+            await MainActor.run {
+                errorMessage = error
+            }
             return
         }
         print("ProjectStore: Bookmark created successfully")
@@ -72,7 +82,9 @@ class ProjectStore: ObservableObject {
         guard rootURL.startAccessingSecurityScopedResource() else {
             let error = "Failed to access \(rootURL.path) - check sandbox permissions"
             print("ProjectStore: ERROR - \(error)")
-            errorMessage = error
+            await MainActor.run {
+                errorMessage = error
+            }
             return
         }
         defer {
@@ -114,7 +126,10 @@ class ProjectStore: ObservableObject {
         }
 
         print("ProjectStore: Scan complete - found \(found) projects")
-        errorMessage = found > 0 ? nil : "No projects with .beads directories found"
+
+        await MainActor.run {
+            errorMessage = found > 0 ? nil : "No projects with .beads directories found"
+        }
     }
 
     func addProject(_ projectURL: URL) async {
