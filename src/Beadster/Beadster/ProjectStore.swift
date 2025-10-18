@@ -203,8 +203,8 @@ class ProjectStore: ObservableObject {
             return
         }
 
-        // generate source ID
-        let sourceId = "src_\(UUID().uuidString.prefix(12))"
+        // generate deterministic source ID from path (matches CLI approach)
+        let sourceId = SourceIDGenerator.generate(from: projectURL.path)
 
         var project = ProjectInfo(
             id: UUID().uuidString,
@@ -215,15 +215,8 @@ class ProjectStore: ObservableObject {
             sourceId: sourceId
         )
 
-        // register source with cloud
-        print("ProjectStore: Registering source with cloud...")
-        do {
-            _ = try await registerProjectSource(project: project, projectURL: projectURL)
-            print("ProjectStore: Source registered successfully: \(sourceId)")
-        } catch {
-            print("ProjectStore: WARNING - Source registration failed: \(error)")
-            // Continue anyway - will try to register on first sync
-        }
+        // source will be created automatically on first sync
+        print("ProjectStore: Generated source ID: \(sourceId)")
 
         await MainActor.run {
             projects.append(project)
