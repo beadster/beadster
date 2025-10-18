@@ -67,19 +67,19 @@ class SyncDaemon: ObservableObject {
             return
         }
 
-        let issuesFile = projectURL.appendingPathComponent(".beads/issues.jsonl")
+        let dbFile = projectURL.appendingPathComponent(".beads/beadster.db")
 
-        guard FileManager.default.fileExists(atPath: issuesFile.path) else {
+        guard FileManager.default.fileExists(atPath: dbFile.path) else {
             projectURL.stopAccessingSecurityScopedResource()
-            print("No issues.jsonl found for \(project.name)")
+            print("No beadster.db found for \(project.name)")
             return
         }
 
         // open file descriptor
-        let fd = open(issuesFile.path, O_EVTONLY)
+        let fd = open(dbFile.path, O_EVTONLY)
         guard fd >= 0 else {
             projectURL.stopAccessingSecurityScopedResource()
-            print("Failed to open \(issuesFile.path)")
+            print("Failed to open \(dbFile.path)")
             return
         }
 
@@ -91,7 +91,7 @@ class SyncDaemon: ObservableObject {
         )
 
         source.setEventHandler { [weak self] in
-            print("File changed: \(issuesFile.path)")
+            print("File changed: \(dbFile.path)")
             Task { @MainActor in
                 await self?.syncProject(project)
             }
@@ -105,7 +105,7 @@ class SyncDaemon: ObservableObject {
         source.resume()
 
         watchers[project.id] = source
-        print("Started watching: \(issuesFile.path)")
+        print("Started watching: \(dbFile.path)")
     }
 
     func stopWatching(projectId: String) {
@@ -156,8 +156,12 @@ class SyncDaemon: ObservableObject {
             }
             defer { projectURL.stopAccessingSecurityScopedResource() }
 
-            // 1. Read local issues
-            let localIssues = try JSONLManager.readIssues(from: projectURL)
+            // 1. Read local issues from SQLite
+            let db = BeadsDatabase(beadsDir: projectURL)
+            try db.open()
+            defer { db.close() }
+
+            let localIssues = try db.getAllIssues()
             print("Found \(localIssues.count) local issues")
 
             // 2. Get or create source on cloud
@@ -172,17 +176,11 @@ class SyncDaemon: ObservableObject {
             let remoteIssues = try await APIClient.shared.getIssues(sourceId: sourceId)
             print("Found \(remoteIssues.count) remote issues")
 
-            // 4. Merge
-            let merged = mergeIssues(local: localIssues, remote: remoteIssues)
-            print("Merged to \(merged.count) issues")
-
-            // 5. Push to cloud
-            let response = try await APIClient.shared.syncIssues(sourceId: sourceId, issues: merged)
+            // 4. Push to cloud (one-way sync for POC)
+            // For now: SQLite is read-only (managed by bd CLI)
+            // Cloud changes would be applied by running bd CLI commands
+            let response = try await APIClient.shared.syncIssues(sourceId: sourceId, issues: localIssues)
             print("Sync result: created=\(response.created), updated=\(response.updated), skipped=\(response.skipped)")
-
-            // 6. Write merged back to local
-            try JSONLManager.writeIssues(merged, to: projectURL)
-            print("Wrote \(merged.count) issues to local .beads/issues.jsonl")
 
             lastSyncDate = Date()
             syncError = nil

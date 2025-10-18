@@ -56,15 +56,24 @@ class IssueStore: ObservableObject {
             projectURL.stopAccessingSecurityScopedResource()
         }
 
-        // read from .beads/issues.jsonl
-        let issuesFile = projectURL.appendingPathComponent(".beads/issues.jsonl")
-        print("IssueStore: Reading from \(issuesFile.path)")
+        // read from .beads/beadster.db
+        let dbPath = projectURL.appendingPathComponent(".beads/beadster.db")
+        print("IssueStore: Reading from \(dbPath.path)")
 
         do {
-            let localIssues = try JSONLManager.readIssues(from: projectURL)
+            let db = BeadsDatabase(beadsDir: projectURL)
+            try db.open()
+            defer { db.close() }
+
+            let localIssues = try db.getAllIssues()
             print("IssueStore: Loaded \(localIssues.count) issues")
             await MainActor.run {
                 self.issues = localIssues
+            }
+        } catch DatabaseError.cantOpen {
+            print("IssueStore: ERROR - No .beads/beadster.db found")
+            await MainActor.run {
+                self.issues = []
             }
         } catch {
             print("IssueStore: ERROR loading issues: \(error)")

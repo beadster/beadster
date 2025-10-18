@@ -97,9 +97,9 @@ class ProjectStore: ObservableObject {
         var found = 0
 
         // check root folder itself first
-        let rootBeadsDir = rootURL.appendingPathComponent(".beads")
-        if FileManager.default.fileExists(atPath: rootBeadsDir.path) {
-            print("ProjectStore: Found .beads at root: \(rootURL.path)")
+        let rootBeadsDB = rootURL.appendingPathComponent(".beads/beadster.db")
+        if FileManager.default.fileExists(atPath: rootBeadsDB.path) {
+            print("ProjectStore: Found .beads/beadster.db at root: \(rootURL.path)")
             await addProject(rootURL)
             found += 1
         }
@@ -117,9 +117,9 @@ class ProjectStore: ObservableObject {
                 continue
             }
 
-            let beadsDir = url.appendingPathComponent(".beads")
-            if FileManager.default.fileExists(atPath: beadsDir.path) {
-                print("ProjectStore: Found .beads at \(url.path)")
+            let beadsDB = url.appendingPathComponent(".beads/beadster.db")
+            if FileManager.default.fileExists(atPath: beadsDB.path) {
+                print("ProjectStore: Found .beads/beadster.db at \(url.path)")
                 await addProject(url)
                 found += 1
             }
@@ -128,7 +128,7 @@ class ProjectStore: ObservableObject {
         print("ProjectStore: Scan complete - found \(found) projects")
 
         await MainActor.run {
-            errorMessage = found > 0 ? nil : "No projects with .beads directories found"
+            errorMessage = found > 0 ? nil : "No projects with .beads/beadster.db found"
         }
     }
 
