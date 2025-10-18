@@ -160,17 +160,29 @@ class SyncDaemon: ObservableObject {
             let localIssues = try JSONLManager.readIssues(from: projectURL)
             print("Found \(localIssues.count) local issues")
 
-            // 2. Get remote issues (TODO: need source ID from project)
-            // let remoteIssues = try await APIClient.shared.getIssues(sourceId: project.sourceId)
+            // 2. Get or create source on cloud
+            guard let sourceId = project.sourceId else {
+                print("No source ID - skipping cloud sync for now")
+                lastSyncDate = Date()
+                syncError = nil
+                return
+            }
 
-            // 3. Merge (for POC: just push local to remote)
-            // let merged = mergeIssues(local: localIssues, remote: remoteIssues)
+            // 3. Get remote issues
+            let remoteIssues = try await APIClient.shared.getIssues(sourceId: sourceId)
+            print("Found \(remoteIssues.count) remote issues")
 
-            // 4. Push to cloud (TODO: implement)
-            // let response = try await APIClient.shared.syncIssues(sourceId: project.sourceId, issues: localIssues)
+            // 4. Merge
+            let merged = mergeIssues(local: localIssues, remote: remoteIssues)
+            print("Merged to \(merged.count) issues")
 
-            // 5. Write back to local (TODO: implement)
-            // try JSONLManager.writeIssues(merged, to: projectURL)
+            // 5. Push to cloud
+            let response = try await APIClient.shared.syncIssues(sourceId: sourceId, issues: merged)
+            print("Sync result: created=\(response.created), updated=\(response.updated), skipped=\(response.skipped)")
+
+            // 6. Write merged back to local
+            try JSONLManager.writeIssues(merged, to: projectURL)
+            print("Wrote \(merged.count) issues to local .beads/issues.jsonl")
 
             lastSyncDate = Date()
             syncError = nil

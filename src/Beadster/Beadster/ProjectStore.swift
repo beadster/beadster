@@ -84,7 +84,8 @@ class ProjectStore: ObservableObject {
             name: projectURL.lastPathComponent,
             path: projectURL.path,
             bookmark: bookmark,
-            lastSync: nil
+            lastSync: nil,
+            sourceId: nil
         )
 
         projects.append(project)
@@ -98,12 +99,16 @@ class ProjectStore: ObservableObject {
 
     func saveProjects() {
         let projectData = projects.map { project -> [String: Any] in
-            [
+            var dict: [String: Any] = [
                 "id": project.id,
                 "name": project.name,
                 "path": project.path,
                 "bookmark": project.bookmark
             ]
+            if let sourceId = project.sourceId {
+                dict["sourceId"] = sourceId
+            }
+            return dict
         }
 
         UserDefaults.standard.set(projectData, forKey: bookmarksKey)
@@ -139,7 +144,8 @@ class ProjectStore: ObservableObject {
                 name: name,
                 path: path,
                 bookmark: bookmark,
-                lastSync: nil
+                lastSync: nil,
+                sourceId: dict["sourceId"] as? String
             )
         }
     }
@@ -161,4 +167,5 @@ struct ProjectInfo: Identifiable, Hashable {
     let path: String
     let bookmark: Data
     var lastSync: Date?
+    var sourceId: String? // beadster cloud source ID
 }
