@@ -8,6 +8,14 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Layout Constants
+
+private enum LayoutConstants {
+    static let appHeaderHeight: CGFloat = 28
+    static let contentHeaderHeight: CGFloat = 48
+    static let footerHeight: CGFloat = 24
+}
+
 // MARK: - App State
 
 enum AppTab: String, CaseIterable {
@@ -17,7 +25,7 @@ enum AppTab: String, CaseIterable {
     case closedIssues = "Closed"
 }
 
-enum ContentMode {
+enum ContentMode: Equatable {
     case onboarding
     case issuesList
     case issueDetail(Issue)
@@ -37,30 +45,32 @@ struct MainView: View {
     @State private var contentMode: ContentMode = .onboarding
     @State private var showSearch = false
     @State private var isPinned = false
+    @FocusState private var isSearchFocused: Bool
 
     var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                // Content Header
-                contentHeader
-
-                Divider()
-
-                // Content Area
-                contentArea
-
-                Divider()
-
-                // Footer
-                footer
-            }
-            .background(Color.white)
-
-            // App Header (in titlebar area)
+        VStack(spacing: 0) {
+            // App Header (titlebar)
             appHeader
+
+            // Content Header
+            contentHeader
+
+            Divider()
+
+            // Content Area (takes remaining space)
+            contentArea
+                .frame(maxHeight: .infinity)
+
+            Divider()
+
+            // Footer
+            footer
+                .frame(height: LayoutConstants.footerHeight)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.white)
-        .background(WindowAccessor(isHovering: $isHoveringWindow))
+        .background(WindowAccessor(isHovering: $isHoveringWindow, alwaysShow: true))
+        .edgesIgnoringSafeArea(.top)
         .onChange(of: projectStore.selectedProject) { oldValue, newValue in
             if let project = newValue {
                 Task { @MainActor in
@@ -96,125 +106,141 @@ struct MainView: View {
     // MARK: - App Header
 
     var appHeader: some View {
-        VStack {
-            HStack(spacing: 12) {
-                Spacer()
-
-                Button(action: {
-                    // TODO: settings action
-                }) {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 13))
-                        .foregroundColor(.black.opacity(0.6))
-                }
-                .buttonStyle(.plain)
-
-                Button(action: {
-                    isPinned.toggle()
-                    // TODO: implement window pin functionality
-                }) {
-                    Image(systemName: isPinned ? "pin.fill" : "pin")
-                        .font(.system(size: 13))
-                        .foregroundColor(.black.opacity(0.6))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.trailing, 12)
-            .frame(height: 28)
-            .opacity(isHoveringHeader ? 1 : 0)
-            .offset(y: -28)
-            .onHover { hovering in
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isHoveringHeader = hovering
-                    isHoveringWindow = hovering
-                }
-            }
-
+        HStack(spacing: 8) {
             Spacer()
+
+            Button(action: {
+                // TODO: settings action
+            }) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 13))
+                    .foregroundColor(.black.opacity(0.6))
+            }
+            .buttonStyle(.plain)
+            .background(Color.purple.opacity(0.3)) // DEBUG
+            .border(Color.purple) // DEBUG
+
+            Button(action: {
+                isPinned.toggle()
+                // TODO: implement window pin functionality
+            }) {
+                Image(systemName: isPinned ? "pin.fill" : "pin")
+                    .font(.system(size: 13))
+                    .foregroundColor(.black.opacity(0.6))
+            }
+            .buttonStyle(.plain)
+            .background(Color.orange.opacity(0.3)) // DEBUG
+            .border(Color.orange) // DEBUG
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 0)
+        .frame(height: LayoutConstants.appHeaderHeight)
+        .background(Color.red.opacity(0.3)) // DEBUG
+        .border(Color.red, width: 2) // DEBUG
+        .overlay(
+            Text("H:\(LayoutConstants.appHeaderHeight)")
+                .font(.system(size: 8))
+                .foregroundColor(.black)
+                .position(x: 200, y: 14)
+        )
+        // TODO: Restore hover behavior after layout is working
+//        .onHover { hovering in
+//            withAnimation(.easeInOut(duration: 0.2)) {
+//                isHoveringHeader = hovering
+//                isHoveringWindow = hovering
+//            }
+//        }
+//        .opacity(isHoveringHeader ? 1 : 0)
     }
 
     // MARK: - Content Header
 
     var contentHeader: some View {
-        VStack(spacing: 12) {
-            // Search bar (when visible)
+        HStack(spacing: 8) {
+            // Search button or search input
             if showSearch {
-                HStack {
+                HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
 
-                    TextField("Search issues...", text: $issueStore.searchText)
+                    TextField("Search...", text: $issueStore.searchText)
                         .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                        .focused($isSearchFocused)
 
                     Button(action: {
                         showSearch = false
                         issueStore.searchText = ""
                     }) {
                         Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
                 .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
-                .padding(.horizontal, 12)
+                .cornerRadius(6)
+                .frame(width: 140)
+                .onAppear {
+                    isSearchFocused = true
+                }
+            } else {
+                Button(action: {
+                    showSearch = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isSearchFocused = true
+                    }
+                }) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 13))
+                        .foregroundColor(.black.opacity(0.6))
+                }
+                .buttonStyle(.plain)
             }
 
-            // Tabs and search button
-            HStack {
-                if !showSearch {
-                    Button(action: {
-                        showSearch = true
-                    }) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 13))
-                            .foregroundColor(.black.opacity(0.6))
-                    }
-                    .buttonStyle(.plain)
-                }
+            Spacer()
 
-                Spacer()
-
-                // Tabs
-                ForEach(AppTab.allCases, id: \.self) { tab in
-                    Button(action: {
-                        selectedTab = tab
-                        if tab == .projects {
-                            // Show projects view
-                        } else {
-                            // Update filter based on tab
-                            switch tab {
-                            case .openIssues:
-                                issueStore.filter = .open
-                            case .allIssues:
-                                issueStore.filter = .all
-                            case .closedIssues:
-                                issueStore.filter = .closed
-                            case .projects:
-                                break
-                            }
-                            if projectStore.selectedProject != nil {
-                                contentMode = .issuesList
-                            }
+            // Tabs
+            ForEach(AppTab.allCases, id: \.self) { tab in
+                Button(action: {
+                    selectedTab = tab
+                    if tab == .projects {
+                        // TODO: Show projects view in future
+                        contentMode = .onboarding
+                    } else {
+                        // Update filter based on tab
+                        switch tab {
+                        case .openIssues:
+                            issueStore.filter = .open
+                        case .allIssues:
+                            issueStore.filter = .all
+                        case .closedIssues:
+                            issueStore.filter = .closed
+                        case .projects:
+                            break
                         }
-                    }) {
-                        Text(tab.rawValue)
-                            .font(.system(size: 11))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(selectedTab == tab ? Color.blue.opacity(0.2) : Color.clear)
-                            .foregroundColor(selectedTab == tab ? .blue : .black.opacity(0.6))
-                            .cornerRadius(4)
+                        // Always switch to issues list when changing filter tabs
+                        contentMode = .issuesList
                     }
-                    .buttonStyle(.plain)
+                }) {
+                    Text(tab.rawValue)
+                        .font(.system(size: 11))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(selectedTab == tab ? Color.blue.opacity(0.2) : Color.clear)
+                        .foregroundColor(selectedTab == tab ? .blue : .black.opacity(0.6))
+                        .cornerRadius(4)
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
         }
+        .padding(.horizontal, 12)
+        .frame(height: LayoutConstants.contentHeaderHeight)
+        .background(Color.green.opacity(0.3)) // DEBUG
+        .border(Color.green, width: 2) // DEBUG
     }
 
     // MARK: - Content Area
@@ -414,6 +440,10 @@ struct MainView: View {
 
     var footer: some View {
         HStack(spacing: 8) {
+            Text("beadster")
+                .font(.system(size: 9))
+                .foregroundColor(.black.opacity(0.4))
+
             if syncDaemon.isSyncing {
                 ProgressView()
                     .scaleEffect(0.5)
@@ -441,13 +471,16 @@ struct MainView: View {
             Spacer()
         }
         .padding(.horizontal, 12)
-        .frame(height: 24)
-        .opacity(isHoveringFooter ? 1 : 0)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isHoveringFooter = hovering
-            }
-        }
+        .frame(height: LayoutConstants.footerHeight)
+        .background(Color.yellow.opacity(0.3)) // DEBUG
+        .border(Color.yellow, width: 2) // DEBUG
+        // TODO: Restore hover behavior after layout is working
+//        .opacity(isHoveringFooter ? 1 : 0)
+//        .onHover { hovering in
+//            withAnimation(.easeInOut(duration: 0.2)) {
+//                isHoveringFooter = hovering
+//            }
+//        }
     }
 
     // MARK: - Helpers
@@ -621,15 +654,17 @@ struct FlowLayout: Layout {
 
 struct WindowAccessor: NSViewRepresentable {
     @Binding var isHovering: Bool
+    var alwaysShow: Bool = false
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
         DispatchQueue.main.async {
             if let window = view.window {
                 window.titlebarAppearsTransparent = true
-                window.standardWindowButton(.closeButton)?.alphaValue = isHovering ? 1 : 0
-                window.standardWindowButton(.miniaturizeButton)?.alphaValue = isHovering ? 1 : 0
-                window.standardWindowButton(.zoomButton)?.alphaValue = isHovering ? 1 : 0
+                let alpha: CGFloat = alwaysShow ? 1.0 : (isHovering ? 1 : 0)
+                window.standardWindowButton(.closeButton)?.alphaValue = alpha
+                window.standardWindowButton(.miniaturizeButton)?.alphaValue = alpha
+                window.standardWindowButton(.zoomButton)?.alphaValue = alpha
             }
         }
         return view
@@ -637,11 +672,12 @@ struct WindowAccessor: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         if let window = nsView.window {
+            let alpha: CGFloat = alwaysShow ? 1.0 : (isHovering ? 1 : 0)
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.standardWindowButton(.closeButton)?.animator().alphaValue = isHovering ? 1 : 0
-                window.standardWindowButton(.miniaturizeButton)?.animator().alphaValue = isHovering ? 1 : 0
-                window.standardWindowButton(.zoomButton)?.animator().alphaValue = isHovering ? 1 : 0
+                window.standardWindowButton(.closeButton)?.animator().alphaValue = alpha
+                window.standardWindowButton(.miniaturizeButton)?.animator().alphaValue = alpha
+                window.standardWindowButton(.zoomButton)?.animator().alphaValue = alpha
             }
         }
     }
