@@ -35,12 +35,20 @@ guidance for claude code when working with beadster project
 
 - astro builds _worker.js as directory (not file) containing index.js
 - in wrangler.jsonc use: "main": "dist/_worker.js/index.js" (not "dist/_worker.js")
-- if deployed worker returns [object Object] instead of HTML, check that main points to index.js file
+- use exact versions: astro 5.14.4 and @astrojs/cloudflare 12.6.9 (newer versions have [object Object] bug)
 
 deploy:
 ```bash
 npm run deploy     # ALWAYS AND ONLY USE THIS
 ```
 
-NEVER use `wrangler deploy` directly - it will break the site with [object Object]
+NEVER use `wrangler deploy` directly - it will break the site
 NEVER use `astro build` alone - always use full `npm run deploy`
+
+troubleshooting [object Object] bug:
+- if deployed worker returns [object Object] instead of HTML:
+  - check astro and @astrojs/cloudflare versions (must be 5.14.4 and 12.6.9 exactly)
+  - test API endpoints - if they work but .astro pages don't, it's a version issue
+  - run: npm install astro@5.14.4 @astrojs/cloudflare@12.6.9 --save-exact
+  - redeploy: npm run deploy
+- versions 5.14.6+ and 12.6.10+ have regression where astro SSR returns object instead of Response
