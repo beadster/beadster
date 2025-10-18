@@ -23,7 +23,8 @@ let package = Package(
         .executableTarget(
             name: "BeadsterCLI",
             dependencies: ["BeadsterShared"],
-            path: "CLI"
+            path: "CLI",
+            sources: ["main.swift", "CLISyncDaemon.swift"]
         )
     ]
 )

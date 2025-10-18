@@ -196,7 +196,8 @@ class BeadsterExtension {
 
         // Upsert source meta
         var sql = """
-        INSERT INTO beadster_source (id, source_id"""
+        INSERT INTO beadster_source (id, source_id
+        """
 
         if lastPull != nil {
             sql += ", last_pull"

@@ -1,30 +1,29 @@
 import Foundation
 
-let configPath = "\(NSHomeDirectory())/.beadster/config.json"
+@main
+struct BeadsterCLI {
+    static func main() async throws {
+        let configPath = "\(NSHomeDirectory())/.beadster/config.json"
 
-guard FileManager.default.fileExists(atPath: configPath) else {
-    print("❌ Config file not found at \(configPath)")
-    print("")
-    print("Create ~/.beadster/config.json with:")
-    print("""
-    {
-      "apiKey": "your-api-key",
-      "apiUrl": "https://api.beadster.com",
-      "sources": [
-        {
-          "name": "my-project",
-          "path": "/Users/you/projects/my-project"
+        guard FileManager.default.fileExists(atPath: configPath) else {
+            print("❌ Config not found at \(configPath)")
+            print("Create config file with:")
+            print("""
+            {
+              "apiKey": "your-api-key",
+              "apiUrl": "https://beadster-dev-api.systemoperator.workers.dev",
+              "sources": [
+                {
+                  "name": "my-project",
+                  "path": "/path/to/project"
+                }
+              ]
+            }
+            """)
+            return
         }
-      ]
-    }
-    """)
-    exit(1)
-}
 
-do {
-    let daemon = try SyncDaemon(configPath: configPath)
-    await daemon.start()
-} catch {
-    print("❌ Error: \(error)")
-    exit(1)
+        let daemon = try CLISyncDaemon(configPath: configPath)
+        await daemon.start()
+    }
 }
