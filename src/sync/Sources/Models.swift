@@ -41,7 +41,7 @@ struct Issue: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         id = try container.decode(String.self, forKey: .id)
-        beadsId = try container.decode(String.self, forKey: .beadsId)
+        beadsId = try container.decodeIfPresent(String.self, forKey: .beadsId) ?? id
         title = try container.decode(String.self, forKey: .title)
         body = try container.decodeIfPresent(String.self, forKey: .body)
         status = try container.decode(String.self, forKey: .status)

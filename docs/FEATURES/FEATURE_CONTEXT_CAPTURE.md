@@ -123,47 +123,119 @@ claude haiku is perfect for this:
 - cheap: ~$0.0001 per issue
 - good quality for structured extraction
 
-**authentication options:**
+**authentication: reuse claude code oauth token**
 
-option 1: user provides anthropic api key
-- store api key locally (encrypted)
-- sync daemon uses api key for haiku calls
-- user manages their own api billing
-- setup: `beadster config set anthropic_api_key sk-ant-xxx`
+no setup required! extract oauth token from claude code:
 
-option 2: beadster provides the service
-- beadster api does the enrichment
-- user sends conversation context to beadster api
-- beadster uses its own api key
-- could be free tier or paid feature
-- privacy concern: conversation leaves device
+**macOS:**
+```bash
+# extract from keychain
+security find-generic-password -s "Claude Code-credentials" -w
+```
 
-option 3: optional feature, fallback to basic capture
-- if no api key configured, skip ai enrichment
-- still capture conversation messages as-is
-- user can manually enrich later
-- or view raw conversation context
+**linux/ubuntu:**
+```bash
+# read from credentials file
+cat ~/.claude/.credentials.json
+```
 
-**recommended: option 1 (user api key)**
+credentials format:
+```json
+{
+  "claudeAiOauth": {
+    "accessToken": "sk-ant-oat01-...",
+    "refreshToken": "sk-ant-ort01-...",
+    "expiresAt": 1748276587173,
+    "scopes": ["user:inference", "user:profile"]
+  }
+}
+```
 
-pros:
-- user controls their data and costs
-- no privacy concerns (runs locally)
-- simple implementation
+benefits:
+- zero setup (uses existing claude code auth)
+- uses user's claude pro/max subscription
+- no separate api key needed
+- token managed by claude code
+- same auth as claude code
 
-cons:
-- requires user to get anthropic api key
-- one-time setup step
+**token expiration:**
+
+your token expires at: `1760804454572` (unix timestamp in milliseconds)
+
+that's approximately: **~54 days from now** (dec 2025)
+
+access tokens typically expire in 8-12 hours, but refresh happens automatically:
+- claude code auto-refreshes using refresh token
+- sync daemon should check expiration before each call
+- if expired, wait for claude code to refresh or trigger manual refresh
 
 ```typescript
-async function enrichIssueContext(issue, contextWindow) {
-  // check if user has api key configured
-  const apiKey = await getConfig('anthropic_api_key');
-  if (!apiKey) {
-    console.log('skipping ai enrichment - no api key configured');
-    return null;
+async function getClaudeCodeToken() {
+  let creds;
+
+  if (process.platform === 'darwin') {
+    // macOS - extract from keychain
+    const json = execSync(
+      'security find-generic-password -s "Claude Code-credentials" -w'
+    ).toString();
+    creds = JSON.parse(json);
+  } else {
+    // linux - read from file
+    const credsPath = path.join(os.homedir(), '.claude/.credentials.json');
+    creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
   }
 
+  const oauth = creds.claudeAiOauth;
+
+  // check if token expired
+  if (Date.now() >= oauth.expiresAt) {
+    throw new Error('claude code token expired - please run claude code to refresh');
+  }
+
+  return oauth.accessToken;
+}
+
+async function refreshClaudeCodeToken(refreshToken: string) {
+  // use claude's oauth refresh endpoint
+  const response = await fetch('https://console.anthropic.com/v1/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: '9d1c250a-e61b-44d9-88ed-5944d1962f5e'  // claude cli client id
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`token refresh failed: ${data.error}`);
+  }
+
+  // update stored credentials
+  const newCreds = {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresAt: Date.now() + (data.expires_in * 1000),
+    scopes: data.scope.split(' ')
+  };
+
+  // write back to storage
+  if (process.platform === 'darwin') {
+    // update keychain
+    const json = JSON.stringify({ claudeAiOauth: newCreds });
+    execSync(`security add-generic-password -U -s "Claude Code-credentials" -w '${json}'`);
+  } else {
+    // update file
+    const credsPath = path.join(os.homedir(), '.claude/.credentials.json');
+    fs.writeFileSync(credsPath, JSON.stringify({ claudeAiOauth: newCreds }));
+  }
+
+  return newCreds.accessToken;
+}
+
+async function enrichIssueContext(issue, contextWindow) {
   const prompt = `
 analyze this conversation where an issue was created:
 
@@ -187,8 +259,10 @@ extract:
 return as json.
 `;
 
-  // use user's anthropic api key
-  const anthropic = new Anthropic({ apiKey });
+  // reuse claude code oauth token
+  const token = await getClaudeCodeToken();
+  const anthropic = new Anthropic({ apiKey: token });
+
   const result = await anthropic.messages.create({
     model: 'claude-3-haiku-20240307',
     max_tokens: 1024,
