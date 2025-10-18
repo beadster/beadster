@@ -28,35 +28,27 @@ class APIClient {
         return response.sources
     }
 
-    // MARK: - Issues
+    // MARK: - Pull Changes
 
-    func getIssues(sourceId: String) async throws -> [Issue] {
-        let url = URL(string: "\(baseURL)/api/sources/\(sourceId)/issues")!
+    func pullChanges(sourceId: String, since: Int) async throws -> [Issue] {
+        let urlString = "\(baseURL)/api/sync/pull?source_id=\(sourceId)&since=\(since)"
+        guard let url = URL(string: urlString) else {
+            throw APIError.syncFailed
+        }
+
         var request = URLRequest(url: url)
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
 
         let (data, _) = try await URLSession.shared.data(for: request)
-        let response = try JSONDecoder().decode(IssuesResponse.self, from: data)
-        return response.issues
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let issues = try decoder.decode([Issue].self, from: data)
+        return issues
     }
 
-    func syncIssues(sourceId: String, issues: [Issue]) async throws -> SyncResponse {
-        let url = URL(string: "\(baseURL)/api/sources/\(sourceId)/sync")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    // MARK: - Push Issues
 
-        let body = ["issues": issues]
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, _) = try await URLSession.shared.data(for: request)
-        return try JSONDecoder().decode(SyncResponse.self, from: data)
-    }
-
-    // MARK: - Source Registration
-
-    func registerSource(source: SourcePayload, issues: [Issue]) async throws -> String {
+    func pushIssues(source: SourcePayload, issues: [Issue]) async throws {
         let url = URL(string: "\(baseURL)/api/sync/push")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -77,19 +69,18 @@ class APIClient {
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            print("❌ registerSource: Invalid response type")
-            throw APIError.registrationFailed
+            print("❌ pushIssues: Invalid response type")
+            throw APIError.syncFailed
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let responseBody = String(data: data, encoding: .utf8) ?? "Unable to decode response"
-            print("❌ registerSource failed: HTTP \(httpResponse.statusCode)")
+            print("❌ pushIssues failed: HTTP \(httpResponse.statusCode)")
             print("   Response: \(responseBody)")
-            throw APIError.registrationFailed
+            throw APIError.syncFailed
         }
 
-        print("✅ registerSource: HTTP \(httpResponse.statusCode)")
-        return source.id
+        print("✅ pushIssues: HTTP \(httpResponse.statusCode)")
     }
 
     // MARK: - Device Registration
@@ -184,6 +175,7 @@ struct DeviceTrackingResponse: Codable {
 
 enum APIError: Error {
     case registrationFailed
+    case syncFailed
     case deviceRegistrationFailed
     case trackingFailed
 }

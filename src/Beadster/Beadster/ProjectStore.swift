@@ -40,22 +40,10 @@ class ProjectStore: ObservableObject {
         var updatedProjects: [(Int, ProjectInfo)] = []
 
         for (index, project) in projectsToRegister {
-            print("ProjectStore: Auto-registering project: \(project.name)")
+            print("ProjectStore: Generating source ID for project: \(project.name)")
 
-            // generate source ID
-            let sourceId = "src_\(UUID().uuidString.prefix(12))"
-
-            // resolve bookmark
-            var isStale = false
-            guard let projectURL = try? URL(
-                resolvingBookmarkData: project.bookmark,
-                options: .withSecurityScope,
-                relativeTo: nil,
-                bookmarkDataIsStale: &isStale
-            ) else {
-                print("ProjectStore: Failed to resolve bookmark for \(project.name)")
-                continue
-            }
+            // generate deterministic source ID from path (matches CLI approach)
+            let sourceId = SourceIDGenerator.generate(from: project.path)
 
             // create updated project with sourceId
             let updatedProject = ProjectInfo(
@@ -67,14 +55,8 @@ class ProjectStore: ObservableObject {
                 sourceId: sourceId
             )
 
-            // register with cloud
-            do {
-                _ = try await registerProjectSource(project: updatedProject, projectURL: projectURL)
-                print("ProjectStore: Auto-registered source: \(sourceId)")
-                updatedProjects.append((index, updatedProject))
-            } catch {
-                print("ProjectStore: WARNING - Auto-registration failed for \(project.name): \(error)")
-            }
+            print("ProjectStore: Generated source ID: \(sourceId)")
+            updatedProjects.append((index, updatedProject))
         }
 
         // update all at once on MainActor
@@ -252,35 +234,6 @@ class ProjectStore: ObservableObject {
         // start watching this project
         print("ProjectStore: Starting file watcher for \(project.name)")
         SyncDaemon.shared.startWatching(project: project)
-    }
-
-    private func registerProjectSource(project: ProjectInfo, projectURL: URL) async throws -> String {
-        guard let sourceId = project.sourceId else {
-            throw NSError(domain: "ProjectStore", code: 1, userInfo: [NSLocalizedDescriptionKey: "No source ID"])
-        }
-
-        // access security scoped resource
-        guard projectURL.startAccessingSecurityScopedResource() else {
-            throw NSError(domain: "ProjectStore", code: 2, userInfo: [NSLocalizedDescriptionKey: "Access denied"])
-        }
-        defer { projectURL.stopAccessingSecurityScopedResource() }
-
-        // read issues from database
-        let db = BeadsDatabase(beadsDir: projectURL)
-        try db.open()
-        defer { db.close() }
-
-        let issues = try db.getAllIssues()
-
-        // register with API
-        let sourcePayload = SourcePayload(
-            id: sourceId,
-            name: project.name,
-            type: "local",
-            path: project.path
-        )
-
-        return try await APIClient.shared.registerSource(source: sourcePayload, issues: issues)
     }
 
     // MARK: - Persistence

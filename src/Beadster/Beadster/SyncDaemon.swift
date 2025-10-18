@@ -194,8 +194,14 @@ class SyncDaemon: ObservableObject {
             }
 
             // 3. Push local changes to cloud
-            let response = try await APIClient.shared.syncIssues(sourceId: sourceId, issues: localIssues)
-            print("⬆️  Push result: created=\(response.created), updated=\(response.updated), skipped=\(response.skipped)")
+            let sourcePayload = SourcePayload(
+                id: sourceId,
+                name: project.name,
+                type: "local",
+                path: project.path
+            )
+            try await APIClient.shared.pushIssues(source: sourcePayload, issues: localIssues)
+            print("⬆️  Pushed \(localIssues.count) issue(s) to cloud")
 
             // 4. Pull remote changes and apply locally
             try await pullAndApplyChanges(project: project, projectURL: projectURL, sourceId: sourceId)
@@ -323,17 +329,12 @@ class SyncDaemon: ObservableObject {
 
     private func pullAndApplyChanges(project: ProjectInfo, projectURL: URL, sourceId: String) async throws {
         // Get timestamp of last sync for this project
-        let since = lastSync[project.id]?.timeIntervalSince1970 ?? 0
+        let since = Int(lastSync[project.id]?.timeIntervalSince1970 ?? 0)
 
         print("🔽 Pulling changes since \(since)...")
 
         // Get remote changes
-        let remoteIssues = try await APIClient.shared.getIssues(sourceId: sourceId)
-
-        // Filter to only changes since last sync
-        let changes = remoteIssues.filter { issue in
-            issue.updatedAt.timeIntervalSince1970 > since
-        }
+        let changes = try await APIClient.shared.pullChanges(sourceId: sourceId, since: since)
 
         if changes.isEmpty {
             print("  ✓ No changes from cloud")
