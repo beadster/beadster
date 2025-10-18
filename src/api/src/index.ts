@@ -344,6 +344,179 @@ app.get('/api/sessions/:id/issues', async (c) => {
   return c.json({ issues: parsedIssues });
 });
 
+// Device: Register device
+app.post('/api/devices/register', async (c) => {
+  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '');
+  const user = await authenticate(c.env.DB, apiKey);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const { device_id, hardware_uuid, device_name, device_type, platform, platform_version } = await c.req.json();
+  const now = Date.now();
+
+  // Check if device exists
+  const existing = await c.env.DB.prepare(`
+    SELECT * FROM devices WHERE hardware_uuid = ? AND user_id = ?
+  `).bind(hardware_uuid, user.id).first();
+
+  if (existing) {
+    // Update last_seen and metadata
+    await c.env.DB.prepare(`
+      UPDATE devices
+      SET last_seen = ?, device_name = ?, platform_version = ?
+      WHERE id = ?
+    `).bind(now, device_name, platform_version, existing.id).run();
+
+    return c.json({ device_id: existing.id });
+  }
+
+  // Create new device
+  await c.env.DB.prepare(`
+    INSERT INTO devices (
+      id, user_id, hardware_uuid, device_name, device_type,
+      platform, platform_version, first_seen, last_seen
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    device_id,
+    user.id,
+    hardware_uuid,
+    device_name,
+    device_type,
+    platform,
+    platform_version,
+    now,
+    now
+  ).run();
+
+  return c.json({ device_id });
+});
+
+// Device Issue Tracking: Record that device saw issue
+app.post('/api/device-tracking/record', async (c) => {
+  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '');
+  const user = await authenticate(c.env.DB, apiKey);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const { issue_id, device_id, client } = await c.req.json();
+  const now = Date.now();
+
+  // Upsert tracking record
+  await c.env.DB.prepare(`
+    INSERT INTO device_issue_tracking (issue_id, device_id, client, first_seen, last_seen)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(issue_id, device_id) DO UPDATE SET
+      last_seen = excluded.last_seen
+  `).bind(issue_id, device_id, client, now, now).run();
+
+  return c.json({ success: true });
+});
+
+// Device Issue Tracking: Get tracking for issue
+app.get('/api/device-tracking/:issue_id', async (c) => {
+  const apiKey = c.req.query('api_key') || c.req.header('Authorization')?.replace('Bearer ', '');
+  const user = await authenticate(c.env.DB, apiKey);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const issueId = c.req.param('issue_id');
+
+  const tracking = await c.env.DB.prepare(`
+    SELECT
+      dit.*,
+      d.device_name,
+      d.device_type,
+      d.platform
+    FROM device_issue_tracking dit
+    JOIN devices d ON d.id = dit.device_id
+    JOIN issues i ON i.id = dit.issue_id
+    WHERE dit.issue_id = ? AND i.user_id = ?
+    ORDER BY dit.last_seen DESC
+  `).bind(issueId, user.id).all();
+
+  return c.json({ tracking: tracking.results });
+});
+
+// Source Sequences: Get next beads_id for source
+app.post('/api/sources/:source_id/next-id', async (c) => {
+  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '');
+  const user = await authenticate(c.env.DB, apiKey);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const sourceId = c.req.param('source_id');
+
+  // Verify source belongs to user
+  const source = await c.env.DB.prepare(`
+    SELECT id FROM sources WHERE id = ? AND user_id = ?
+  `).bind(sourceId, user.id).first();
+
+  if (!source) {
+    return c.json({ error: 'Source not found' }, 404);
+  }
+
+  // Initialize sequence if not exists
+  await c.env.DB.prepare(`
+    INSERT INTO source_sequences (source_id, next_beads_id)
+    VALUES (?, 1)
+    ON CONFLICT(source_id) DO NOTHING
+  `).bind(sourceId).run();
+
+  // Get and increment next ID atomically
+  const result = await c.env.DB.prepare(`
+    UPDATE source_sequences
+    SET next_beads_id = next_beads_id + 1
+    WHERE source_id = ?
+    RETURNING next_beads_id - 1 as beads_id_num
+  `).bind(sourceId).first();
+
+  return c.json({
+    beads_id: `bd-${result.beads_id_num}`,
+    beads_id_num: result.beads_id_num
+  });
+});
+
+// Source Sequences: Update sequence (when desktop syncs higher IDs)
+app.post('/api/sources/:source_id/update-sequence', async (c) => {
+  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '');
+  const user = await authenticate(c.env.DB, apiKey);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const sourceId = c.req.param('source_id');
+  const { next_beads_id } = await c.req.json();
+
+  // Verify source belongs to user
+  const source = await c.env.DB.prepare(`
+    SELECT id FROM sources WHERE id = ? AND user_id = ?
+  `).bind(sourceId, user.id).first();
+
+  if (!source) {
+    return c.json({ error: 'Source not found' }, 404);
+  }
+
+  // Update only if higher
+  await c.env.DB.prepare(`
+    INSERT INTO source_sequences (source_id, next_beads_id)
+    VALUES (?, ?)
+    ON CONFLICT(source_id) DO UPDATE SET
+      next_beads_id = MAX(next_beads_id, excluded.next_beads_id)
+  `).bind(sourceId, next_beads_id).run();
+
+  return c.json({ success: true });
+});
+
 // Helper: Authenticate user by API key
 async function authenticate(db: D1Database, apiKey: string | undefined) {
   if (!apiKey) {
