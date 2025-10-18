@@ -495,7 +495,7 @@ struct IssueDetailView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
 
-                            Text(issue.issueType.capitalized)
+                            Text((issue.issueType ?? "task").capitalized)
                                 .font(.caption)
                         }
 
@@ -616,28 +616,33 @@ struct IssueEditSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Details") {
-                    TextField("Title", text: $title)
+            VStack(spacing: 0) {
+                Form {
+                    Section("Details") {
+                        TextField("Title", text: $title)
 
-                    TextField("Description (optional)", text: $description, axis: .vertical)
-                        .lineLimit(5...10)
+                        TextField("Description (optional)", text: $description, axis: .vertical)
+                            .lineLimit(5...10)
 
-                    Picker("Priority", selection: $priority) {
-                        ForEach(0..<5) { p in
-                            Text("P\(p)").tag(p)
+                        Picker("Priority", selection: $priority) {
+                            ForEach(0..<5) { p in
+                                Text("P\(p)").tag(p)
+                            }
+                        }
+                    }
+
+                    if let error = errorMessage {
+                        Section {
+                            Text(error)
+                                .foregroundColor(.red)
+                                .font(.caption)
                         }
                     }
                 }
 
-                if let error = errorMessage {
-                    Section {
-                        Text(error)
-                            .foregroundColor(.red)
-                            .font(.caption)
-                    }
-                }
+                Spacer()
             }
+            .frame(width: 500, height: 400, alignment: .top)
             .navigationTitle(issue == nil ? "New Issue" : "Edit Issue")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -656,7 +661,6 @@ struct IssueEditSheet: View {
                 }
             }
         }
-        .frame(width: 500, height: 400)
     }
 
     private func save() async {

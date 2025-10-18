@@ -67,7 +67,14 @@ class JSONLManager {
         }
 
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        // use ISO8601 format with fractional seconds and timezone offset
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            let dateString = dateFormatter.string(from: date)
+            try container.encode(dateString)
+        }
 
         let lines = try issues.map { issue in
             let data = try encoder.encode(issue)

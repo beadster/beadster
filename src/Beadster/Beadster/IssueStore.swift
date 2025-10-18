@@ -157,84 +157,138 @@ class IssueStore: ObservableObject {
         issues[index] = updated
     }
 
-    // MARK: - Issue Editing (via bd CLI)
+    // MARK: - Issue Editing (direct JSONL write)
 
     func createIssue(projectPath: String, title: String, description: String?, priority: Int, labels: [String]) async throws {
-        var command = "cd \"\(projectPath)\" && bd create \"\(escapeForShell(title))\" --priority=\(priority)"
+        let projectURL = URL(fileURLWithPath: projectPath)
 
-        if let desc = description, !desc.isEmpty {
-            command += " --description=\"\(escapeForShell(desc))\""
+        // read existing issues
+        let existingIssues = try JSONLManager.readIssues(from: projectURL)
+
+        // generate next issue ID
+        let projectName = projectURL.lastPathComponent
+        let nextNumber = getNextIssueNumber(existingIssues: existingIssues, projectName: projectName)
+        let newId = "\(projectName)-\(nextNumber)"
+
+        // create new issue
+        let now = Date()
+        let newIssue = Issue(
+            id: newId,
+            title: title,
+            description: description,
+            status: "open",
+            priority: priority,
+            issueType: "task",
+            labels: labels.isEmpty ? nil : labels,
+            assignee: nil,
+            design: nil,
+            acceptanceCriteria: nil,
+            notes: nil,
+            dueAt: nil,
+            createdAt: now,
+            updatedAt: now,
+            closedAt: nil
+        )
+
+        // append to issues and write
+        var allIssues = existingIssues
+        allIssues.append(newIssue)
+        try JSONLManager.writeIssues(allIssues, to: projectURL)
+
+        // update local state
+        await MainActor.run {
+            self.issues.append(newIssue)
         }
-
-        if !labels.isEmpty {
-            let labelsStr = labels.map { escapeForShell($0) }.joined(separator: ",")
-            command += " --labels=\"\(labelsStr)\""
-        }
-
-        try await runBdCommand(command)
     }
 
     func updateIssue(projectPath: String, issueId: String, title: String?, description: String?, status: String?, priority: Int?) async throws {
-        var command = "cd \"\(projectPath)\" && bd update \(issueId)"
+        let projectURL = URL(fileURLWithPath: projectPath)
 
+        // read existing issues
+        var allIssues = try JSONLManager.readIssues(from: projectURL)
+
+        // find and update the issue
+        guard let index = allIssues.firstIndex(where: { $0.id == issueId }) else {
+            throw IssueEditError.issueNotFound(issueId)
+        }
+
+        var updated = allIssues[index]
         if let title = title {
-            command += " --title=\"\(escapeForShell(title))\""
+            updated.title = title
         }
-
         if let description = description {
-            command += " --description=\"\(escapeForShell(description))\""
+            updated.description = description
         }
-
         if let status = status {
-            command += " --status=\(status)"
+            updated.status = status
+            if status == "closed" && updated.closedAt == nil {
+                updated.closedAt = Date()
+            }
         }
-
         if let priority = priority {
-            command += " --priority=\(priority)"
+            updated.priority = priority
         }
+        updated.updatedAt = Date()
 
-        try await runBdCommand(command)
+        allIssues[index] = updated
+
+        // write back
+        try JSONLManager.writeIssues(allIssues, to: projectURL)
+
+        // update local state
+        await MainActor.run {
+            if let localIndex = self.issues.firstIndex(where: { $0.id == issueId }) {
+                self.issues[localIndex] = updated
+            }
+        }
     }
 
     func deleteIssue(projectPath: String, issueId: String) async throws {
-        let command = "cd \"\(projectPath)\" && bd delete \(issueId)"
-        try await runBdCommand(command)
-    }
+        let projectURL = URL(fileURLWithPath: projectPath)
 
-    private func runBdCommand(_ command: String) async throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["-c", command]
+        // read existing issues
+        var allIssues = try JSONLManager.readIssues(from: projectURL)
 
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
+        // remove the issue
+        guard let index = allIssues.firstIndex(where: { $0.id == issueId }) else {
+            throw IssueEditError.issueNotFound(issueId)
+        }
 
-        try process.run()
-        process.waitUntilExit()
+        allIssues.remove(at: index)
 
-        if process.terminationStatus != 0 {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorOutput = String(data: errorData, encoding: .utf8) ?? "Unknown error"
-            throw IssueEditError.commandFailed(errorOutput)
+        // write back
+        try JSONLManager.writeIssues(allIssues, to: projectURL)
+
+        // update local state
+        await MainActor.run {
+            self.issues.removeAll(where: { $0.id == issueId })
         }
     }
 
-    private func escapeForShell(_ str: String) -> String {
-        return str.replacingOccurrences(of: "\"", with: "\\\"")
-            .replacingOccurrences(of: "$", with: "\\$")
-            .replacingOccurrences(of: "`", with: "\\`")
+    private func getNextIssueNumber(existingIssues: [Issue], projectName: String) -> Int {
+        let prefix = "\(projectName)-"
+        let numbers = existingIssues
+            .map { $0.id }
+            .filter { $0.hasPrefix(prefix) }
+            .compactMap { id -> Int? in
+                let numberPart = id.dropFirst(prefix.count)
+                return Int(numberPart)
+            }
+
+        return (numbers.max() ?? 0) + 1
     }
 }
 
 enum IssueEditError: LocalizedError {
-    case commandFailed(String)
+    case issueNotFound(String)
+    case fileWriteError(Error)
 
     var errorDescription: String? {
         switch self {
-        case .commandFailed(let error):
-            return "bd command failed: \(error)"
+        case .issueNotFound(let id):
+            return "Issue not found: \(id)"
+        case .fileWriteError(let error):
+            return "Failed to write issues: \(error.localizedDescription)"
         }
     }
 }
