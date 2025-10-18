@@ -64,6 +64,7 @@ class APIClient {
         let requestBody = SyncPushRequest(source: source, issues: issues)
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
+        encoder.dateEncodingStrategy = .secondsSince1970
         request.httpBody = try encoder.encode(requestBody)
 
         let (data, response) = try await URLSession.shared.data(for: request)
