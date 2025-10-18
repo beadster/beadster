@@ -666,6 +666,172 @@ app.post('/api/sources/:source_id/update-sequence', async (c) => {
   return c.json({ success: true });
 });
 
+// Sync Logs: Get sync history with filters
+app.get('/api/sync-logs', async (c) => {
+  const apiKey = c.req.query('api_key') || c.req.header('Authorization')?.replace('Bearer ', '');
+  const user = await authenticate(c.env.DB, apiKey);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const sourceId = c.req.query('source_id');
+  const deviceId = c.req.query('device_id');
+  const status = c.req.query('status');
+  const operation = c.req.query('operation');
+  const limit = parseInt(c.req.query('limit') || '50');
+  const offset = parseInt(c.req.query('offset') || '0');
+
+  // Build dynamic query
+  let query = 'SELECT * FROM sync_logs WHERE user_id = ?';
+  const params: any[] = [user.id];
+
+  if (sourceId) {
+    query += ' AND source_id = ?';
+    params.push(sourceId);
+  }
+
+  if (deviceId) {
+    query += ' AND device_id = ?';
+    params.push(deviceId);
+  }
+
+  if (status) {
+    query += ' AND status = ?';
+    params.push(status);
+  }
+
+  if (operation) {
+    query += ' AND operation = ?';
+    params.push(operation);
+  }
+
+  query += ' ORDER BY started_at DESC LIMIT ? OFFSET ?';
+  params.push(limit, offset);
+
+  const logs = await c.env.DB.prepare(query).bind(...params).all();
+
+  // Parse JSON fields
+  const parsedLogs = logs.results.map((log: any) => ({
+    ...log,
+    issue_ids: log.issue_ids ? JSON.parse(log.issue_ids) : [],
+    conflict_details: log.conflict_details ? JSON.parse(log.conflict_details) : []
+  }));
+
+  return c.json({ logs: parsedLogs, count: parsedLogs.length });
+});
+
+// Sync Logs: Get single sync log by ID
+app.get('/api/sync-logs/:id', async (c) => {
+  const apiKey = c.req.query('api_key') || c.req.header('Authorization')?.replace('Bearer ', '');
+  const user = await authenticate(c.env.DB, apiKey);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const logId = c.req.param('id');
+
+  const log = await c.env.DB.prepare(`
+    SELECT * FROM sync_logs WHERE id = ? AND user_id = ?
+  `).bind(logId, user.id).first();
+
+  if (!log) {
+    return c.json({ error: 'Sync log not found' }, 404);
+  }
+
+  // Parse JSON fields
+  const parsedLog = {
+    ...log,
+    issue_ids: log.issue_ids ? JSON.parse(log.issue_ids as string) : [],
+    conflict_details: log.conflict_details ? JSON.parse(log.conflict_details as string) : []
+  };
+
+  return c.json({ log: parsedLog });
+});
+
+// Sync Stats: Get sync statistics
+app.get('/api/sync-stats', async (c) => {
+  const apiKey = c.req.query('api_key') || c.req.header('Authorization')?.replace('Bearer ', '');
+  const user = await authenticate(c.env.DB, apiKey);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const sourceId = c.req.query('source_id');
+  const deviceId = c.req.query('device_id');
+  const period = c.req.query('period'); // e.g., '7d', '30d'
+
+  // Calculate time window
+  let sinceTimestamp = 0;
+  if (period) {
+    const match = period.match(/^(\d+)([dhm])$/);
+    if (match) {
+      const value = parseInt(match[1]);
+      const unit = match[2];
+      const now = Date.now();
+      if (unit === 'd') sinceTimestamp = now - (value * 24 * 60 * 60 * 1000);
+      if (unit === 'h') sinceTimestamp = now - (value * 60 * 60 * 1000);
+      if (unit === 'm') sinceTimestamp = now - (value * 60 * 1000);
+    }
+  }
+
+  // Build dynamic query
+  let whereClause = 'WHERE user_id = ?';
+  const params: any[] = [user.id];
+
+  if (sourceId) {
+    whereClause += ' AND source_id = ?';
+    params.push(sourceId);
+  }
+
+  if (deviceId) {
+    whereClause += ' AND device_id = ?';
+    params.push(deviceId);
+  }
+
+  if (sinceTimestamp > 0) {
+    whereClause += ' AND started_at >= ?';
+    params.push(sinceTimestamp);
+  }
+
+  // Get overall stats
+  const stats = await c.env.DB.prepare(`
+    SELECT
+      COUNT(*) as total_syncs,
+      SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_syncs,
+      SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_syncs,
+      AVG(duration_ms) as avg_duration_ms,
+      SUM(issue_count) as total_issues_synced,
+      SUM(issues_created) as total_issues_created,
+      SUM(issues_updated) as total_issues_updated
+    FROM sync_logs
+    ${whereClause}
+  `).bind(...params).first();
+
+  // Get error breakdown
+  const errorBreakdown = await c.env.DB.prepare(`
+    SELECT error_code, COUNT(*) as count
+    FROM sync_logs
+    ${whereClause} AND status = 'failed' AND error_code IS NOT NULL
+    GROUP BY error_code
+    ORDER BY count DESC
+  `).bind(...params).all();
+
+  const successRate = stats.total_syncs > 0
+    ? (stats.successful_syncs / stats.total_syncs * 100).toFixed(2)
+    : 0;
+
+  return c.json({
+    stats: {
+      ...stats,
+      success_rate_percent: parseFloat(successRate as string)
+    },
+    error_breakdown: errorBreakdown.results
+  });
+});
+
 // Helper: Authenticate user by API key
 async function authenticate(db: D1Database, apiKey: string | undefined) {
   if (!apiKey) {
