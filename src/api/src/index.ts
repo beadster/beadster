@@ -213,7 +213,7 @@ app.post('/api/sync/push', async (c) => {
       // Update session tracking
       if (issue.session_id) {
         await c.env.DB.prepare(`
-          INSERT INTO sessions (
+          INSERT INTO issue_sessions (
             id, user_id, source_id, client, project_name,
             first_issue_at, last_issue_at, issue_count,
             created_at, updated_at
@@ -488,7 +488,7 @@ app.get('/api/sessions', async (c) => {
     SELECT
       s.*,
       src.name as source_name
-    FROM sessions s
+    FROM issue_sessions s
     LEFT JOIN sources src ON src.id = s.source_id
     WHERE s.user_id = ?
     ORDER BY s.last_issue_at DESC

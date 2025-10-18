@@ -1,6 +1,10 @@
 -- Migration: Add Better Auth tables and extend users table
 -- Applied: [DATE]
 
+-- Rename existing sessions table to avoid conflict with better-auth
+-- The existing sessions table tracks Claude Code sessions (issue groupings)
+ALTER TABLE sessions RENAME TO issue_sessions;
+
 -- Extend users table with better-auth fields
 ALTER TABLE users ADD COLUMN name TEXT;
 ALTER TABLE users ADD COLUMN image TEXT;

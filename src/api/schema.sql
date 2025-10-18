@@ -131,8 +131,8 @@ CREATE INDEX idx_issues_client ON issues(client);
 -- Ensure beads_id is unique per source
 CREATE UNIQUE INDEX idx_issues_source_beads_id ON issues(source_id, beads_id);
 
--- Sessions for grouping
-CREATE TABLE sessions (
+-- Issue sessions for grouping (renamed from "sessions" to avoid conflict with better-auth)
+CREATE TABLE issue_sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   source_id TEXT,
@@ -147,9 +147,9 @@ CREATE TABLE sessions (
   FOREIGN KEY (source_id) REFERENCES sources(id)
 );
 
-CREATE INDEX idx_sessions_user ON sessions(user_id);
-CREATE INDEX idx_sessions_source ON sessions(source_id);
-CREATE INDEX idx_sessions_last_issue ON sessions(last_issue_at);
+CREATE INDEX idx_issue_sessions_user ON issue_sessions(user_id);
+CREATE INDEX idx_issue_sessions_source ON issue_sessions(source_id);
+CREATE INDEX idx_issue_sessions_last_issue ON issue_sessions(last_issue_at);
 
 -- Devices for tracking which machine/client
 CREATE TABLE devices (
