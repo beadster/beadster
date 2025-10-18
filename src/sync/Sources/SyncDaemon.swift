@@ -62,19 +62,16 @@ class SyncDaemon {
             let issues = try db.getAllIssues()
             print("    📝 Found \(issues.count) issue(s)")
 
-            // Add session metadata to issues
-            print("    🏷  Adding session metadata...")
-            let issuesWithSession = issues.map { issue in
-                sessionTracker.addSessionLabels(to: issue, beadsDir: source.path)
-            }
+            // Skip session tracking - issues already exist
+            // Session tracking should happen at creation time, not during sync
 
             print("    ⬆️  Pushing to cloud...")
             let api = CloudAPI(apiUrl: config.apiUrl, apiKey: config.apiKey)
-            try await api.pushIssues(source: source, issues: issuesWithSession)
+            try await api.pushIssues(source: source, issues: issues)
 
             lastSync[source.path] = Int(Date().timeIntervalSince1970)
 
-            print("    ✅ Synced \(issuesWithSession.count) issue(s) from \(source.name)")
+            print("    ✅ Synced \(issues.count) issue(s) from \(source.name)")
         } catch DatabaseError.cantOpen {
             print("    ⚠️  No .beads/ found in \(source.path)")
         } catch {
