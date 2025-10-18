@@ -28,9 +28,18 @@ class ProjectStore: ObservableObject {
     }
 
     private func registerUnregisteredProjects() async {
-        var needsSave = false
+        // collect projects to register (avoid modifying array while iterating)
+        let projectsToRegister = projects.enumerated()
+            .filter { $0.element.sourceId == nil }
+            .map { ($0.offset, $0.element) }
 
-        for (index, project) in projects.enumerated() where project.sourceId == nil {
+        if projectsToRegister.isEmpty {
+            return
+        }
+
+        var updatedProjects: [(Int, ProjectInfo)] = []
+
+        for (index, project) in projectsToRegister {
             print("ProjectStore: Auto-registering project: \(project.name)")
 
             // generate source ID
@@ -62,18 +71,19 @@ class ProjectStore: ObservableObject {
             do {
                 _ = try await registerProjectSource(project: updatedProject, projectURL: projectURL)
                 print("ProjectStore: Auto-registered source: \(sourceId)")
-
-                // update in array
-                await MainActor.run {
-                    projects[index] = updatedProject
-                }
-                needsSave = true
+                updatedProjects.append((index, updatedProject))
             } catch {
                 print("ProjectStore: WARNING - Auto-registration failed for \(project.name): \(error)")
             }
         }
 
-        if needsSave {
+        // update all at once on MainActor
+        if !updatedProjects.isEmpty {
+            await MainActor.run {
+                for (index, project) in updatedProjects {
+                    projects[index] = project
+                }
+            }
             saveProjects()
         }
     }
