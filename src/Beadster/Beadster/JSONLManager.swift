@@ -12,20 +12,38 @@ class JSONLManager {
     static func readIssues(from url: URL) throws -> [Issue] {
         let issuesFile = url.appendingPathComponent(".beads/issues.jsonl")
 
+        print("JSONLManager: Checking file at \(issuesFile.path)")
         guard FileManager.default.fileExists(atPath: issuesFile.path) else {
+            print("JSONLManager: File does not exist")
             return []
         }
 
+        print("JSONLManager: Reading file...")
         let content = try String(contentsOf: issuesFile, encoding: .utf8)
         let lines = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
+        print("JSONLManager: Found \(lines.count) lines")
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
-        return try lines.compactMap { line in
-            guard let data = line.data(using: .utf8) else { return nil }
-            return try? decoder.decode(Issue.self, from: data)
+        var issues: [Issue] = []
+        for (index, line) in lines.enumerated() {
+            guard let data = line.data(using: .utf8) else {
+                print("JSONLManager: Line \(index) - failed to convert to data")
+                continue
+            }
+
+            do {
+                let issue = try decoder.decode(Issue.self, from: data)
+                issues.append(issue)
+            } catch {
+                print("JSONLManager: Line \(index) - decode error: \(error)")
+                print("JSONLManager: Line content: \(line.prefix(100))...")
+            }
         }
+
+        print("JSONLManager: Successfully decoded \(issues.count) issues")
+        return issues
     }
 
     // Write issues to .beads/issues.jsonl

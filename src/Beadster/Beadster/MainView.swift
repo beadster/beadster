@@ -83,7 +83,7 @@ struct ProjectsSidebar: View {
         .frame(minWidth: 200)
         .onChange(of: projectStore.selectedProject) { oldValue, newValue in
             if let project = newValue {
-                Task {
+                Task { @MainActor in
                     await issueStore.loadIssues(for: project)
                 }
             }
