@@ -195,7 +195,7 @@ class ProjectStore: ObservableObject {
             return
         }
 
-        projects = projectData.compactMap { dict in
+        let loadedProjects = projectData.compactMap { dict -> ProjectInfo? in
             guard let id = dict["id"] as? String,
                   let name = dict["name"] as? String,
                   let path = dict["path"] as? String,
@@ -215,7 +215,7 @@ class ProjectStore: ObservableObject {
                 return nil
             }
 
-            return ProjectInfo(
+            let project = ProjectInfo(
                 id: id,
                 name: name,
                 path: path,
@@ -223,7 +223,16 @@ class ProjectStore: ObservableObject {
                 lastSync: nil,
                 sourceId: dict["sourceId"] as? String
             )
+
+            // start watching loaded projects
+            Task { @MainActor in
+                SyncDaemon.shared.startWatching(project: project)
+            }
+
+            return project
         }
+
+        projects = loadedProjects
     }
 
     func removeProject(_ project: ProjectInfo) {
