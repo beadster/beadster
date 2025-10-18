@@ -56,6 +56,25 @@ struct Issue: Identifiable, Codable, Hashable {
         case closedAt = "closed_at"
     }
 
+    // Regular initializer for creating issues manually
+    init(id: String, title: String, description: String?, status: String, priority: Int, issueType: String, labels: [String]?, assignee: String? = nil, design: String? = nil, acceptanceCriteria: String? = nil, notes: String? = nil, dueAt: Int? = nil, createdAt: Date, updatedAt: Date, closedAt: Date? = nil) {
+        self.id = id
+        self.title = title
+        self.description = description
+        self.status = status
+        self.priority = priority
+        self.issueType = issueType
+        self.labels = labels
+        self.assignee = assignee
+        self.design = design
+        self.acceptanceCriteria = acceptanceCriteria
+        self.notes = notes
+        self.dueAt = dueAt
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.closedAt = closedAt
+    }
+
     // Custom decoder to handle priority as either Int or String
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
