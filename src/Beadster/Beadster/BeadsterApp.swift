@@ -11,7 +11,14 @@ import SwiftUI
 struct BeadsterApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainView()
+        }
+        .commands {
+            CommandGroup(replacing: .newItem) {}
+        }
+
+        Settings {
+            SettingsView()
         }
     }
 }

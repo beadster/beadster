@@ -1,0 +1,228 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+let sources: any[] = [];
+let error: string | null = null;
+
+try {
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db) {
+    const result = await db.prepare(`
+      SELECT
+        s.id,
+        s.name,
+        s.type,
+        s.path,
+        s.last_issue_number,
+        s.last_sync,
+        s.created_at,
+        COUNT(i.id) as issue_count,
+        SUM(CASE WHEN i.status = 'open' THEN 1 ELSE 0 END) as open_count
+      FROM sources s
+      LEFT JOIN issues i ON i.source_id = s.id
+      GROUP BY s.id
+      ORDER BY s.name ASC
+    `).all();
+
+    sources = result.results || [];
+  } else {
+    error = 'Database binding not available';
+  }
+} catch (e) {
+  error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
+}
+
+function formatDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString();
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
+}
+---
+
+<Layout title="projects">
+  <h2>projects / sources</h2>
+
+  {error && (
+    <div class="error">{error}</div>
+  )}
+
+  {!error && sources.length === 0 && (
+    <div class="empty">
+      <p>no projects found</p>
+      <p style="font-size: 14px; color: #666; margin-top: 10px;">
+        run the sync daemon to register your local beads projects
+      </p>
+    </div>
+  )}
+
+  {!error && sources.length > 0 && (
+    <ul class="source-list">
+      {sources.map(source => (
+        <li class="source-item">
+          <div class="source-header">
+            <h3 class="source-name">{source.name}</h3>
+            <div class="source-badges">
+              <span class={`badge type ${source.type}`}>{source.type}</span>
+            </div>
+          </div>
+
+          {source.path && (
+            <div class="source-path">{source.path}</div>
+          )}
+
+          <div class="source-stats">
+            <div class="stat">
+              <span class="stat-value">{source.issue_count}</span>
+              <span class="stat-label">total issues</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">{source.open_count}</span>
+              <span class="stat-label">open</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">{source.last_issue_number || 0}</span>
+              <span class="stat-label">last number</span>
+            </div>
+          </div>
+
+          <div class="source-meta">
+            <span>created {formatDate(source.created_at)}</span>
+            {source.last_sync && (
+              <span>• last sync {formatRelativeTime(source.last_sync)}</span>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )}
+</Layout>
+
+<style>
+  h2 {
+    margin-bottom: 30px;
+    font-size: 24px;
+  }
+
+  .error,
+  .empty {
+    padding: 20px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    color: #c00;
+  }
+
+  .empty {
+    background: #f9f9f9;
+    border-color: #ddd;
+    color: #666;
+    text-align: center;
+  }
+
+  .source-list {
+    list-style: none;
+    display: grid;
+    gap: 20px;
+  }
+
+  .source-item {
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #eee;
+  }
+
+  .source-item:hover {
+    border-color: #0066cc;
+    background: #f5f9ff;
+  }
+
+  .source-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .source-name {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  .source-badges {
+    display: flex;
+    gap: 8px;
+  }
+
+  .badge.type {
+    background: #e8f4ff;
+    color: #0066cc;
+  }
+
+  .badge.type.local {
+    background: #e8ffe8;
+    color: #006600;
+  }
+
+  .badge.type.virtual {
+    background: #f5e6ff;
+    color: #660099;
+  }
+
+  .source-path {
+    font-family: monospace;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 15px;
+    padding: 8px;
+    background: #fff;
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+
+  .source-stats {
+    display: flex;
+    gap: 30px;
+    margin: 15px 0;
+    padding: 15px 0;
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .source-meta {
+    font-size: 14px;
+    color: #999;
+  }
+</style>
