@@ -1,119 +1,20 @@
 # agents and dependencies
 
-beadster's agent system and four dependency types (from beads)
+how ai agents work with beadster's dependency system
 
-## four dependency types
+## overview
 
-following beads design, beadster supports four relationship types:
+beadster uses beads' four dependency types (see BEADS_DEPENDENCIES.md):
+- `blocks` - hard dependencies (affects ready work)
+- `related` - soft relationships
+- `parent-child` - hierarchical grouping
+- `discovered-from` - provenance tracking
 
-### 1. blocks (hard dependency)
-
-issue X **must** be completed before issue Y can start
-
-```sql
-INSERT INTO dependencies (issue_id, depends_on_id, type)
-VALUES ('bd-2', 'bd-1', 'blocks');
--- bd-2 is blocked by bd-1
--- bd-2 won't appear in ready_issues until bd-1 is closed
-```
-
-use cases:
-- "implement api" blocks "build ui" (ui needs api endpoints)
-- "database schema" blocks "create models" (need schema first)
-- "fix critical bug" blocks "deploy to production" (bug must be fixed)
-
-affects **ready work queue** - only unblocked issues show up
-
-### 2. related (soft relationship)
-
-issues are connected but don't block each other
-
-```sql
-INSERT INTO dependencies (issue_id, depends_on_id, type)
-VALUES ('bd-5', 'bd-3', 'related');
--- bd-5 and bd-3 are related
--- both can be worked on independently
-```
-
-use cases:
-- "add dark mode" related to "update theme system"
-- "optimize queries" related to "add caching"
-- "write docs" related to "implement feature" (can happen in parallel)
-
-does **not** affect ready work queue
-
-### 3. parent-child (hierarchy)
-
-epic contains subtasks
-
-```sql
--- create epic
-INSERT INTO issues (id, title, issue_type) VALUES ('bd-10', 'auth system', 'epic');
-
--- create subtasks
-INSERT INTO issues (id, title) VALUES ('bd-11', 'user registration');
-INSERT INTO issues (id, title) VALUES ('bd-12', 'user login');
-INSERT INTO issues (id, title) VALUES ('bd-13', 'password reset');
-
--- link to epic
-INSERT INTO dependencies (issue_id, depends_on_id, type)
-VALUES
-  ('bd-11', 'bd-10', 'parent-child'),
-  ('bd-12', 'bd-10', 'parent-child'),
-  ('bd-13', 'bd-10', 'parent-child');
-```
-
-use cases:
-- organize large features into smaller tasks
-- track progress on epics (3/5 subtasks done)
-- filter by epic
-
-does **not** affect ready work queue (subtasks can be worked independently)
-
-### 4. discovered-from (provenance)
-
-track issues discovered while working on other issues
-
-```sql
--- working on bd-5, discovered bd-15
-INSERT INTO issues (id, title) VALUES ('bd-15', 'add rate limiting');
-
-INSERT INTO dependencies (issue_id, depends_on_id, type)
-VALUES ('bd-15', 'bd-5', 'discovered-from');
--- bd-15 was discovered while working on bd-5
-```
-
-use cases:
-- agent discovers bugs while implementing feature
-- find todos/fixmes in code
-- track technical debt discovered during work
-- see what new work emerged from completed work
-
-does **not** affect ready work queue
-
-benefits:
-- see what issues spawned other issues
-- understand how backlog grows
-- track productivity (completed 1 issue, discovered 3 more)
-
-## ready work algorithm
-
-```sql
--- issues with NO open blockers
-SELECT i.*
-FROM issues i
-WHERE i.status = 'open'
-  AND NOT EXISTS (
-    SELECT 1 FROM dependencies d
-    JOIN issues blocker ON d.depends_on_id = blocker.id
-    WHERE d.issue_id = i.id
-      AND d.type = 'blocks'  -- only blocks type affects ready work
-      AND blocker.status IN ('open', 'in_progress', 'blocked')
-  )
-ORDER BY i.priority ASC, i.created_at ASC;
-```
-
-only `blocks` dependencies prevent an issue from being ready
+agents leverage these to:
+- find ready work (no blockers)
+- discover new issues during work
+- respect dependencies
+- track what work spawned what
 
 ## agent system
 

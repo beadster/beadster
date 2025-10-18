@@ -36,3 +36,11 @@ guidance for claude code when working with beadster project
 - astro builds _worker.js as directory (not file) containing index.js
 - in wrangler.jsonc use: "main": "dist/_worker.js/index.js" (not "dist/_worker.js")
 - if deployed worker returns [object Object] instead of HTML, check that main points to index.js file
+
+build and deploy:
+```bash
+npm run build      # builds astro site to dist/
+wrangler deploy    # deploys to cloudflare workers
+# or
+npm run deploy     # runs both
+```
