@@ -9,6 +9,8 @@ import SwiftUI
 
 @main
 struct BeadsterApp: App {
+    @StateObject private var syncDaemon = SyncDaemon.shared
+
     var body: some Scene {
         WindowGroup {
             MainView()
@@ -19,6 +21,13 @@ struct BeadsterApp: App {
 
         Settings {
             SettingsView()
+        }
+    }
+
+    init() {
+        // start sync daemon on app launch
+        Task { @MainActor in
+            SyncDaemon.shared.start()
         }
     }
 }

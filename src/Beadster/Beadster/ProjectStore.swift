@@ -89,6 +89,9 @@ class ProjectStore: ObservableObject {
 
         projects.append(project)
         saveProjects()
+
+        // start watching this project
+        SyncDaemon.shared.startWatching(project: project)
     }
 
     // MARK: - Persistence
@@ -144,6 +147,9 @@ class ProjectStore: ObservableObject {
     func removeProject(_ project: ProjectInfo) {
         projects.removeAll { $0.id == project.id }
         saveProjects()
+
+        // stop watching this project
+        SyncDaemon.shared.stopWatching(projectId: project.id)
     }
 }
 
