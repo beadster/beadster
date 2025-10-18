@@ -14,9 +14,13 @@ struct BeadsterApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        WindowGroup {
+        Window("Beadster", id: "main") {
             MainView()
+                .frame(minWidth: 400, maxWidth: 400, minHeight: 500, maxHeight: .infinity)
         }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 400, height: 700)
+        .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .newItem) {}
         }
