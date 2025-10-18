@@ -31,7 +31,7 @@ struct Issue: Identifiable, Codable, Hashable {
     var description: String?
     var status: String // "open", "in_progress", "blocked", "closed"
     var priority: Int // 0-4
-    var issueType: String // "bug", "feature", "task", "epic"
+    var issueType: String? // "bug", "feature", "task", "epic"
     var labels: [String]?
     var assignee: String?
 
@@ -57,7 +57,7 @@ struct Issue: Identifiable, Codable, Hashable {
     }
 
     // Regular initializer for creating issues manually
-    init(id: String, title: String, description: String?, status: String, priority: Int, issueType: String, labels: [String]?, assignee: String? = nil, design: String? = nil, acceptanceCriteria: String? = nil, notes: String? = nil, dueAt: Int? = nil, createdAt: Date, updatedAt: Date, closedAt: Date? = nil) {
+    init(id: String, title: String, description: String?, status: String, priority: Int, issueType: String? = nil, labels: [String]? = nil, assignee: String? = nil, design: String? = nil, acceptanceCriteria: String? = nil, notes: String? = nil, dueAt: Int? = nil, createdAt: Date, updatedAt: Date, closedAt: Date? = nil) {
         self.id = id
         self.title = title
         self.description = description
@@ -94,7 +94,7 @@ struct Issue: Identifiable, Codable, Hashable {
             priority = 1 // default
         }
 
-        issueType = try container.decode(String.self, forKey: .issueType)
+        issueType = try container.decodeIfPresent(String.self, forKey: .issueType)
         labels = try container.decodeIfPresent([String].self, forKey: .labels)
         assignee = try container.decodeIfPresent(String.self, forKey: .assignee)
         design = try container.decodeIfPresent(String.self, forKey: .design)
