@@ -20,6 +20,10 @@ class SyncDaemon: ObservableObject {
     private var syncTimer: Timer?
     private let syncInterval: TimeInterval = 300 // 5 minutes
     private var lastSync: [String: Date] = [:] // project id -> last sync time
+    private var retryQueue: [(project: ProjectInfo, retryCount: Int, nextRetry: Date)] = []
+    private var retryTimer: Timer?
+    private let maxRetries = 3
+    private let baseRetryDelay: TimeInterval = 30 // 30 seconds
 
     private init() {}
 
@@ -34,14 +38,23 @@ class SyncDaemon: ObservableObject {
                 await self?.syncAll()
             }
         }
+
+        // start retry timer (check every 10 seconds)
+        retryTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                await self?.processRetryQueue()
+            }
+        }
     }
 
     func stop() {
         print("Stopping sync daemon...")
 
-        // stop timer
+        // stop timers
         syncTimer?.invalidate()
         syncTimer = nil
+        retryTimer?.invalidate()
+        retryTimer = nil
 
         // stop all watchers
         stopAllWatchers()
@@ -130,7 +143,7 @@ class SyncDaemon: ObservableObject {
         // TODO: implement when we have project store reference
     }
 
-    func syncProject(_ project: ProjectInfo) async {
+    func syncProject(_ project: ProjectInfo, retryCount: Int = 0) async {
         guard !isSyncing else {
             print("Sync already in progress")
             return
@@ -139,7 +152,11 @@ class SyncDaemon: ObservableObject {
         isSyncing = true
         defer { isSyncing = false }
 
-        print("Syncing project: \(project.name)")
+        if retryCount > 0 {
+            print("🔁 Retry \(retryCount)/\(maxRetries) for \(project.name)")
+        } else {
+            print("Syncing project: \(project.name)")
+        }
 
         do {
             // resolve bookmark
@@ -189,9 +206,100 @@ class SyncDaemon: ObservableObject {
             print("✅ Sync completed successfully")
 
         } catch {
-            print("Sync failed: \(error)")
-            syncError = error.localizedDescription
+            print("❌ Sync failed: \(error)")
+
+            // classify error
+            if isRetriableError(error) && retryCount < maxRetries {
+                let delay = exponentialBackoff(retryCount: retryCount)
+                print("⏳ Will retry in \(Int(delay))s (attempt \(retryCount + 1)/\(maxRetries))")
+                addToRetryQueue(project, retryCount: retryCount + 1, delay: delay)
+                syncError = "Sync failed, retrying in \(Int(delay))s: \(friendlyErrorMessage(error))"
+            } else {
+                let message = retryCount > 0 ? "after \(retryCount) retries" : ""
+                syncError = "Sync failed \(message): \(friendlyErrorMessage(error))"
+                print("🛑 Max retries reached or non-retriable error")
+            }
         }
+    }
+
+    // MARK: - Retry Logic
+
+    private func isRetriableError(_ error: Error) -> Bool {
+        // network errors are retriable
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .timedOut, .cannotConnectToHost, .cannotFindHost:
+                return true
+            default:
+                return false
+            }
+        }
+
+        // API errors 5xx are retriable
+        if let syncError = error as? SyncError {
+            switch syncError {
+            case .networkError:
+                return true
+            default:
+                return false
+            }
+        }
+
+        return false
+    }
+
+    private func exponentialBackoff(retryCount: Int) -> TimeInterval {
+        // 30s, 60s, 120s
+        return baseRetryDelay * pow(2.0, Double(retryCount))
+    }
+
+    private func friendlyErrorMessage(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet:
+                return "No internet connection"
+            case .networkConnectionLost:
+                return "Network connection lost"
+            case .timedOut:
+                return "Request timed out"
+            case .cannotConnectToHost, .cannotFindHost:
+                return "Cannot reach server"
+            default:
+                return urlError.localizedDescription
+            }
+        }
+
+        return error.localizedDescription
+    }
+
+    private func addToRetryQueue(_ project: ProjectInfo, retryCount: Int, delay: TimeInterval) {
+        let nextRetry = Date().addingTimeInterval(delay)
+
+        // remove existing entry for this project
+        retryQueue.removeAll { $0.project.id == project.id }
+
+        // add new entry
+        retryQueue.append((project: project, retryCount: retryCount, nextRetry: nextRetry))
+
+        print("📋 Added \(project.name) to retry queue (retry at \(nextRetry.formatted(.dateTime.hour().minute().second())))")
+    }
+
+    private func processRetryQueue() async {
+        guard !isSyncing else { return }
+
+        let now = Date()
+        let readyToRetry = retryQueue.filter { $0.nextRetry <= now }
+
+        guard !readyToRetry.isEmpty else { return }
+
+        print("🔄 Processing retry queue (\(readyToRetry.count) ready)")
+
+        // remove from queue
+        let entry = readyToRetry.first!
+        retryQueue.removeAll { $0.project.id == entry.project.id }
+
+        // retry sync
+        await syncProject(entry.project, retryCount: entry.retryCount)
     }
 
     func manualSync(project: ProjectInfo) async {
