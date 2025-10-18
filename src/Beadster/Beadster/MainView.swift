@@ -135,6 +135,7 @@ struct IssuesListView: View {
     @State private var showFilters = false
     @State private var showCreateIssue = false
     @State private var editingIssue: Issue?
+    @State private var selectedIssue: Issue?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -292,9 +293,13 @@ struct IssuesListView: View {
                         description: Text("No issues found for this project")
                     )
                 } else {
-                    List(issueStore.filteredIssues()) { issue in
+                    List(issueStore.filteredIssues(), selection: $selectedIssue) { issue in
                         IssueRow(issue: issue, issueStore: issueStore)
+                            .tag(issue)
                             .contextMenu {
+                                Button("View Details") {
+                                    selectedIssue = issue
+                                }
                                 Button("Edit") {
                                     editingIssue = issue
                                 }
@@ -309,6 +314,9 @@ struct IssuesListView: View {
                                         }
                                     }
                                 }
+                            }
+                            .onTapGesture(count: 2) {
+                                selectedIssue = issue
                             }
                     }
                 }
@@ -342,6 +350,11 @@ struct IssuesListView: View {
                     }
                 )
             }
+        }
+        .sheet(item: $selectedIssue) { issue in
+            IssueDetailView(issue: issue, onDismiss: {
+                selectedIssue = nil
+            })
         }
     }
 }
@@ -430,6 +443,147 @@ struct LabelBadge: View {
             .background(Color.blue.opacity(0.2))
             .foregroundColor(.blue)
             .cornerRadius(4)
+    }
+}
+
+// MARK: - Issue Detail View
+
+struct IssueDetailView: View {
+    let issue: Issue
+    var onDismiss: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Header with ID and status
+                    HStack {
+                        Text(issue.id)
+                            .font(.title3.monospaced())
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Text(issue.status.capitalized)
+                            .font(.caption)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(statusColor(issue.status).opacity(0.2))
+                            .foregroundColor(statusColor(issue.status))
+                            .cornerRadius(8)
+                    }
+
+                    Divider()
+
+                    // Title
+                    Text(issue.title)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+
+                    // Metadata
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Label("Priority", systemImage: "flag.fill")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            PriorityBadge(priority: issue.priority)
+                        }
+
+                        HStack {
+                            Label("Type", systemImage: "tag.fill")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Text(issue.issueType.capitalized)
+                                .font(.caption)
+                        }
+
+                        HStack {
+                            Label("Created", systemImage: "clock.fill")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Text(issue.createdAt.formatted(.relative(presentation: .named)))
+                                .font(.caption)
+                        }
+
+                        HStack {
+                            Label("Updated", systemImage: "arrow.clockwise")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Text(issue.updatedAt.formatted(.relative(presentation: .named)))
+                                .font(.caption)
+                        }
+
+                        if let closedAt = issue.closedAt {
+                            HStack {
+                                Label("Closed", systemImage: "checkmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+
+                                Text(closedAt.formatted(.relative(presentation: .named)))
+                                    .font(.caption)
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    // Labels
+                    if let labels = issue.labels, !labels.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Labels")
+                                .font(.headline)
+
+                            FlowLayout(spacing: 4) {
+                                ForEach(labels, id: \.self) { label in
+                                    LabelBadge(label: label)
+                                }
+                            }
+                        }
+
+                        Divider()
+                    }
+
+                    // Description
+                    if let description = issue.description, !description.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Description")
+                                .font(.headline)
+
+                            Text(description)
+                                .font(.body)
+                                .textSelection(.enabled)
+                        }
+                    } else {
+                        Text("No description")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Issue Details")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        onDismiss()
+                    }
+                }
+            }
+        }
+        .frame(width: 600, height: 600)
+    }
+
+    private func statusColor(_ status: String) -> Color {
+        switch status {
+        case "open": return .blue
+        case "in_progress": return .orange
+        case "closed": return .green
+        default: return .gray
+        }
     }
 }
 
