@@ -200,11 +200,17 @@ class SyncDaemon: ObservableObject {
             // 4. Pull remote changes and apply locally
             try await pullAndApplyChanges(project: project, projectURL: projectURL, sourceId: sourceId)
 
+            // 5. Record device tracking for all synced issues
+            try await recordDeviceTracking(sourceId: sourceId, issues: localIssues)
+
             lastSync[project.id] = Date()
             lastSyncDate = Date()
             syncError = nil
 
             print("✅ Sync completed successfully")
+
+            // send success notification
+            sendNotification(title: "Sync Complete", body: "Successfully synced \(project.name)")
 
         } catch {
             print("❌ Sync failed: \(error)")
@@ -219,6 +225,12 @@ class SyncDaemon: ObservableObject {
                 let message = retryCount > 0 ? "after \(retryCount) retries" : ""
                 syncError = "Sync failed \(message): \(friendlyErrorMessage(error))"
                 print("🛑 Max retries reached or non-retriable error")
+
+                // send error notification
+                sendNotification(
+                    title: "Sync Failed",
+                    body: "Failed to sync \(project.name): \(friendlyErrorMessage(error))"
+                )
             }
         }
     }
@@ -417,6 +429,55 @@ class SyncDaemon: ObservableObject {
         }
 
         return Array(merged.values)
+    }
+
+    // MARK: - Device Tracking
+
+    private func recordDeviceTracking(sourceId: String, issues: [Issue]) async throws {
+        print("📍 Recording device tracking for \(issues.count) issues...")
+
+        // Get device ID (should be set during app initialization)
+        guard let deviceId = UserDefaults.standard.string(forKey: "beadster_device_id") else {
+            print("⚠️  No device ID - skipping device tracking")
+            return
+        }
+
+        // Record tracking for each issue
+        for issue in issues {
+            do {
+                try await APIClient.shared.recordDeviceTracking(
+                    issueId: issue.id,
+                    deviceId: deviceId,
+                    client: "macos"
+                )
+            } catch {
+                // Don't fail sync if tracking fails
+                print("⚠️  Failed to record tracking for \(issue.id): \(error)")
+            }
+        }
+
+        print("  ✓ Device tracking recorded")
+    }
+
+    // MARK: - Notifications
+
+    private func sendNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil // immediate
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to send notification: \(error)")
+            }
+        }
     }
 }
 
