@@ -14,8 +14,17 @@ class IssueStore: ObservableObject {
     @Published var filter: IssueFilter = .all
 
     func loadIssues(for project: ProjectInfo) async {
-        isLoading = true
-        defer { isLoading = false }
+        print("IssueStore: Loading issues for \(project.name)")
+
+        await MainActor.run {
+            isLoading = true
+        }
+
+        defer {
+            Task { @MainActor in
+                isLoading = false
+            }
+        }
 
         // resolve bookmark
         var isStale = false
@@ -25,24 +34,43 @@ class IssueStore: ObservableObject {
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
         ) else {
-            print("Failed to resolve bookmark for \(project.name)")
+            print("IssueStore: ERROR - Failed to resolve bookmark for \(project.name)")
+            await MainActor.run {
+                self.issues = []
+            }
             return
         }
+
+        print("IssueStore: Resolved URL: \(projectURL.path)")
 
         // access security scoped resource
         guard projectURL.startAccessingSecurityScopedResource() else {
-            print("Failed to access \(projectURL)")
+            print("IssueStore: ERROR - Failed to access \(projectURL)")
+            await MainActor.run {
+                self.issues = []
+            }
             return
         }
-        defer { projectURL.stopAccessingSecurityScopedResource() }
+        defer {
+            print("IssueStore: Stopping security scoped access")
+            projectURL.stopAccessingSecurityScopedResource()
+        }
 
         // read from .beads/issues.jsonl
+        let issuesFile = projectURL.appendingPathComponent(".beads/issues.jsonl")
+        print("IssueStore: Reading from \(issuesFile.path)")
+
         do {
             let localIssues = try JSONLManager.readIssues(from: projectURL)
-            self.issues = localIssues
+            print("IssueStore: Loaded \(localIssues.count) issues")
+            await MainActor.run {
+                self.issues = localIssues
+            }
         } catch {
-            print("Error loading issues: \(error)")
-            self.issues = []
+            print("IssueStore: ERROR loading issues: \(error)")
+            await MainActor.run {
+                self.issues = []
+            }
         }
     }
 
