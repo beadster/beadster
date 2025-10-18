@@ -36,10 +36,23 @@ struct ProjectsSidebar: View {
     @ObservedObject var issueStore: IssueStore
 
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("Projects")
                 .font(.headline)
                 .padding()
+
+            if let error = projectStore.errorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+            }
+
+            if projectStore.isScanning {
+                ProgressView("Scanning...")
+                    .padding()
+            }
 
             List(projectStore.projects, selection: $projectStore.selectedProject) { project in
                 ProjectRow(project: project)
@@ -48,17 +61,24 @@ struct ProjectsSidebar: View {
 
             Divider()
 
-            HStack {
+            VStack(alignment: .leading, spacing: 8) {
                 Button(action: {
+                    print("UI: Add Projects button clicked")
                     projectStore.selectFolderToScan()
                 }) {
                     Label("Add Projects", systemImage: "folder.badge.plus")
                 }
                 .buttonStyle(.plain)
-                .padding()
 
-                Spacer()
+                Button(action: {
+                    print("UI: Add Claude Logs button clicked")
+                    selectClaudeLogs()
+                }) {
+                    Label("Add Claude Logs", systemImage: "doc.text.magnifyingglass")
+                }
+                .buttonStyle(.plain)
             }
+            .padding()
         }
         .frame(minWidth: 200)
         .onChange(of: projectStore.selectedProject) { oldValue, newValue in
@@ -67,6 +87,20 @@ struct ProjectsSidebar: View {
                     await issueStore.loadIssues(for: project)
                 }
             }
+        }
+    }
+
+    func selectClaudeLogs() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Select your .claude folder for context capture"
+        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude")
+
+        if panel.runModal() == .OK, let url = panel.url {
+            print("Selected Claude folder: \(url.path)")
+            // TODO: save bookmark for Claude folder
         }
     }
 }
