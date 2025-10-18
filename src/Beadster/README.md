@@ -7,6 +7,7 @@ native swiftui macos app for syncing and viewing bd issues
 ### data models
 - `Models.swift` - source, issue, dependency models
 - json codable with snake_case mapping
+- sourceId tracking for cloud sync
 
 ### api client
 - `APIClient.swift` - rest api client for beadster dev api
@@ -17,6 +18,15 @@ native swiftui macos app for syncing and viewing bd issues
 - `JSONLManager.swift` - read/write .beads/issues.jsonl
 - `ProjectStore.swift` - manage projects with security bookmarks
 - sandbox-safe folder selection with NSOpenPanel
+- save/load projects from UserDefaults
+
+### sync daemon
+- `SyncDaemon.swift` - background sync service
+- file system watching with DispatchSource
+- monitors .beads/issues.jsonl for changes
+- periodic sync every 5 minutes
+- bidirectional sync: local ↔ cloud
+- merge logic (last-write-wins)
 
 ### ui
 - `MainView.swift` - split view with projects sidebar and issues list
@@ -25,24 +35,28 @@ native swiftui macos app for syncing and viewing bd issues
 - priority badges (P0-P4)
 - label badges
 - checkbox to toggle issue status
+- error display and loading states
+- comprehensive logging
 
 ### features working
 - ✅ add projects via folder selection
-- ✅ scan folders for .beads directories
+- ✅ scan folders for .beads directories (root and subdirectories)
 - ✅ security bookmarks for sandbox access
 - ✅ read issues from .beads/issues.jsonl
 - ✅ display issues with filtering
 - ✅ toggle issue status (open/closed)
 - ✅ show priority and labels
+- ✅ file system watching (auto-sync on file changes)
+- ✅ bidirectional sync with cloud api
+- ✅ periodic sync timer (every 5 min)
+- ✅ merge conflicts resolution
+- ✅ comprehensive logging for debugging
 
 ## what's NOT implemented yet (for later)
 
-- ❌ bidirectional sync with cloud
-- ❌ file system watching
-- ❌ periodic sync daemon
-- ❌ context capture
-- ❌ sign in with apple auth
-- ❌ real api token (currently hardcoded)
+- ❌ context capture with claude logs
+- ❌ sign in with apple auth (using hardcoded token)
+- ❌ source registration on cloud (manual sourceId for now)
 
 ## how to test
 
