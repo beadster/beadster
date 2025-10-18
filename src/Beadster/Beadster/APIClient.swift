@@ -55,17 +55,36 @@ class APIClient {
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        // create request body
-        struct SyncPushRequest: Codable {
-            let source: SourcePayload
-            let issues: [Issue]
+        // Transform issues to match API format (add beads_id, format id)
+        let transformedIssues = issues.map { issue -> [String: Any] in
+            var dict: [String: Any] = [
+                "id": "\(source.id)_\(issue.id)",  // format: sourceId_beadsId
+                "beads_id": issue.id,              // beadster-1, beadster-2, etc
+                "title": issue.title,
+                "status": issue.status,
+                "labels": issue.labels ?? [],
+                "created_at": Int(issue.createdAt.timeIntervalSince1970),
+                "updated_at": Int(issue.updatedAt.timeIntervalSince1970)
+            ]
+
+            // Add optional fields only if they exist
+            if let description = issue.description { dict["body"] = description }
+            if issue.priority > 0 { dict["priority"] = issue.priority }
+
+            return dict
         }
 
-        let requestBody = SyncPushRequest(source: source, issues: issues)
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        encoder.dateEncodingStrategy = .secondsSince1970
-        request.httpBody = try encoder.encode(requestBody)
+        let requestBody: [String: Any] = [
+            "source": [
+                "id": source.id,
+                "name": source.name,
+                "type": source.type,
+                "path": source.path
+            ],
+            "issues": transformedIssues
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 

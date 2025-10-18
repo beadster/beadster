@@ -71,6 +71,7 @@ app.post('/api/sync/push', async (c) => {
   }
 
   const { source, issues } = await c.req.json();
+  console.log('Push request:', JSON.stringify({ source, issueCount: issues.length, firstIssue: issues[0] }));
   const now = Date.now();
 
   // Upsert source
