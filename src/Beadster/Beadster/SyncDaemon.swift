@@ -93,11 +93,11 @@ class SyncDaemon: ObservableObject {
             return
         }
 
-        let dbFile = projectURL.appendingPathComponent(".beads/beadster.db")
+        let dbFile = projectURL.appendingPathComponent(".beads/beads.db")
 
         guard FileManager.default.fileExists(atPath: dbFile.path) else {
             projectURL.stopAccessingSecurityScopedResource()
-            print("No beadster.db found for \(project.name)")
+            print("No beads.db found for \(project.name)")
             return
         }
 

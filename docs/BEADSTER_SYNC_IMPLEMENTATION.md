@@ -530,7 +530,7 @@ if let renumber = result.renumber {
 
 ### 2. update BeadsDatabase class
 
-- [ ] change path from `beadster.db` → `beads.db`
+- [ ] change path from `beads.db` → `beads.db`
 - [ ] read from beads core tables (issues, dependencies)
 - [ ] add method to get specific issues by IDs
 - [ ] add method to check if issue exists

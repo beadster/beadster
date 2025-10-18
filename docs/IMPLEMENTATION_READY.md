@@ -53,7 +53,7 @@ all documentation complete and ready to start implementation
 next steps:
 
 1. **fix BeadsDatabase.swift** (both CLI and macOS app)
-   - change from `beadster.db` → `beads.db`
+   - change from `beads.db` → `beads.db`
    - read from beads core tables (issues, dependencies, events)
    - add methods: getIssues(ids:), issueExists()
 
@@ -76,7 +76,7 @@ next steps:
 
 ## key decisions made
 
-1. ✅ **use beads.db** (not separate beadster.db) - follows beads extension pattern
+1. ✅ **use beads.db** (not separate beads.db) - follows beads extension pattern
 2. ✅ **cloud IDs NOT in JSONL** - keeps beads pure, cloud is separate layer
 3. ✅ **each machine builds its own sync state** - through cloud API discovery
 4. ✅ **incremental sync** - only transfer what changed (10-100x faster)

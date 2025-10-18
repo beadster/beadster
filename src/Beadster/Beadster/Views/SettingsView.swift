@@ -61,7 +61,7 @@ struct GeneralSettings: View {
                 HStack {
                     Text("Database:")
                     Spacer()
-                    Text("SQLite (.beads/beadster.db)")
+                    Text("SQLite (.beads/beads.db)")
                         .foregroundColor(.secondary)
                         .font(.caption)
                 }

@@ -6,7 +6,7 @@ class BeadsDatabase {
     private var db: OpaquePointer?
 
     init(beadsDir: String) {
-        self.dbPath = "\(beadsDir)/.beads/beadster.db"
+        self.dbPath = "\(beadsDir)/.beads/beads.db"
     }
 
     func open() throws {

@@ -157,7 +157,7 @@ merge these files manually (keep best from both):
    - merge query methods
    - keep macOS date parsing logic
    - add CLI's issueExists() method
-   - change path from `beadster.db` → `beads.db`
+   - change path from `beads.db` → `beads.db`
 
 3. **Shared/SyncDaemon.swift**
    - use macOS version as base (more complete)
