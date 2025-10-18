@@ -48,7 +48,7 @@ class SyncDaemon: ObservableObject {
 
     // MARK: - File Watching
 
-    func startWatching(project: ProjectInfo) {
+    nonisolated func startWatching(project: ProjectInfo) {
         // resolve bookmark
         var isStale = false
         guard let projectURL = try? URL(
@@ -104,8 +104,10 @@ class SyncDaemon: ObservableObject {
 
         source.resume()
 
-        watchers[project.id] = source
-        print("Started watching: \(dbFile.path)")
+        Task { @MainActor [weak self] in
+            self?.watchers[project.id] = source
+            print("Started watching: \(dbFile.path)")
+        }
     }
 
     func stopWatching(projectId: String) {
