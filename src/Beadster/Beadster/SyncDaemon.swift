@@ -19,6 +19,7 @@ class SyncDaemon: ObservableObject {
     private var watchers: [String: DispatchSourceFileSystemObject] = [:]
     private var syncTimer: Timer?
     private let syncInterval: TimeInterval = 300 // 5 minutes
+    private var lastSync: [String: Date] = [:] // project id -> last sync time
 
     private init() {}
 
@@ -174,20 +175,18 @@ class SyncDaemon: ObservableObject {
                 return
             }
 
-            // 3. Get remote issues
-            let remoteIssues = try await APIClient.shared.getIssues(sourceId: sourceId)
-            print("Found \(remoteIssues.count) remote issues")
-
-            // 4. Push to cloud (one-way sync for POC)
-            // For now: SQLite is read-only (managed by bd CLI)
-            // Cloud changes would be applied by running bd CLI commands
+            // 3. Push local changes to cloud
             let response = try await APIClient.shared.syncIssues(sourceId: sourceId, issues: localIssues)
-            print("Sync result: created=\(response.created), updated=\(response.updated), skipped=\(response.skipped)")
+            print("⬆️  Push result: created=\(response.created), updated=\(response.updated), skipped=\(response.skipped)")
 
+            // 4. Pull remote changes and apply locally
+            try await pullAndApplyChanges(project: project, projectURL: projectURL, sourceId: sourceId)
+
+            lastSync[project.id] = Date()
             lastSyncDate = Date()
             syncError = nil
 
-            print("Sync completed successfully")
+            print("✅ Sync completed successfully")
 
         } catch {
             print("Sync failed: \(error)")
@@ -197,6 +196,91 @@ class SyncDaemon: ObservableObject {
 
     func manualSync(project: ProjectInfo) async {
         await syncProject(project)
+    }
+
+    // MARK: - Pull & Apply Changes
+
+    private func pullAndApplyChanges(project: ProjectInfo, projectURL: URL, sourceId: String) async throws {
+        // Get timestamp of last sync for this project
+        let since = lastSync[project.id]?.timeIntervalSince1970 ?? 0
+
+        print("🔽 Pulling changes since \(since)...")
+
+        // Get remote changes
+        let remoteIssues = try await APIClient.shared.getIssues(sourceId: sourceId)
+
+        // Filter to only changes since last sync
+        let changes = remoteIssues.filter { issue in
+            issue.updatedAt.timeIntervalSince1970 > since
+        }
+
+        if changes.isEmpty {
+            print("  ✓ No changes from cloud")
+            return
+        }
+
+        print("⬇️  Applying \(changes.count) change(s)...")
+
+        // Open database to check which issues exist locally
+        let db = BeadsDatabase(beadsDir: projectURL)
+        try db.open()
+        defer { db.close() }
+
+        // Apply each change via bd CLI
+        for issue in changes {
+            // Check if issue exists locally
+            let existsLocally = try db.issueExists(beadsId: issue.id)
+
+            // Only update existing issues
+            // Skip creating new issues from cloud (would create ID mismatch)
+            guard existsLocally else {
+                print("  ⊘ Skipping new issue from cloud: \(issue.title) (id=\(issue.id))")
+                continue
+            }
+
+            // Apply change via bd update command
+            try await applyChange(issue: issue, projectPath: projectURL.path)
+        }
+
+        print("  ✅ Applied \(changes.count) change(s)")
+    }
+
+    private func applyChange(issue: Issue, projectPath: String) async throws {
+        // Escape title for shell command
+        let escapedTitle = issue.title.replacingOccurrences(of: "\"", with: "\\\"")
+
+        // Build bd update command
+        let command = """
+        cd "\(projectPath)" && bd update \(issue.id) \
+        --title="\(escapedTitle)" \
+        --status=\(issue.status) \
+        --priority=\(issue.priority)
+        """
+
+        print("  🔄 Updating: \(issue.title)")
+
+        // Execute command
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", command]
+
+        // Capture output
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        try process.run()
+        process.waitUntilExit()
+
+        if process.terminationStatus != 0 {
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let errorOutput = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+            print("  ❌ Failed to update \(issue.id): \(errorOutput)")
+            throw SyncError.bdCommandFailed(errorOutput)
+        }
+
+        print("  ✓ Updated: \(issue.title)")
     }
 
     // MARK: - Merge Logic
@@ -234,6 +318,7 @@ enum SyncError: LocalizedError {
     case accessDenied
     case networkError
     case mergeConflict
+    case bdCommandFailed(String)
 
     var errorDescription: String? {
         switch self {
@@ -241,6 +326,7 @@ enum SyncError: LocalizedError {
         case .accessDenied: return "Access denied to project folder"
         case .networkError: return "Network error during sync"
         case .mergeConflict: return "Merge conflict detected"
+        case .bdCommandFailed(let error): return "bd command failed: \(error)"
         }
     }
 }
