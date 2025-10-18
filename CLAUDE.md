@@ -39,8 +39,10 @@ guidance for claude code when working with beadster project
 
 build and deploy:
 ```bash
-npm run build      # builds astro site to dist/
-wrangler deploy    # deploys to cloudflare workers
-# or
-npm run deploy     # runs both
+npm run deploy     # ALWAYS use this - builds then deploys
+# never use wrangler deploy directly - it skips the build step
 ```
+
+if [object Object] appears after deploy:
+- means you deployed without rebuilding astro
+- fix: cd src/web && npm run deploy (not wrangler deploy)
