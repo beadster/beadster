@@ -1,0 +1,147 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const { id } = Astro.params;
+
+// Fetch session issues from API
+const runtime = Astro.locals.runtime;
+const API_URL = runtime?.env?.BEADSTER_API_URL || 'https://beadster-dev-api.systemoperator.workers.dev';
+const API_KEY = runtime?.env?.BEADSTER_API_KEY;
+
+interface Issue {
+  id: string;
+  user_id: string;
+  beads_id: string;
+  title: string;
+  body: string | null;
+  status: string;
+  priority: number | null;
+  labels: string[] | null;
+  session_id: string | null;
+  client: string | null;
+  project_name: string | null;
+  created_at: number;
+  updated_at: number;
+  closed_at: number | null;
+}
+
+let issues: Issue[] = [];
+let error: string | null = null;
+let sessionInfo: { client: string; project_name: string | null } | null = null;
+
+try {
+  const url = API_KEY ? `${API_URL}/api/sessions/${id}/issues?api_key=${API_KEY}` : `${API_URL}/api/sessions/${id}/issues`;
+  const response = await fetch(url);
+  if (response.ok) {
+    const data = await response.json();
+    issues = data.issues || [];
+
+    // Extract session info from first issue
+    if (issues.length > 0) {
+      sessionInfo = {
+        client: issues[0].client || 'unknown',
+        project_name: issues[0].project_name
+      };
+    }
+  } else {
+    error = `API error: ${response.status}`;
+  }
+} catch (e) {
+  error = `Failed to fetch: ${e}`;
+}
+
+function formatDate(timestamp: number): string {
+  return new Date(timestamp * 1000).toLocaleDateString();
+}
+
+function formatDateTime(timestamp: number): string {
+  return new Date(timestamp * 1000).toLocaleString();
+}
+
+function getPriorityClass(priority: number | null): string {
+  if (priority === null) return '';
+  if (priority === 0) return 'priority';
+  if (priority === 1) return 'priority p1';
+  return 'priority p2';
+}
+---
+
+<Layout title="session">
+  <div style="margin-bottom: 20px;">
+    <a href="/sessions" style="color: #0066cc; text-decoration: none;">← back to sessions</a>
+  </div>
+
+  <div style="margin-bottom: 30px;">
+    <h2>session details</h2>
+    {sessionInfo && (
+      <div style="margin-top: 10px;">
+        <span class="badge client">{sessionInfo.client}</span>
+        {sessionInfo.project_name && (
+          <span class="badge" style="margin-left: 10px;">{sessionInfo.project_name}</span>
+        )}
+      </div>
+    )}
+  </div>
+
+  {error && (
+    <div class="error">
+      <p>{error}</p>
+      <p style="font-size: 14px; color: #666; margin-top: 10px;">
+        configure BEADSTER_API_URL environment variable or update src/pages/sessions/[id].astro
+      </p>
+    </div>
+  )}
+
+  {!error && issues.length === 0 && (
+    <div class="empty">
+      <p>no issues in this session</p>
+    </div>
+  )}
+
+  {!error && issues.length > 0 && (
+    <div>
+      <h3 style="margin-bottom: 15px; font-size: 18px; color: #666;">
+        {issues.length} issue{issues.length !== 1 ? 's' : ''} in this session
+      </h3>
+      <ul class="issue-list">
+        {issues.map(issue => (
+          <li class="issue-item">
+            <div class="issue-header">
+              <span class="issue-id">{issue.beads_id}</span>
+              <span class="issue-title">{issue.title}</span>
+            </div>
+            <div class="issue-meta">
+              <span class={`badge status ${issue.status}`}>{issue.status}</span>
+              {issue.priority !== null && (
+                <span class={`badge ${getPriorityClass(issue.priority)}`}>
+                  P{issue.priority}
+                </span>
+              )}
+              <span>created {formatDateTime(issue.created_at)}</span>
+            </div>
+            {issue.body && (
+              <div style="margin-top: 8px; font-size: 14px; color: #666;">
+                {issue.body}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+</Layout>
+
+<style>
+  h2 {
+    margin-bottom: 10px;
+    font-size: 24px;
+  }
+
+  .error {
+    padding: 20px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    color: #c00;
+  }
+</style>

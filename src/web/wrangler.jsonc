@@ -1,0 +1,27 @@
+{
+  "name": "beadster-dev-web",
+  "compatibility_date": "2025-10-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "497c361ec2693b656492eccf2a43849a",
+  "main": "dist/_worker.js/index.js",
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "beadster-dev-db",
+      "database_id": "739ce35d-70a6-4075-9527-fa796ea73ba0"
+    }
+  ],
+  "services": [
+    {
+      "binding": "API",
+      "service": "beadster-dev-api"
+    }
+  ],
+  "vars": {
+    "BEADSTER_API_URL": "https://beadster-dev-api.systemoperator.workers.dev",
+    "BEADSTER_API_KEY": "3ae6ab7b-3e95-49b5-8d96-5ab6e8102373"
+  }
+}

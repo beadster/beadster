@@ -1,4 +1,4 @@
-# Scaling BeadsHub for Teams
+# Scaling beadster for Teams
 
 ## Beads TEXT_FORMATS.md Recommendations
 
@@ -15,25 +15,25 @@ From the Beads documentation:
 
 **Key insight:** At scale, git merge conflicts become the bottleneck.
 
-## BeadsHub Solves This
+## beadster Solves This
 
-BeadsHub is already designed as the "shared server" for teams!
+beadster is already designed as the "shared server" for teams!
 
 ### Architecture for Teams
 
 ```
 Team Member 1 (Mac)
   ├── Local .beads/ (git-backed)
-  └── Sync daemon → BeadsHub Cloud
+  └── Sync daemon → beadster Cloud
 
 Team Member 2 (Mac)
   ├── Local .beads/ (git-backed)
-  └── Sync daemon → BeadsHub Cloud
+  └── Sync daemon → beadster Cloud
 
 Team Member 3 (iOS)
-  └── BeadsHub app → Cloud (no local .beads/)
+  └── beadster app → Cloud (no local .beads/)
 
-BeadsHub Cloud (Shared Server)
+beadster Cloud (Shared Server)
   └── Cloudflare D1 (SQLite) or PostgreSQL
 ```
 
@@ -41,7 +41,7 @@ BeadsHub Cloud (Shared Server)
 - No more git merge conflicts on issues
 - Real-time sync via cloud
 - Each developer can still use local .beads/ + bd CLI
-- But sync happens through BeadsHub, not git push/pull
+- But sync happens through beadster, not git push/pull
 
 ## Database Backend Options
 
@@ -93,7 +93,7 @@ BeadsHub Cloud (Shared Server)
 **Best of both worlds**
 
 ```
-BeadsHub uses D1 by default
+beadster uses D1 by default
 ↓
 Team grows beyond D1 limits
 ↓
@@ -104,7 +104,7 @@ Migrate to PostgreSQL
 
 ```typescript
 // Abstract database interface
-interface BeadsHubDatabase {
+interface beadsterDatabase {
   getIssues(userId: string, filters: Filters): Promise<Issue[]>;
   createIssue(issue: Issue): Promise<void>;
   updateIssue(id: string, updates: Partial<Issue>): Promise<void>;
@@ -112,7 +112,7 @@ interface BeadsHubDatabase {
 }
 
 // D1 implementation
-class D1Database implements BeadsHubDatabase {
+class D1Database implements beadsterDatabase {
   constructor(private db: D1Database) {}
 
   async getIssues(userId: string, filters: Filters) {
@@ -125,7 +125,7 @@ class D1Database implements BeadsHubDatabase {
 }
 
 // PostgreSQL implementation
-class PostgresDatabase implements BeadsHubDatabase {
+class PostgresDatabase implements beadsterDatabase {
   constructor(private pool: Pool) {}
 
   async getIssues(userId: string, filters: Filters) {
@@ -140,7 +140,7 @@ class PostgresDatabase implements BeadsHubDatabase {
 }
 
 // Factory
-function createDatabase(env: Env): BeadsHubDatabase {
+function createDatabase(env: Env): beadsterDatabase {
   if (env.POSTGRES_URL) {
     return new PostgresDatabase(createPool(env.POSTGRES_URL));
   }
@@ -370,7 +370,7 @@ John Doe updated issue #53 "Update docs"
 ### Phase 1: Launch (D1)
 
 ```
-beadshub.com launches
+beadster.com launches
 - Cloudflare Workers + D1
 - Serverless, simple
 - Free tier covers early users
@@ -493,7 +493,7 @@ async function migrate() {
 ### Or: Offer Both Tiers
 
 ```
-BeadsHub Pricing:
+beadster Pricing:
 
 Free Tier:
 - Up to 10 sources
@@ -522,7 +522,7 @@ Team Tier ($50/month):
 
 **Beads recommendation:** 20+ developers need shared server
 
-**BeadsHub is that shared server!**
+**beadster is that shared server!**
 
 **Database choice:**
 - **D1 (SQLite):** Start here, simple, scales to 5K users
@@ -540,4 +540,4 @@ Team Tier ($50/month):
 3. Migrate to PostgreSQL when scaling demands it
 4. Or offer both as different pricing tiers
 
-**BeadsHub abstracts the backend, so choice is transparent to users!**
+**beadster abstracts the backend, so choice is transparent to users!**

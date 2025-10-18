@@ -1,4 +1,4 @@
-# BeadsHub PoC Plan
+# beadster PoC Plan
 
 ## Goal
 
@@ -33,7 +33,7 @@ Web UI (simple HTML or Astro)
 **What to build:**
 
 ```
-beadshub-api/
+beadster-api/
 ├── src/
 │   ├── index.ts           # Main worker
 │   ├── db/
@@ -260,10 +260,10 @@ export default app;
 **Deploy:**
 
 ```bash
-cd beadshub-api
+cd beadster-api
 npm install hono
-npx wrangler d1 create beadshub-db
-npx wrangler d1 execute beadshub-db --file=src/db/schema.sql
+npx wrangler d1 create beadster-db
+npx wrangler d1 execute beadster-db --file=src/db/schema.sql
 npx wrangler deploy
 ```
 
@@ -278,9 +278,9 @@ npx wrangler deploy
 - ✅ Can compile to standalone binary
 
 ```
-beadshub-sync/
+beadster-sync/
 ├── Sources/
-│   └── BeadsHubSync/
+│   └── beadsterSync/
 │       ├── main.swift           # Entry point
 │       ├── SyncDaemon.swift     # Main daemon
 │       ├── FileWatcher.swift    # FSEvents watcher
@@ -575,7 +575,7 @@ class SyncDaemon {
     }
 
     func start() async {
-        print("BeadsHub sync daemon starting...")
+        print("beadster sync daemon starting...")
 
         // Initial sync
         for source in config.sources {
@@ -675,11 +675,11 @@ class SyncDaemon {
 // main.swift
 import Foundation
 
-let configPath = "\(NSHomeDirectory())/.beadshub/config.json"
+let configPath = "\(NSHomeDirectory())/.beadster/config.json"
 
 guard FileManager.default.fileExists(atPath: configPath) else {
     print("Error: Config file not found at \(configPath)")
-    print("Create ~/.beadshub/config.json with your API key and sources")
+    print("Create ~/.beadster/config.json with your API key and sources")
     exit(1)
 }
 
@@ -699,16 +699,16 @@ do {
 import PackageDescription
 
 let package = Package(
-    name: "BeadsHubSync",
+    name: "beadsterSync",
     platforms: [
         .macOS(.v13)
     ],
     dependencies: [],
     targets: [
         .executableTarget(
-            name: "BeadsHubSync",
+            name: "beadsterSync",
             dependencies: [],
-            path: "Sources/BeadsHubSync"
+            path: "Sources/beadsterSync"
         )
     ]
 )
@@ -717,10 +717,10 @@ let package = Package(
 **Config file:**
 
 ```json
-// ~/.beadshub/config.json
+// ~/.beadster/config.json
 {
   "apiKey": "your-api-key",
-  "apiUrl": "https://api.beadshub.com",
+  "apiUrl": "https://api.beadster.com",
   "sources": [
     {
       "name": "main-app",
@@ -737,7 +737,7 @@ let package = Package(
 **Install & run:**
 
 ```bash
-cd beadshub-sync
+cd beadster-sync
 npm install
 npm run build
 npm start
@@ -749,7 +749,7 @@ npm start
 **Just wrap bd CLI for now**
 
 ```
-beadshub-mcp/
+beadster-mcp/
 ├── src/
 │   └── index.ts
 ├── package.json
@@ -768,7 +768,7 @@ import path from 'path';
 
 const server = new Server(
   {
-    name: 'beadshub-mcp',
+    name: 'beadster-mcp',
     version: '0.1.0',
   },
   {
@@ -893,7 +893,7 @@ function findBeadsDir(): string {
   }
 
   // Use inbox as fallback
-  const inbox = path.join(process.env.HOME!, '.beadshub', 'inbox');
+  const inbox = path.join(process.env.HOME!, '.beadster', 'inbox');
   if (!fs.existsSync(path.join(inbox, '.beads'))) {
     fs.mkdirSync(inbox, { recursive: true });
     execSync(`cd ${inbox} && bd init`);
@@ -912,9 +912,9 @@ server.connect(transport);
 // ~/.claude/mcp.json
 {
   "mcpServers": {
-    "beadshub": {
+    "beadster": {
       "command": "node",
-      "args": ["/path/to/beadshub-mcp/dist/index.js"]
+      "args": ["/path/to/beadster-mcp/dist/index.js"]
     }
   }
 }
@@ -925,7 +925,7 @@ server.connect(transport);
 **Ultra-minimal web interface**
 
 ```
-beadshub-web/
+beadster-web/
 ├── src/
 │   └── pages/
 │       └── index.astro
@@ -943,7 +943,7 @@ const apiKey = Astro.url.searchParams.get('api_key');
 let issues = [];
 if (apiKey) {
   const response = await fetch(
-    `https://api.beadshub.com/api/issues?api_key=${apiKey}`
+    `https://api.beadster.com/api/issues?api_key=${apiKey}`
   );
   issues = await response.json();
 }
@@ -951,7 +951,7 @@ if (apiKey) {
 
 <html>
 <head>
-  <title>BeadsHub</title>
+  <title>beadster</title>
   <style>
     body {
       font-family: system-ui;
@@ -981,7 +981,7 @@ if (apiKey) {
   </style>
 </head>
 <body>
-  <h1>BeadsHub</h1>
+  <h1>beadster</h1>
 
   {!apiKey ? (
     <form>
@@ -1013,7 +1013,7 @@ if (apiKey) {
 **Deploy to Cloudflare Pages:**
 
 ```bash
-cd beadshub-web
+cd beadster-web
 npm create astro@latest
 npm install
 npm run build
@@ -1042,8 +1042,8 @@ bd list
 
 ```bash
 # Create project
-mkdir beadshub-api
-cd beadshub-api
+mkdir beadster-api
+cd beadster-api
 
 # Install dependencies
 npm init -y
@@ -1054,10 +1054,10 @@ npm install -D @cloudflare/workers-types wrangler
 # ... create src/index.ts, schema.sql, wrangler.jsonc
 
 # Create D1 database
-npx wrangler d1 create beadshub-db
+npx wrangler d1 create beadster-db
 
 # Run migrations
-npx wrangler d1 execute beadshub-db --file=src/db/schema.sql
+npx wrangler d1 execute beadster-db --file=src/db/schema.sql
 
 # Deploy
 npx wrangler deploy
@@ -1066,7 +1066,7 @@ npx wrangler deploy
 ### 3. Register User & Get API Key
 
 ```bash
-curl -X POST https://api.beadshub.com/api/auth/register \
+curl -X POST https://api.beadster.com/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"your@email.com"}'
 
@@ -1077,8 +1077,8 @@ curl -X POST https://api.beadshub.com/api/auth/register \
 
 ```bash
 # Create project
-mkdir beadshub-sync
-cd beadshub-sync
+mkdir beadster-sync
+cd beadster-sync
 
 npm init -y
 npm install better-sqlite3 chokidar
@@ -1088,11 +1088,11 @@ npm install -D @types/better-sqlite3 @types/node typescript
 # ... create src/index.ts
 
 # Create config
-mkdir -p ~/.beadshub
-cat > ~/.beadshub/config.json << EOF
+mkdir -p ~/.beadster
+cat > ~/.beadster/config.json << EOF
 {
   "apiKey": "YOUR_API_KEY",
-  "apiUrl": "https://api.beadshub.com",
+  "apiUrl": "https://api.beadster.com",
   "sources": [
     {
       "name": "test-project",
@@ -1111,8 +1111,8 @@ npm start
 
 ```bash
 # Create project
-mkdir beadshub-mcp
-cd beadshub-mcp
+mkdir beadster-mcp
+cd beadster-mcp
 
 npm init -y
 npm install @modelcontextprotocol/sdk
@@ -1128,7 +1128,7 @@ npm run build
 cat > ~/.claude/mcp.json << EOF
 {
   "mcpServers": {
-    "beadshub": {
+    "beadster": {
       "command": "node",
       "args": ["$PWD/dist/index.js"]
     }
@@ -1141,8 +1141,8 @@ EOF
 
 ```bash
 # Create Astro project
-npm create astro@latest beadshub-web
-cd beadshub-web
+npm create astro@latest beadster-web
+cd beadster-web
 
 # Create page (use code above)
 # ... create src/pages/index.astro
@@ -1179,7 +1179,7 @@ Sync daemon watching ~/projects/test-project
 ### 3. View on web
 
 ```
-Open https://beadshub.pages.dev?api_key=YOUR_KEY
+Open https://beadster.pages.dev?api_key=YOUR_KEY
 
 → Shows: "Implement OAuth" (open)
 ```

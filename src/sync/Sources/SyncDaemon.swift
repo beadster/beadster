@@ -4,6 +4,7 @@ class SyncDaemon {
     private let config: Config
     private var watchers: [FileWatcher] = []
     private var lastSync: [String: Int] = [:] // source path -> timestamp
+    private let sessionTracker = SessionTracker()
 
     init(configPath: String) throws {
         let data = try Data(contentsOf: URL(fileURLWithPath: configPath))
@@ -47,12 +48,17 @@ class SyncDaemon {
 
             let issues = try db.getAllIssues()
 
+            // Add session metadata to issues
+            let issuesWithSession = issues.map { issue in
+                sessionTracker.addSessionLabels(to: issue, beadsDir: source.path)
+            }
+
             let api = CloudAPI(apiUrl: config.apiUrl, apiKey: config.apiKey)
-            try await api.pushIssues(source: source, issues: issues)
+            try await api.pushIssues(source: source, issues: issuesWithSession)
 
             lastSync[source.path] = Int(Date().timeIntervalSince1970)
 
-            print("✓ Synced \(issues.count) issue(s) from \(source.name)")
+            print("✓ Synced \(issuesWithSession.count) issue(s) from \(source.name)")
         } catch DatabaseError.cantOpen {
             print("⚠️  No .beads/ found in \(source.path)")
         } catch {

@@ -6,7 +6,7 @@ class BeadsDatabase {
     private var db: OpaquePointer?
 
     init(beadsDir: String) {
-        self.dbPath = "\(beadsDir)/.beads/beads.db"
+        self.dbPath = "\(beadsDir)/.beads/beadster.db"
     }
 
     func open() throws {
@@ -22,9 +22,21 @@ class BeadsDatabase {
     func getAllIssues() throws -> [Issue] {
         var issues: [Issue] = []
 
+        // Get all issues with their labels
         let query = """
-        SELECT id, title, body, status, priority, labels, created_at, updated_at
-        FROM issues
+        SELECT
+            i.id,
+            i.title,
+            i.description,
+            i.status,
+            i.priority,
+            i.issue_type,
+            i.created_at,
+            i.updated_at,
+            GROUP_CONCAT(l.label, ',') as labels
+        FROM issues i
+        LEFT JOIN labels l ON i.id = l.issue_id
+        GROUP BY i.id
         """
 
         var statement: OpaquePointer?
@@ -37,30 +49,35 @@ class BeadsDatabase {
         while sqlite3_step(statement) == SQLITE_ROW {
             let id = String(cString: sqlite3_column_text(statement, 0))
             let title = String(cString: sqlite3_column_text(statement, 1))
-            let body = sqlite3_column_text(statement, 2).map { String(cString: $0) }
+            let description = sqlite3_column_text(statement, 2).map { String(cString: $0) }
             let status = String(cString: sqlite3_column_text(statement, 3))
-            let priority = sqlite3_column_text(statement, 4).map { String(cString: $0) }
-            let labelsJSON = sqlite3_column_text(statement, 5).map { String(cString: $0) } ?? "[]"
-            let createdAt = Int(sqlite3_column_int64(statement, 6))
-            let updatedAt = Int(sqlite3_column_int64(statement, 7))
+            let priority = Int(sqlite3_column_int(statement, 4))
+            let issueType = String(cString: sqlite3_column_text(statement, 5))
+            let createdAt = String(cString: sqlite3_column_text(statement, 6))
+            let updatedAt = String(cString: sqlite3_column_text(statement, 7))
+            let labelsStr = sqlite3_column_text(statement, 8).map { String(cString: $0) }
 
-            let labels = (try? JSONDecoder().decode([String].self, from: labelsJSON.data(using: .utf8)!)) ?? []
+            let labels = labelsStr?.split(separator: ",").map(String.init) ?? []
 
-            // Extract session metadata from labels
-            let sessionId = extractLabel(from: labels, prefix: "session:")
-            let client = extractLabel(from: labels, prefix: "client:")
-            let projectName = extractLabel(from: labels, prefix: "project:")
+            // Extract session metadata from labels (using -x- prefix for system labels)
+            let sessionId = extractLabel(from: labels, prefix: "-x-session:")
+            let client = extractLabel(from: labels, prefix: "-x-client:")
+            let projectName = extractLabel(from: labels, prefix: "-x-project:")
+
+            // Convert datetime strings to unix timestamps
+            let createdAtTimestamp = dateToTimestamp(createdAt) ?? 0
+            let updatedAtTimestamp = dateToTimestamp(updatedAt) ?? 0
 
             issues.append(Issue(
                 id: id,
                 beadsId: id,
                 title: title,
-                body: body,
+                body: description,
                 status: status,
-                priority: priority,
+                priority: String(priority),
                 labels: labels,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
+                createdAt: createdAtTimestamp,
+                updatedAt: updatedAtTimestamp,
                 sessionId: sessionId,
                 client: client,
                 projectName: projectName
@@ -73,5 +90,30 @@ class BeadsDatabase {
     private func extractLabel(from labels: [String], prefix: String) -> String? {
         return labels.first { $0.hasPrefix(prefix) }?
             .replacingOccurrences(of: prefix, with: "")
+    }
+
+    private func dateToTimestamp(_ dateStr: String) -> Int? {
+        // Go format: "2025-10-17 22:19:13.718092 +0200 CEST m=+0.008369668"
+        // We need to extract just the date/time part before the timezone
+        let components = dateStr.components(separatedBy: " ")
+        if components.count >= 3 {
+            // Combine date and time: "2025-10-17 22:19:13.718092"
+            let dateTimeStr = "\(components[0])T\(components[1])\(components[2])"
+
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds, .withTimeZone]
+            if let date = formatter.date(from: dateTimeStr) {
+                return Int(date.timeIntervalSince1970)
+            }
+        }
+
+        // Fallback: try standard ISO8601
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: dateStr) {
+            return Int(date.timeIntervalSince1970)
+        }
+
+        return nil
     }
 }

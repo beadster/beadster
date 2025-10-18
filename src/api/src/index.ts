@@ -204,7 +204,13 @@ app.get('/api/issues', async (c) => {
     ORDER BY i.created_at DESC
   `).bind(user.id).all();
 
-  return c.json(issues.results);
+  // Parse labels JSON
+  const parsedIssues = issues.results.map((issue: any) => ({
+    ...issue,
+    labels: issue.labels ? JSON.parse(issue.labels) : []
+  }));
+
+  return c.json({ issues: parsedIssues });
 });
 
 // Web: Get sessions
@@ -227,7 +233,7 @@ app.get('/api/sessions', async (c) => {
     LIMIT 50
   `).bind(user.id).all();
 
-  return c.json(sessions.results);
+  return c.json({ sessions: sessions.results });
 });
 
 // Web: Get issues for session
@@ -251,7 +257,13 @@ app.get('/api/sessions/:id/issues', async (c) => {
     ORDER BY i.created_at ASC
   `).bind(user.id, sessionId).all();
 
-  return c.json(issues.results);
+  // Parse labels JSON
+  const parsedIssues = issues.results.map((issue: any) => ({
+    ...issue,
+    labels: issue.labels ? JSON.parse(issue.labels) : []
+  }));
+
+  return c.json({ issues: parsedIssues });
 });
 
 // Helper: Authenticate user by API key

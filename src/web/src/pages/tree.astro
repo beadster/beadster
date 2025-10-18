@@ -1,0 +1,59 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="tree">
+  <nav class="tabs">
+    <a href="/">open</a>
+    <a href="/all">all</a>
+    <a href="/closed">closed</a>
+    <a href="/labels">labels</a>
+    <a href="/tree" class="active">tree</a>
+  </nav>
+
+  <h2>dependency tree</h2>
+
+  <div class="empty">
+    <p>dependency tree view coming soon</p>
+  </div>
+</Layout>
+
+<style>
+  .tabs {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+  }
+
+  .tabs a {
+    text-decoration: none;
+    color: #666;
+    font-size: 16px;
+    padding: 8px 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tabs a:hover {
+    color: #000;
+  }
+
+  .tabs a.active {
+    color: #000;
+    border-bottom-color: #000;
+    font-weight: 500;
+  }
+
+  h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+
+  .empty {
+    padding: 40px;
+    text-align: center;
+    color: #666;
+  }
+</style>

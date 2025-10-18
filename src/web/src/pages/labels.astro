@@ -1,0 +1,169 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+interface Issue {
+  id: string;
+  beads_id: string;
+  title: string;
+  status: string;
+  labels: string | null;
+}
+
+let labelGroups: Map<string, Issue[]> = new Map();
+let error: string | null = null;
+
+try {
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db) {
+    const result = await db.prepare(
+      'SELECT id, beads_id, title, status, labels FROM issues WHERE status = ? ORDER BY beads_id'
+    ).bind('open').all();
+
+    const issues = result.results as Issue[];
+
+    // Group by labels
+    for (const issue of issues) {
+      if (!issue.labels) continue;
+
+      const labels = JSON.parse(issue.labels) as string[];
+
+      // Skip system labels
+      const userLabels = labels.filter(l => !l.startsWith('-x-'));
+
+      if (userLabels.length === 0) {
+        if (!labelGroups.has('no labels')) {
+          labelGroups.set('no labels', []);
+        }
+        labelGroups.get('no labels')!.push(issue);
+      } else {
+        for (const label of userLabels) {
+          if (!labelGroups.has(label)) {
+            labelGroups.set(label, []);
+          }
+          labelGroups.get(label)!.push(issue);
+        }
+      }
+    }
+  } else {
+    error = 'Database binding not available';
+  }
+} catch (e) {
+  error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
+}
+
+const sortedLabels = Array.from(labelGroups.keys()).sort();
+---
+
+<Layout title="labels">
+  <nav class="tabs">
+    <a href="/">open</a>
+    <a href="/all">all</a>
+    <a href="/closed">closed</a>
+    <a href="/labels" class="active">labels</a>
+    <a href="/tree">tree</a>
+  </nav>
+
+  <h2>labels</h2>
+
+  {error && (
+    <div class="error">
+      <p>{error}</p>
+    </div>
+  )}
+
+  {!error && sortedLabels.length === 0 && (
+    <div class="empty">
+      <p>no labels found</p>
+    </div>
+  )}
+
+  {!error && sortedLabels.length > 0 && (
+    <div class="label-groups">
+      {sortedLabels.map(label => (
+        <div class="label-group">
+          <h3>
+            <span class="badge">{label}</span>
+            <span class="count">({labelGroups.get(label)!.length})</span>
+          </h3>
+          <ul class="issue-list">
+            {labelGroups.get(label)!.map(issue => (
+              <li class="issue-item">
+                <span class="issue-id">{issue.beads_id}</span>
+                <span class="issue-title">{issue.title}</span>
+                <span class={`badge status ${issue.status}`}>{issue.status}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  )}
+</Layout>
+
+<style>
+  .tabs {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+  }
+
+  .tabs a {
+    text-decoration: none;
+    color: #666;
+    font-size: 16px;
+    padding: 8px 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tabs a:hover {
+    color: #000;
+  }
+
+  .tabs a.active {
+    color: #000;
+    border-bottom-color: #000;
+    font-weight: 500;
+  }
+
+  h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+
+  .label-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .label-group h3 {
+    margin-bottom: 12px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .count {
+    color: #666;
+    font-size: 14px;
+    font-weight: normal;
+  }
+
+  .error {
+    padding: 20px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    color: #c00;
+  }
+
+  .empty {
+    padding: 40px;
+    text-align: center;
+    color: #666;
+  }
+</style>

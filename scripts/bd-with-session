@@ -1,0 +1,33 @@
+#!/bin/bash
+# Wrapper for bd that automatically adds session metadata
+# Usage: bd-with-session create "Issue title" [other bd args...]
+# Or just: bd-with-session [any bd command]
+
+# Get session ID from statsig file
+SESSION_ID=$(cat ~/.claude/statsig/statsig.session_id.* 2>/dev/null | jq -r '.sessionID' | head -1)
+
+# Get project name from current directory
+PROJECT_NAME=$(basename "$PWD")
+
+# Detect client (claude-code sets CLAUDECODE env var)
+if [ -n "$CLAUDECODE" ]; then
+    CLIENT="claude-code"
+else
+    CLIENT="cli"
+fi
+
+# If creating an issue, add session labels
+if [[ "$1" == "create" ]]; then
+    if [ -n "$SESSION_ID" ]; then
+        bd "$@" \
+            --label="session:${SESSION_ID}" \
+            --label="client:${CLIENT}" \
+            --label="project:${PROJECT_NAME}"
+    else
+        # No session ID found, just run bd normally
+        bd "$@"
+    fi
+else
+    # Not creating, just pass through to bd
+    bd "$@"
+fi

@@ -1,0 +1,99 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+interface Session {
+  id: string;
+  user_id: string;
+  source_id: string | null;
+  client: string;
+  project_name: string | null;
+  first_issue_at: number;
+  last_issue_at: number;
+  issue_count: number;
+  created_at: number;
+  updated_at: number;
+}
+
+let sessions: Session[] = [];
+let error: string | null = null;
+
+// Use D1 binding directly
+try {
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db) {
+    const result = await db.prepare(
+      'SELECT * FROM sessions ORDER BY last_issue_at DESC'
+    ).all();
+
+    sessions = result.results as Session[];
+  } else {
+    error = 'Database binding not available';
+  }
+} catch (e) {
+  error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
+}
+
+function formatDate(timestamp: number): string {
+  return new Date(timestamp * 1000).toLocaleDateString();
+}
+
+function formatDateTime(timestamp: number): string {
+  return new Date(timestamp * 1000).toLocaleString();
+}
+---
+
+<Layout title="sessions">
+  <h2>chat sessions</h2>
+
+  {error && (
+    <div class="error">
+      <p>{error}</p>
+      <p style="font-size: 14px; color: #666; margin-top: 10px;">
+        configure BEADSTER_API_URL environment variable or update src/pages/sessions.astro
+      </p>
+    </div>
+  )}
+
+  {!error && sessions.length === 0 && (
+    <div class="empty">
+      <p>no sessions yet</p>
+    </div>
+  )}
+
+  {!error && sessions.length > 0 && (
+    <ul class="session-list">
+      {sessions.map(session => (
+        <li class="session-item">
+          <a href={`/sessions/${session.id}`} style="text-decoration: none; color: inherit; display: block;">
+            <div class="session-header">
+              <span class="badge client">{session.client}</span>
+              {session.project_name && (
+                <span>{session.project_name}</span>
+              )}
+            </div>
+            <div class="session-meta">
+              <span>{session.issue_count} issue{session.issue_count !== 1 ? 's' : ''}</span>
+              <span>started {formatDateTime(session.first_issue_at)}</span>
+              <span>last activity {formatDate(session.last_issue_at)}</span>
+            </div>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
+</Layout>
+
+<style>
+  h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+
+  .error {
+    padding: 20px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    color: #c00;
+  }
+</style>

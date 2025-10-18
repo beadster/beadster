@@ -1,10 +1,10 @@
-# Identity, Authentication, and Sharing in BeadsHub
+# Identity, Authentication, and Sharing in beadster
 
 ## Apple ID Authentication
 
 ### Sign in with Apple for Mac/iOS Apps
 
-**Perfect fit for BeadsHub:**
+**Perfect fit for beadster:**
 
 ```swift
 import AuthenticationServices
@@ -30,7 +30,7 @@ class AuthManager: NSObject, ASAuthorizationControllerDelegate {
       let email = credential.email
       let fullName = credential.fullName
 
-      // Exchange with BeadsHub backend
+      // Exchange with beadster backend
       Task {
         await exchangeAppleCredentialForToken(
           userID: userID,
@@ -46,9 +46,9 @@ class AuthManager: NSObject, ASAuthorizationControllerDelegate {
     identityToken: Data?,
     authorizationCode: Data?
   ) async {
-    // Send to BeadsHub API
+    // Send to beadster API
     let response = try await URLSession.shared.data(
-      for: URLRequest(url: URL(string: "https://api.beadshub.com/auth/apple")!)
+      for: URLRequest(url: URL(string: "https://api.beadster.com/auth/apple")!)
         .with(method: "POST")
         .with(body: [
           "user_id": userID,
@@ -60,11 +60,11 @@ class AuthManager: NSObject, ASAuthorizationControllerDelegate {
     let auth = try JSONDecoder().decode(AuthResponse.self, from: response.0)
 
     // Save tokens
-    KeychainHelper.save(auth.accessToken, for: "beadshub_access_token")
-    KeychainHelper.save(auth.refreshToken, for: "beadshub_refresh_token")
+    KeychainHelper.save(auth.accessToken, for: "beadster_access_token")
+    KeychainHelper.save(auth.refreshToken, for: "beadster_refresh_token")
 
     // Store user ID
-    UserDefaults.standard.set(userID, forKey: "beadshub_user_id")
+    UserDefaults.standard.set(userID, forKey: "beadster_user_id")
   }
 }
 ```
@@ -72,7 +72,7 @@ class AuthManager: NSObject, ASAuthorizationControllerDelegate {
 ### Backend (Cloudflare Workers)
 
 ```typescript
-// api.beadshub.com/auth/apple
+// api.beadster.com/auth/apple
 
 import { Hono } from 'hono';
 import jwt from '@tsndr/cloudflare-worker-jwt';
@@ -166,16 +166,16 @@ CREATE INDEX idx_users_api_key ON users(api_key);
 
 ### CLI Authentication
 
-**For CLI users (brew install beadshub):**
+**For CLI users (brew install beadster):**
 
 ```bash
-beadshub login
+beadster login
 
-# Opens browser to beadshub.com/cli/auth
+# Opens browser to beadster.com/cli/auth
 # User signs in with Apple ID on web
 # Web returns code
 # CLI exchanges code for API key
-# Saves to ~/.beadshub/config.json
+# Saves to ~/.beadster/config.json
 ```
 
 **Backend:**
@@ -196,8 +196,8 @@ app.get('/cli/auth', async (c) => {
           // Sign in with Apple JS SDK
           document.getElementById('signin').onclick = () => {
             AppleID.auth.signIn({
-              clientId: 'com.beadshub.auth',
-              redirectURI: 'https://api.beadshub.com/auth/apple/callback',
+              clientId: 'com.beadster.auth',
+              redirectURI: 'https://api.beadster.com/auth/apple/callback',
               state: '${code}',
               scope: 'email name'
             });
@@ -244,20 +244,20 @@ app.get('/cli/auth/poll', async (c) => {
 
 ```bash
 #!/bin/bash
-# beadshub login
+# beadster login
 
-CODE=$(curl -s https://api.beadshub.com/cli/auth/start | jq -r .code)
+CODE=$(curl -s https://api.beadster.com/cli/auth/start | jq -r .code)
 echo "Opening browser..."
-open "https://api.beadshub.com/cli/auth?code=$CODE"
+open "https://api.beadster.com/cli/auth?code=$CODE"
 
 echo "Waiting for authentication..."
 while true; do
-  RESPONSE=$(curl -s "https://api.beadshub.com/cli/auth/poll?code=$CODE")
+  RESPONSE=$(curl -s "https://api.beadster.com/cli/auth/poll?code=$CODE")
   STATUS=$(echo $RESPONSE | jq -r .status)
 
   if [ "$STATUS" = "complete" ]; then
     API_KEY=$(echo $RESPONSE | jq -r .api_key)
-    echo "API_KEY=$API_KEY" > ~/.beadshub/config
+    echo "API_KEY=$API_KEY" > ~/.beadster/config
     echo "✓ Logged in!"
     break
   fi
@@ -466,7 +466,7 @@ app.post('/api/issues/:id/share', async (c) => {
     VALUES (?, ?, ?, ?, ?)
   `).bind(crypto.randomUUID(), issueId, issue.source_id, user.id, token).run();
 
-  const url = `https://beadshub.com/share/${token}`;
+  const url = `https://beadster.com/share/${token}`;
 
   return c.json({ url });
 });
@@ -500,7 +500,7 @@ app.get('/share/:token', async (c) => {
   return c.html(`
     <html>
       <head>
-        <title>${share.title} - BeadsHub</title>
+        <title>${share.title} - beadster</title>
       </head>
       <body>
         <h1>${share.title}</h1>
@@ -508,7 +508,7 @@ app.get('/share/:token', async (c) => {
         <p><strong>Status:</strong> ${share.status}</p>
         <p><strong>Priority:</strong> ${share.priority}</p>
         <div>${share.body}</div>
-        <p><small>Shared via BeadsHub</small></p>
+        <p><small>Shared via beadster</small></p>
       </body>
     </html>
   `);
@@ -519,10 +519,10 @@ app.get('/share/:token', async (c) => {
 
 ### Capturing Log Context
 
-**Store log references in BeadsHub extension table:**
+**Store log references in beadster extension table:**
 
 ```sql
-CREATE TABLE beadshub_context (
+CREATE TABLE beadster_context (
   id TEXT PRIMARY KEY,
   issue_id TEXT NOT NULL,
   context_type TEXT NOT NULL,  -- 'claude_log', 'screenshot', 'file', 'conversation'
@@ -550,8 +550,8 @@ CREATE TABLE beadshub_context (
   FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_beadshub_context_issue ON beadshub_context(issue_id);
-CREATE INDEX idx_beadshub_context_type ON beadshub_context(context_type);
+CREATE INDEX idx_beadster_context_issue ON beadster_context(issue_id);
+CREATE INDEX idx_beadster_context_type ON beadster_context(context_type);
 ```
 
 ### MCP Server Captures Context
@@ -559,7 +559,7 @@ CREATE INDEX idx_beadshub_context_type ON beadshub_context(context_type);
 **When creating issue:**
 
 ```typescript
-class BeadsHubMCP {
+class beadsterMCP {
   async todo_create(params) {
     // Create issue via bd
     const issueId = await this.createIssueWithBd(params);
@@ -580,7 +580,7 @@ class BeadsHubMCP {
       const excerpt = await this.readLogExcerpt(logPath);
 
       db.prepare(`
-        INSERT INTO beadshub_context (
+        INSERT INTO beadster_context (
           id, issue_id, context_type, log_path, log_excerpt, created_at
         )
         VALUES (?, ?, 'claude_log', ?, ?, ?)
@@ -597,7 +597,7 @@ class BeadsHubMCP {
     const conversationId = await this.getConversationId();
     if (conversationId) {
       db.prepare(`
-        INSERT INTO beadshub_context (
+        INSERT INTO beadster_context (
           id, issue_id, context_type, conversation_id, created_at
         )
         VALUES (?, ?, 'conversation', ?, ?)
@@ -608,7 +608,7 @@ class BeadsHubMCP {
     const fileContext = await this.getCurrentFileContext();
     if (fileContext) {
       db.prepare(`
-        INSERT INTO beadshub_context (
+        INSERT INTO beadster_context (
           id, issue_id, context_type, file_path, file_line, created_at
         )
         VALUES (?, ?, 'file', ?, ?, ?)
@@ -695,8 +695,8 @@ struct IssueDetailView: View {
   }
 
   func loadContexts() {
-    // Load from beadshub_context table
-    contexts = BeadsHubDatabase.shared.getContexts(for: issue.id)
+    // Load from beadster_context table
+    contexts = beadsterDatabase.shared.getContexts(for: issue.id)
   }
 }
 
@@ -825,7 +825,7 @@ async function uploadLogContext(issueId: string, logPath: string) {
   await env.R2.put(key, content);
 
   // Get public URL
-  const url = `https://beadshub-logs.r2.dev/${key}`;
+  const url = `https://beadster-logs.r2.dev/${key}`;
 
   // Store in database
   await env.DB.prepare(`
@@ -848,7 +848,7 @@ async function uploadLogContext(issueId: string, logPath: string) {
 
 2. **API keys** for CLI/MCP
    - Generate via web auth
-   - Store in ~/.beadshub/config
+   - Store in ~/.beadster/config
    - Long-lived tokens
 
 3. **Database schema** tracks Apple ID + API keys
@@ -876,7 +876,7 @@ async function uploadLogContext(issueId: string, logPath: string) {
    - Current file + line
    - Screenshots
 
-2. **Store in beadshub_context table**
+2. **Store in beadster_context table**
    - References to local logs
    - Excerpts for quick view
    - Full logs optional (upload to R2)
@@ -887,4 +887,4 @@ async function uploadLogContext(issueId: string, logPath: string) {
    - Deep link to conversations
    - Open files at exact line
 
-**All three features integrate seamlessly with the BeadsHub extension model!**
+**All three features integrate seamlessly with the beadster extension model!**

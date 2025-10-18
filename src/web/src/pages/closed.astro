@@ -1,0 +1,157 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+interface Issue {
+  id: string;
+  user_id: string;
+  beads_id: string;
+  title: string;
+  body: string | null;
+  status: string;
+  priority: number | null;
+  labels: string | null;
+  session_id: string | null;
+  client: string | null;
+  project_name: string | null;
+  created_at: number;
+  updated_at: number;
+  closed_at: number | null;
+}
+
+let issues: Issue[] = [];
+let error: string | null = null;
+
+// Use D1 binding directly - show closed issues
+try {
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db) {
+    const result = await db.prepare(
+      'SELECT * FROM issues WHERE status = ? ORDER BY closed_at DESC'
+    ).bind('closed').all();
+
+    issues = result.results as Issue[];
+  } else {
+    error = 'Database binding not available';
+  }
+} catch (e) {
+  error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
+}
+
+function formatDate(timestamp: number): string {
+  return new Date(timestamp * 1000).toLocaleDateString();
+}
+
+function getPriorityClass(priority: number | null): string {
+  if (priority === null) return '';
+  if (priority === 0) return 'priority';
+  if (priority === 1) return 'priority p1';
+  return 'priority p2';
+}
+---
+
+<Layout title="issues">
+  <nav class="tabs">
+    <a href="/">open</a>
+    <a href="/all">all</a>
+    <a href="/closed" class="active">closed</a>
+    <a href="/labels">labels</a>
+    <a href="/tree">tree</a>
+  </nav>
+
+  <h2>closed issues</h2>
+
+  {error && (
+    <div class="error">
+      <p>{error}</p>
+      <p style="font-size: 14px; color: #666; margin-top: 10px;">
+        configure BEADSTER_API_URL environment variable or update src/pages/index.astro
+      </p>
+    </div>
+  )}
+
+  {!error && issues.length === 0 && (
+    <div class="empty">
+      <p>no issues yet</p>
+    </div>
+  )}
+
+  {!error && issues.length > 0 && (
+    <ul class="issue-list">
+      {issues.map(issue => (
+        <li class="issue-item">
+          <div class="issue-header">
+            <span class="issue-id">{issue.beads_id}</span>
+            <span class="issue-title">{issue.title}</span>
+          </div>
+          <div class="issue-meta">
+            <span class={`badge status ${issue.status}`}>{issue.status}</span>
+            {issue.priority !== null && (
+              <span class={`badge ${getPriorityClass(issue.priority)}`}>
+                P{issue.priority}
+              </span>
+            )}
+            {issue.session_id && (
+              <span class="badge session">
+                {issue.session_id.substring(0, 20)}...
+              </span>
+            )}
+            {issue.client && (
+              <span class="badge client">{issue.client}</span>
+            )}
+            {issue.project_name && (
+              <span class="badge">{issue.project_name}</span>
+            )}
+            <span>created {formatDate(issue.created_at)}</span>
+          </div>
+          {issue.body && (
+            <div style="margin-top: 8px; font-size: 14px; color: #666;">
+              {issue.body}
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  )}
+</Layout>
+
+<style>
+  .tabs {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+  }
+
+  .tabs a {
+    text-decoration: none;
+    color: #666;
+    font-size: 16px;
+    padding: 8px 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tabs a:hover {
+    color: #000;
+  }
+
+  .tabs a.active {
+    color: #000;
+    border-bottom-color: #000;
+    font-weight: 500;
+  }
+
+  h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+
+  .error {
+    padding: 20px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    color: #c00;
+  }
+</style>

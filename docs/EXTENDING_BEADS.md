@@ -1,10 +1,10 @@
-# How BeadsHub Extends Beads
+# How beadster Extends Beads
 
 ## Philosophy
 
 **Beads is perfect as-is. Don't modify it.**
 
-Following the EXTENDING.md guidelines, BeadsHub adds orchestration layers WITHOUT touching Beads core.
+Following the EXTENDING.md guidelines, beadster adds orchestration layers WITHOUT touching Beads core.
 
 ## What Beads Provides
 
@@ -21,7 +21,7 @@ Following the EXTENDING.md guidelines, BeadsHub adds orchestration layers WITHOU
 - `events` - Issue history
 - `audit` - Change tracking
 
-## What BeadsHub Adds
+## What beadster Adds
 
 ### 1. Custom Tables in Same Database
 
@@ -30,8 +30,8 @@ Following EXTENDING.md pattern, add namespaced tables:
 ```sql
 -- In .beads/beads.db
 
--- BeadsHub sync metadata
-CREATE TABLE IF NOT EXISTS beadshub_sync (
+-- beadster sync metadata
+CREATE TABLE IF NOT EXISTS beadster_sync (
   issue_id TEXT PRIMARY KEY,
   cloud_id TEXT,
   synced_at INTEGER,
@@ -40,11 +40,11 @@ CREATE TABLE IF NOT EXISTS beadshub_sync (
   FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_beadshub_sync_status ON beadshub_sync(sync_status);
-CREATE INDEX idx_beadshub_sync_cloud_id ON beadshub_sync(cloud_id);
+CREATE INDEX idx_beadster_sync_status ON beadster_sync(sync_status);
+CREATE INDEX idx_beadster_sync_cloud_id ON beadster_sync(cloud_id);
 
--- BeadsHub source info
-CREATE TABLE IF NOT EXISTS beadshub_source (
+-- beadster source info
+CREATE TABLE IF NOT EXISTS beadster_source (
   id TEXT PRIMARY KEY DEFAULT 1,  -- Only one row
   name TEXT,
   cloud_source_id TEXT,
@@ -56,8 +56,8 @@ CREATE TABLE IF NOT EXISTS beadshub_source (
   bookmark_updated_at INTEGER
 );
 
--- BeadsHub session tracking (from labels)
-CREATE TABLE IF NOT EXISTS beadshub_sessions (
+-- beadster session tracking (from labels)
+CREATE TABLE IF NOT EXISTS beadster_sessions (
   session_id TEXT PRIMARY KEY,
   first_issue_id TEXT,
   last_issue_id TEXT,
@@ -68,11 +68,11 @@ CREATE TABLE IF NOT EXISTS beadshub_sessions (
   issue_count INTEGER
 );
 
-CREATE INDEX idx_beadshub_sessions_client ON beadshub_sessions(client);
-CREATE INDEX idx_beadshub_sessions_project ON beadshub_sessions(project);
+CREATE INDEX idx_beadster_sessions_client ON beadster_sessions(client);
+CREATE INDEX idx_beadster_sessions_project ON beadster_sessions(project);
 
--- BeadsHub conflict resolution
-CREATE TABLE IF NOT EXISTS beadshub_conflicts (
+-- beadster conflict resolution
+CREATE TABLE IF NOT EXISTS beadster_conflicts (
   id TEXT PRIMARY KEY,
   issue_id TEXT,
   conflict_type TEXT,  -- 'update_conflict', 'delete_conflict'
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS beadshub_conflicts (
 
 ### 2. Access Pattern
 
-**Sync daemon reads Beads data, adds BeadsHub metadata:**
+**Sync daemon reads Beads data, adds beadster metadata:**
 
 ```typescript
 class SyncDaemon {
@@ -98,9 +98,9 @@ class SyncDaemon {
       SELECT * FROM issues WHERE id = ?
     `).get(issueId);
 
-    // 2. Check BeadsHub sync status
+    // 2. Check beadster sync status
     const syncStatus = db.prepare(`
-      SELECT * FROM beadshub_sync WHERE issue_id = ?
+      SELECT * FROM beadster_sync WHERE issue_id = ?
     `).get(issueId);
 
     if (syncStatus && syncStatus.synced_at > issue.updated_at) {
@@ -111,9 +111,9 @@ class SyncDaemon {
     // 3. Push to cloud
     const cloudIssue = await this.pushToCloud(issue);
 
-    // 4. Update BeadsHub metadata (write to our tables only)
+    // 4. Update beadster metadata (write to our tables only)
     db.prepare(`
-      INSERT INTO beadshub_sync (issue_id, cloud_id, synced_at, sync_status)
+      INSERT INTO beadster_sync (issue_id, cloud_id, synced_at, sync_status)
       VALUES (?, ?, ?, 'synced')
       ON CONFLICT(issue_id) DO UPDATE SET
         synced_at = excluded.synced_at,
@@ -131,7 +131,7 @@ class SyncDaemon {
 
       // Update our sync metadata
       db.prepare(`
-        UPDATE beadshub_sync
+        UPDATE beadster_sync
         SET cloud_updated_at = ?, sync_status = 'synced'
         WHERE issue_id = ?
       `).run(Date.now(), change.id);
@@ -146,7 +146,7 @@ class SyncDaemon {
 
 ```typescript
 // When creating issue via MCP
-class BeadsHubMCP {
+class beadsterMCP {
   async todo_create(params) {
     const beadsDir = await this.findBeadsDir();
 
@@ -184,7 +184,7 @@ class BeadsHubMCP {
     const db = new Database(`${beadsDir}/beads.db`);
 
     db.prepare(`
-      INSERT INTO beadshub_sessions (
+      INSERT INTO beadster_sessions (
         session_id, first_seen, last_seen, client, project, issue_count
       )
       VALUES (?, ?, ?, ?, ?, 1)
@@ -196,7 +196,7 @@ class BeadsHubMCP {
 }
 ```
 
-### 4. Query Both Beads and BeadsHub Data
+### 4. Query Both Beads and beadster Data
 
 ```typescript
 // Query issues with session info
@@ -210,7 +210,7 @@ async function getIssuesWithSessions(sourceId: string) {
       s.cloud_id,
       s.sync_status
     FROM issues i
-    LEFT JOIN beadshub_sync s ON s.issue_id = i.id
+    LEFT JOIN beadster_sync s ON s.issue_id = i.id
     WHERE i.status = 'open'
     ORDER BY i.created_at DESC
   `).all();
@@ -244,7 +244,7 @@ async function getSessionStats() {
       issue_count,
       first_seen,
       last_seen
-    FROM beadshub_sessions
+    FROM beadster_sessions
     ORDER BY last_seen DESC
     LIMIT 20
   `).all();
@@ -255,10 +255,10 @@ async function getSessionStats() {
 
 ### 5. Database Initialization
 
-**On first use, create BeadsHub tables:**
+**On first use, create beadster tables:**
 
 ```typescript
-class BeadsHubExtension {
+class beadsterExtension {
   async initialize(beadsDir: string) {
     const dbPath = path.join(beadsDir, '.beads', 'beads.db');
 
@@ -268,9 +268,9 @@ class BeadsHubExtension {
 
     const db = new Database(dbPath);
 
-    // Create BeadsHub extension tables
+    // Create beadster extension tables
     db.exec(`
-      CREATE TABLE IF NOT EXISTS beadshub_sync (
+      CREATE TABLE IF NOT EXISTS beadster_sync (
         issue_id TEXT PRIMARY KEY,
         cloud_id TEXT,
         synced_at INTEGER,
@@ -279,10 +279,10 @@ class BeadsHubExtension {
         FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
       );
 
-      CREATE INDEX IF NOT EXISTS idx_beadshub_sync_status
-        ON beadshub_sync(sync_status);
+      CREATE INDEX IF NOT EXISTS idx_beadster_sync_status
+        ON beadster_sync(sync_status);
 
-      CREATE TABLE IF NOT EXISTS beadshub_source (
+      CREATE TABLE IF NOT EXISTS beadster_source (
         id TEXT PRIMARY KEY DEFAULT 1,
         name TEXT,
         cloud_source_id TEXT,
@@ -291,7 +291,7 @@ class BeadsHubExtension {
         tags TEXT
       );
 
-      CREATE TABLE IF NOT EXISTS beadshub_sessions (
+      CREATE TABLE IF NOT EXISTS beadster_sessions (
         session_id TEXT PRIMARY KEY,
         first_issue_id TEXT,
         last_issue_id TEXT,
@@ -302,7 +302,7 @@ class BeadsHubExtension {
         issue_count INTEGER
       );
 
-      CREATE TABLE IF NOT EXISTS beadshub_conflicts (
+      CREATE TABLE IF NOT EXISTS beadster_conflicts (
         id TEXT PRIMARY KEY,
         issue_id TEXT,
         conflict_type TEXT,
@@ -314,12 +314,12 @@ class BeadsHubExtension {
       );
 
       -- Store extension version
-      CREATE TABLE IF NOT EXISTS beadshub_meta (
+      CREATE TABLE IF NOT EXISTS beadster_meta (
         key TEXT PRIMARY KEY,
         value TEXT
       );
 
-      INSERT OR REPLACE INTO beadshub_meta (key, value)
+      INSERT OR REPLACE INTO beadster_meta (key, value)
       VALUES ('version', '1.0.0');
     `);
 
@@ -346,7 +346,7 @@ async function handleConflict(issueId: string) {
 
   // Check sync metadata
   const syncInfo = db.prepare(`
-    SELECT * FROM beadshub_sync WHERE issue_id = ?
+    SELECT * FROM beadster_sync WHERE issue_id = ?
   `).get(issueId);
 
   if (localIssue.updated_at > syncInfo.synced_at &&
@@ -355,7 +355,7 @@ async function handleConflict(issueId: string) {
 
     // Store conflict for user resolution
     db.prepare(`
-      INSERT INTO beadshub_conflicts (
+      INSERT INTO beadster_conflicts (
         id, issue_id, conflict_type, local_state, cloud_state, detected_at
       )
       VALUES (?, ?, 'update_conflict', ?, ?, ?)
@@ -378,15 +378,15 @@ async function handleConflict(issueId: string) {
 **Store complex state using SQLite JSON:**
 
 ```sql
--- BeadsHub cache (for quick queries)
-CREATE TABLE IF NOT EXISTS beadshub_cache (
+-- beadster cache (for quick queries)
+CREATE TABLE IF NOT EXISTS beadster_cache (
   key TEXT PRIMARY KEY,
   value TEXT,  -- JSON
   expires_at INTEGER
 );
 
 -- Example: Cache ready work
-INSERT INTO beadshub_cache (key, value, expires_at)
+INSERT INTO beadster_cache (key, value, expires_at)
 VALUES (
   'ready_work',
   json_array(
@@ -399,7 +399,7 @@ VALUES (
 -- Query
 SELECT
   json_extract(value, '$[0].title') as first_ready_task
-FROM beadshub_cache
+FROM beadster_cache
 WHERE key = 'ready_work'
   AND expires_at > ?;
 ```
@@ -409,7 +409,7 @@ WHERE key = 'ready_work'
 ### ✅ Do:
 
 1. **Add custom tables with namespace**
-   - `beadshub_sync`, `beadshub_sessions`, etc.
+   - `beadster_sync`, `beadster_sessions`, etc.
    - Never `sync`, `sessions` (too generic)
 
 2. **Use foreign keys to issues table**
@@ -449,7 +449,7 @@ WHERE key = 'ready_work'
 
 4. **Don't use generic table names**
    - Not: `sync`, `metadata`, `config`
-   - Yes: `beadshub_sync`, `beadshub_metadata`
+   - Yes: `beadster_sync`, `beadster_metadata`
 
 5. **Don't store large blobs**
    - Keep database fast
@@ -468,28 +468,28 @@ WHERE key = 'ready_work'
 cd ~/projects/main-app
 bd init
 
-# BeadsHub hook runs (if installed)
-beadshub init-extension
+# beadster hook runs (if installed)
+beadster init-extension
 ```
 
 ```typescript
-// beadshub init-extension
+// beadster init-extension
 async function initExtension() {
   const beadsDir = process.cwd();
   const dbPath = `${beadsDir}/.beads/beads.db`;
 
-  // Create BeadsHub tables
-  await BeadsHubExtension.initialize(beadsDir);
+  // Create beadster tables
+  await beadsterExtension.initialize(beadsDir);
 
-  // Create beadshub.json
-  fs.writeFileSync(`${beadsDir}/.beads/beadshub.json`, JSON.stringify({
+  // Create beadster.json
+  fs.writeFileSync(`${beadsDir}/.beads/beadster.json`, JSON.stringify({
     version: '1.0.0',
     source_id: generateSourceId(),
     registered: false,
     sync_enabled: true
   }, null, 2));
 
-  console.log('✓ BeadsHub extension initialized');
+  console.log('✓ beadster extension initialized');
 }
 ```
 
@@ -516,7 +516,7 @@ class SyncDaemon {
 
     // Check our sync status
     const syncStatus = db.prepare(`
-      SELECT * FROM beadshub_sync WHERE issue_id = ?
+      SELECT * FROM beadster_sync WHERE issue_id = ?
     `).get(issueId);
 
     if (!syncStatus || syncStatus.synced_at < issue.updated_at) {
@@ -525,7 +525,7 @@ class SyncDaemon {
 
       // Update our metadata
       db.prepare(`
-        INSERT INTO beadshub_sync (issue_id, synced_at, sync_status)
+        INSERT INTO beadster_sync (issue_id, synced_at, sync_status)
         VALUES (?, ?, 'synced')
         ON CONFLICT(issue_id) DO UPDATE SET
           synced_at = excluded.synced_at,
@@ -548,7 +548,7 @@ async function pullCloudChanges() {
 
     // Update our sync metadata
     db.prepare(`
-      UPDATE beadshub_sync
+      UPDATE beadster_sync
       SET cloud_updated_at = ?
       WHERE issue_id = ?
     `).run(Date.now(), change.id);
@@ -558,7 +558,7 @@ async function pullCloudChanges() {
 
 ## Migration Strategy
 
-**When BeadsHub extension updates:**
+**When beadster extension updates:**
 
 ```typescript
 class Migration {
@@ -567,25 +567,25 @@ class Migration {
 
     // Check current version
     const version = db.prepare(`
-      SELECT value FROM beadshub_meta WHERE key = 'version'
+      SELECT value FROM beadster_meta WHERE key = 'version'
     `).get()?.value || '0.0.0';
 
     if (version < '1.1.0') {
       // Add new column
       db.exec(`
-        ALTER TABLE beadshub_sync ADD COLUMN last_error TEXT;
+        ALTER TABLE beadster_sync ADD COLUMN last_error TEXT;
       `);
 
       // Update version
       db.prepare(`
-        UPDATE beadshub_meta SET value = '1.1.0' WHERE key = 'version'
+        UPDATE beadster_meta SET value = '1.1.0' WHERE key = 'version'
       `).run();
     }
 
     if (version < '1.2.0') {
       // Add new table
       db.exec(`
-        CREATE TABLE IF NOT EXISTS beadshub_webhooks (
+        CREATE TABLE IF NOT EXISTS beadster_webhooks (
           id TEXT PRIMARY KEY,
           url TEXT,
           events TEXT,
@@ -594,7 +594,7 @@ class Migration {
       `);
 
       db.prepare(`
-        UPDATE beadshub_meta SET value = '1.2.0' WHERE key = 'version'
+        UPDATE beadster_meta SET value = '1.2.0' WHERE key = 'version'
       `).run();
     }
   }
@@ -607,18 +607,18 @@ class Migration {
 
 ```swift
 // Mac app
-class BeadsHubDatabase {
+class beadsterDatabase {
   func getIssues(from beadsPath: URL) -> [Issue] {
     let dbPath = beadsPath.appendingPathComponent("beads.db").path
 
     let db = try Connection(dbPath)
 
     let issues = Table("issues")
-    let beadshubSync = Table("beadshub_sync")
+    let beadsterSync = Table("beadster_sync")
 
     let query = issues
-      .join(.leftOuter, beadshubSync, on: issues[id] == beadshubSync[issue_id])
-      .select(issues[*], beadshubSync[cloud_id], beadshubSync[sync_status])
+      .join(.leftOuter, beadsterSync, on: issues[id] == beadsterSync[issue_id])
+      .select(issues[*], beadsterSync[cloud_id], beadsterSync[sync_status])
       .order(issues[created_at].desc)
 
     return try db.prepare(query).map { row in
@@ -626,8 +626,8 @@ class BeadsHubDatabase {
         id: row[issues[id]],
         title: row[issues[title]],
         status: row[issues[status]],
-        cloudId: row[beadshubSync[cloud_id]],
-        syncStatus: row[beadshubSync[sync_status]]
+        cloudId: row[beadsterSync[cloud_id]],
+        syncStatus: row[beadsterSync[sync_status]]
       )
     }
   }
@@ -658,11 +658,11 @@ class SourceManager {
       self.initializeBeads(in: folderURL)
     }
 
-    // Store bookmark in BeadsHub extension table
+    // Store bookmark in beadster extension table
     let db = try Connection(dbPath.path)
 
     try db.run("""
-      INSERT INTO beadshub_source (
+      INSERT INTO beadster_source (
         id, name, bookmark, bookmark_updated_at
       )
       VALUES ('1', ?, ?, ?)
@@ -683,7 +683,7 @@ class SourceManager {
   ) {
     // App container registry
     let containerURL = FileManager.default
-      .containerURL(forSecurityApplicationGroupIdentifier: "group.com.beadshub")!
+      .containerURL(forSecurityApplicationGroupIdentifier: "group.com.beadster")!
 
     let registryPath = containerURL
       .appendingPathComponent("sources.json")
@@ -715,12 +715,12 @@ class SourceManager {
       return nil
     }
 
-    // Read bookmark from BeadsHub extension table
+    // Read bookmark from beadster extension table
     let db = try? Connection(dbPath.path)
 
     let query = try? db?.prepare("""
       SELECT bookmark, bookmark_updated_at
-      FROM beadshub_source
+      FROM beadster_source
       WHERE id = '1'
     """)
 
@@ -751,7 +751,7 @@ class SourceManager {
     // Show alert to user
     let alert = NSAlert()
     alert.messageText = "Access Expired"
-    alert.informativeText = "BeadsHub needs access to this folder again."
+    alert.informativeText = "beadster needs access to this folder again."
     alert.addButton(withTitle: "Grant Access")
     alert.addButton(withTitle: "Cancel")
 
@@ -776,7 +776,7 @@ class SourceManager {
       let db = try? Connection(dbPath.path)
 
       try? db?.run("""
-        UPDATE beadshub_source
+        UPDATE beadster_source
         SET bookmark = ?, bookmark_updated_at = ?
         WHERE id = '1'
       """, bookmark.base64EncodedString(), Int(Date().timeIntervalSince1970))
@@ -791,17 +791,17 @@ class SourceManager {
 
 1. **Portable** - Bookmark travels with project
 2. **Self-contained** - .beads/ directory knows how to be accessed
-3. **Multiple apps** - Any BeadsHub app can read the bookmark
+3. **Multiple apps** - Any beadster app can read the bookmark
 4. **Sync-aware** - If .beads/ moves, bookmark can be refreshed
 
 **App registry vs .beads/ database:**
 
 ```
-~/.Library/Containers/com.beadshub/Data/sources.json
+~/.Library/Containers/com.beadster/Data/sources.json
 - Quick lookup of all sources
 - App's view of registered projects
 
-~/projects/main-app/.beads/beads.db (beadshub_source table)
+~/projects/main-app/.beads/beads.db (beadster_source table)
 - Bookmark for THIS specific source
 - Self-contained with project
 - Syncs if .beads/ is copied
@@ -815,7 +815,7 @@ class SourceManager {
 3. For each external source:
    a. Get beadsPath from registry
    b. Open beadsPath/beads.db
-   c. Read bookmark from beadshub_source table
+   c. Read bookmark from beadster_source table
    d. Restore access using bookmark
    e. Watch for changes
 ```
@@ -852,9 +852,9 @@ class AppDelegate {
 
 ## Summary
 
-**BeadsHub extends Beads following EXTENDING.md guidelines:**
+**beadster extends Beads following EXTENDING.md guidelines:**
 
-1. ✅ **Add custom tables** (namespaced: `beadshub_*`)
+1. ✅ **Add custom tables** (namespaced: `beadster_*`)
 2. ✅ **Use foreign keys** to `issues` table
 3. ✅ **Store metadata** in our tables, not Beads tables
 4. ✅ **Read from Beads**, write via `bd` CLI
@@ -875,4 +875,4 @@ class AppDelegate {
 - ❌ Duplicate Beads data
 - ❌ Break Beads migrations
 
-**Key insight:** Beads stays pure and focused. BeadsHub adds orchestration layers using the recommended extension patterns. Both systems coexist in the same SQLite database harmoniously.
+**Key insight:** Beads stays pure and focused. beadster adds orchestration layers using the recommended extension patterns. Both systems coexist in the same SQLite database harmoniously.
