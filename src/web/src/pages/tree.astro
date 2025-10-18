@@ -9,12 +9,20 @@ import Layout from '../layouts/Layout.astro';
     <a href="/closed">closed</a>
     <a href="/labels">labels</a>
     <a href="/tree" class="active">tree</a>
+    <a href="/stats">stats</a>
   </nav>
 
   <h2>dependency tree</h2>
 
-  <div class="empty">
-    <p>dependency tree view coming soon</p>
+  <div class="notice">
+    <h3>Coming Soon</h3>
+    <p>
+      Dependency tree visualization will be available once dependencies are synced to the cloud.
+    </p>
+    <p>
+      For now, use the local bd CLI to view dependencies:
+    </p>
+    <pre><code>bd dep tree</code></pre>
   </div>
 </Layout>
 
@@ -51,9 +59,36 @@ import Layout from '../layouts/Layout.astro';
     font-size: 24px;
   }
 
-  .empty {
-    padding: 40px;
+  .notice {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 30px;
     text-align: center;
+  }
+
+  .notice h3 {
+    margin: 0 0 15px 0;
+    font-size: 20px;
     color: #666;
+  }
+
+  .notice p {
+    margin: 10px 0;
+    color: #666;
+    line-height: 1.6;
+  }
+
+  .notice pre {
+    display: inline-block;
+    background: #f0f0f0;
+    padding: 10px 20px;
+    border-radius: 4px;
+    margin-top: 15px;
+  }
+
+  .notice code {
+    font-family: monospace;
+    color: #0066cc;
   }
 </style>
