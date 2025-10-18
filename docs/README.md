@@ -58,13 +58,11 @@ covers:
 
 ## implementation
 
-[POC/POC_PLAN.md](POC/POC_PLAN.md) - proof of concept implementation plan
-
-detailed steps for building:
-- api (cloudflare workers + d1)
-- sync daemon (swift)
-- mcp server (typescript)
-- web ui (astro)
+see component READMEs for implementation details:
+- [src/api/README.md](../src/api/README.md) - cloudflare workers api
+- [src/sync/README.md](../src/sync/README.md) - swift sync daemon
+- [src/mcp/README.md](../src/mcp/README.md) - mcp server
+- [src/web/README.md](../src/web/README.md) - astro web ui
 
 ## file overview
 
@@ -78,9 +76,7 @@ docs/
 ├── DEVICE_TRACKING.md     # device identity
 ├── IDENTITY_AND_SHARING.md # auth and sharing
 ├── EXTENDING_BEADS.md     # technical architecture
-├── SCALING_FOR_TEAMS.md   # database and scaling
-└── POC/
-    └── POC_PLAN.md        # implementation details
+└── SCALING_FOR_TEAMS.md   # database and scaling
 ```
 
 ## reading order
@@ -97,4 +93,4 @@ want technical details:
 4. SCALING_FOR_TEAMS.md - databases
 
 ready to build:
-1. POC/POC_PLAN.md - implementation steps
+1. check component READMEs in src/ for implementation
