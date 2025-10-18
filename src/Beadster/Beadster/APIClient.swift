@@ -63,20 +63,16 @@ class APIClient {
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
+        // create request body
+        struct SyncPushRequest: Codable {
+            let source: SourcePayload
+            let issues: [Issue]
+        }
+
+        let requestBody = SyncPushRequest(source: source, issues: issues)
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
-
-        let body: [String: Any] = [
-            "source": try encoder.encode(source),
-            "issues": try encoder.encode(issues)
-        ]
-
-        // Manually encode the JSON since we have mixed types
-        var jsonObject: [String: Any] = [:]
-        jsonObject["source"] = try JSONSerialization.jsonObject(with: try encoder.encode(source))
-        jsonObject["issues"] = try JSONSerialization.jsonObject(with: try encoder.encode(issues))
-
-        request.httpBody = try JSONSerialization.data(withJSONObject: jsonObject)
+        request.httpBody = try encoder.encode(requestBody)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
