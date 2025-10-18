@@ -26,10 +26,17 @@ class SyncDaemon: ObservableObject {
     private let maxRetries = 3
     private let baseRetryDelay: TimeInterval = 30 // 30 seconds
 
+    // device ID for tracking
+    private let deviceId: String
+
     // reference to ProjectStore to get latest project data
     weak var projectStore: ProjectStore?
 
-    private init() {}
+    private init() {
+        // get hardware-based device ID
+        deviceId = DeviceID.shared.getDeviceId()
+        print("SyncDaemon initialized with device ID: \(deviceId)")
+    }
 
     // MARK: - Start/Stop
 
