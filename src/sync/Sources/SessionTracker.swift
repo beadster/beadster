@@ -140,13 +140,9 @@ class SessionTracker {
         // Get project name from beads directory
         let projectName = URL(fileURLWithPath: beadsDir).lastPathComponent
 
-        // Try to find session for this issue
-        let sessionInfo: SessionInfo?
-        if let session = findSessionForIssue(createdAt: issue.createdAt, issueTitle: issue.title) {
-            sessionInfo = session
-        } else {
-            sessionInfo = getCurrentSession()
-        }
+        // Skip session tracking for now - too slow
+        // TODO: optimize session tracking with caching
+        let sessionInfo = getCurrentSession()
 
         guard let session = sessionInfo else {
             return issue // Can't determine session
