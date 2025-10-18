@@ -68,15 +68,22 @@ see component READMEs for implementation details:
 
 ```
 docs/
-├── README.md              # this file
-├── OVERVIEW.md            # what is beadster (start here)
-├── SETUP.md               # installation and setup
-├── USAGE.md               # usage patterns
-├── AUTO_SETUP.md          # auto-init and registration
-├── DEVICE_TRACKING.md     # device identity
-├── IDENTITY_AND_SHARING.md # auth and sharing
-├── EXTENDING_BEADS.md     # technical architecture
-└── SCALING_FOR_TEAMS.md   # database and scaling
+├── README.md                  # this file
+├── OVERVIEW.md                # what is beadster (start here)
+├── SETUP.md                   # installation and setup
+├── USAGE.md                   # usage patterns
+├── AUTO_SETUP.md              # auto-init and registration
+├── SCHEMA.md                  # complete database schema
+├── BEADS_DEPENDENCIES.md      # four dependency types from beads
+├── AGENTS_AND_DEPENDENCIES.md # how agents use dependencies
+├── DEVICE_TRACKING.md         # device identity
+├── IDENTITY_AND_SHARING.md    # auth and sharing
+├── EXTENDING_BEADS.md         # technical architecture
+├── SCALING_FOR_TEAMS.md       # database and scaling
+└── FEATURES/
+    ├── FEATURE_GIT_INFO.md       # git integration
+    ├── FEATURE_CUSTOMER_BUGS.md  # customer bug intake
+    └── LINEAR_IDEAS.md           # ideas from linear
 ```
 
 ## reading order
