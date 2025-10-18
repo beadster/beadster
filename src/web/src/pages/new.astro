@@ -1,0 +1,192 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="new issue">
+  <div class="header">
+    <h2>create new issue</h2>
+    <a href="/" class="back-link">← back to issues</a>
+  </div>
+
+  <form id="issue-form" class="issue-form">
+    <div class="form-group">
+      <label for="title">title</label>
+      <input type="text" id="title" name="title" required autofocus>
+    </div>
+
+    <div class="form-group">
+      <label for="body">description</label>
+      <textarea id="body" name="body" rows="5"></textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="priority">priority</label>
+        <select id="priority" name="priority">
+          <option value="0">P0 - critical</option>
+          <option value="1" selected>P1 - high</option>
+          <option value="2">P2 - normal</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="status">status</label>
+        <select id="status" name="status">
+          <option value="open" selected>open</option>
+          <option value="closed">closed</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">create issue</button>
+      <a href="/" class="btn-secondary">cancel</a>
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+  </form>
+</Layout>
+
+<style>
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+  }
+
+  .back-link {
+    color: #0066cc;
+    text-decoration: none;
+    font-size: 14px;
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 24px;
+  }
+
+  .issue-form {
+    max-width: 600px;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+  }
+
+  input[type="text"],
+  textarea,
+  select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+  }
+
+  input[type="text"]:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-primary {
+    background: #0066cc;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #0052a3;
+  }
+
+  .btn-secondary {
+    background: #f0f0f0;
+    color: #333;
+  }
+
+  .btn-secondary:hover {
+    background: #e0e0e0;
+  }
+
+  .error {
+    margin-top: 20px;
+    padding: 15px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 4px;
+    color: #c00;
+  }
+</style>
+
+<script>
+  const form = document.getElementById('issue-form') as HTMLFormElement;
+  const errorDiv = document.getElementById('error') as HTMLDivElement;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    const data = {
+      title: formData.get('title'),
+      body: formData.get('body') || null,
+      priority: parseInt(formData.get('priority') as string),
+      status: formData.get('status')
+    };
+
+    try {
+      const response = await fetch('/api/issues/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create issue');
+      }
+
+      window.location.href = '/';
+    } catch (err) {
+      errorDiv.textContent = err instanceof Error ? err.message : 'Failed to create issue';
+      errorDiv.style.display = 'block';
+    }
+  });
+</script>

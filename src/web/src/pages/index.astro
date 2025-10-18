@@ -58,7 +58,10 @@ function getPriorityClass(priority: number | null): string {
     <a href="/tree">tree</a>
   </nav>
 
-  <h2>open issues</h2>
+  <div class="header-row">
+    <h2>open issues</h2>
+    <a href="/new" class="btn-new">+ new issue</a>
+  </div>
 
   {error && (
     <div class="error">
@@ -80,8 +83,13 @@ function getPriorityClass(priority: number | null): string {
       {issues.map(issue => (
         <li class="issue-item">
           <div class="issue-header">
-            <span class="issue-id">{issue.beads_id}</span>
-            <span class="issue-title">{issue.title}</span>
+            <div>
+              <span class="issue-id">{issue.beads_id}</span>
+              <span class="issue-title">{issue.title}</span>
+            </div>
+            <div class="issue-actions">
+              <button class="btn-close" data-id={issue.id}>✓ close</button>
+            </div>
           </div>
           <div class="issue-meta">
             <span class={`badge status ${issue.status}`}>{issue.status}</span>
@@ -154,4 +162,78 @@ function getPriorityClass(priority: number | null): string {
     border-radius: 6px;
     color: #c00;
   }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .btn-new {
+    background: #0066cc;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .btn-new:hover {
+    background: #0052a3;
+  }
+
+  .issue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .issue-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-close {
+    background: #e8ffe8;
+    color: #060;
+    border: 1px solid #cfc;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .btn-close:hover {
+    background: #d0ffd0;
+  }
 </style>
+
+<script>
+  document.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement;
+
+    if (target.classList.contains('btn-close')) {
+      const id = target.dataset.id;
+      if (!id) return;
+
+      if (!confirm('Close this issue?')) return;
+
+      try {
+        const response = await fetch(`/api/issues/${id}/close`, {
+          method: 'POST'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to close issue');
+        }
+
+        window.location.reload();
+      } catch (err) {
+        alert('Failed to close issue');
+      }
+    }
+  });
+</script>
