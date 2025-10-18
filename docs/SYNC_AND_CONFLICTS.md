@@ -174,9 +174,9 @@ async resolveConflicts(changes: Change[], source: Source): Promise<Change[]> {
       const cloudIssue = change.cloud;
 
       // check if cloud issue has been seen by any real client
-      const views = await this.cloudAPI.getIssueViews(cloudIssue.id);
-      const seenByRealClient = views.some(v =>
-        ['macos', 'ios', 'cli'].includes(v.client)
+      const tracking = await this.cloudAPI.getDeviceTracking(cloudIssue.id);
+      const seenByRealClient = tracking.some(t =>
+        ['macos', 'ios', 'cli'].includes(t.client)
       );
 
       if (!seenByRealClient) {
@@ -222,12 +222,12 @@ async resolveConflicts(changes: Change[], source: Source): Promise<Change[]> {
 }
 ```
 
-## issue_views table (visibility tracking)
+## device_issue_tracking table (visibility tracking)
 
 **purpose:** know if cloud issue has been synced to real clients yet
 
 ```sql
-CREATE TABLE issue_views (
+CREATE TABLE device_issue_tracking (
   issue_id TEXT NOT NULL,           -- global issue id
   device_id TEXT NOT NULL,
   client TEXT NOT NULL,             -- 'macos', 'ios', 'web', 'cli'
@@ -238,8 +238,8 @@ CREATE TABLE issue_views (
   FOREIGN KEY (device_id) REFERENCES devices(id)
 );
 
-CREATE INDEX idx_issue_views_issue ON issue_views(issue_id);
-CREATE INDEX idx_issue_views_device ON issue_views(device_id);
+CREATE INDEX idx_device_issue_tracking_issue ON device_issue_tracking(issue_id);
+CREATE INDEX idx_device_issue_tracking_device ON device_issue_tracking(device_id);
 ```
 
 **usage:**
@@ -249,7 +249,7 @@ CREATE INDEX idx_issue_views_device ON issue_views(device_id);
 async syncFromCloud(source: Source, cloudIssues: Issue[]) {
   for (const issue of cloudIssues) {
     // record that this device saw this issue
-    await this.cloudAPI.recordView(issue.id, {
+    await this.cloudAPI.recordDeviceTracking(issue.id, {
       device_id: this.deviceId,
       client: 'macos',
       timestamp: Date.now()
@@ -261,10 +261,10 @@ async syncFromCloud(source: Source, cloudIssues: Issue[]) {
 
 // when checking if safe to renumber
 async isSafeToRenumber(issueId: string): Promise<boolean> {
-  const views = await this.cloudAPI.getIssueViews(issueId);
+  const tracking = await this.cloudAPI.getDeviceTracking(issueId);
 
   // safe if only seen by web/mobile (ephemeral clients)
-  return views.every(v => ['web', 'mobile'].includes(v.client));
+  return tracking.every(t => ['web', 'mobile'].includes(t.client));
 }
 ```
 
@@ -410,9 +410,9 @@ class SyncDaemon {
     // write back to local
     await this.writeLocalJSONL(source, mergedIssues);
 
-    // 6. record views
+    // 6. record device tracking
     for (const issue of mergedIssues) {
-      await this.cloudAPI.recordView(issue.id, {
+      await this.cloudAPI.recordDeviceTracking(issue.id, {
         device_id: this.deviceId,
         client: 'macos',
         timestamp: Date.now()
@@ -443,7 +443,7 @@ class SyncDaemon {
 
 1. **source_sequences table** - prevent web/mobile collisions upfront
 2. **basic sync** - push/pull without conflict resolution
-3. **issue_views table** - track visibility for safe renumbering
+3. **device_issue_tracking table** - track visibility for safe renumbering
 4. **collision resolution** - use beads algorithm (renumber + update refs)
 5. **auto-sync debounce** - 5s debounce like beads
 6. **polling/websocket** - real-time cloud → local updates
@@ -466,9 +466,9 @@ class SyncDaemon {
 - aggregation layer
 - tracks sequences per source
 - resolves conflicts (desktop wins)
-- provides views table for consensus
+- provides device_issue_tracking table for consensus
 
-### when to use issue_views:
+### when to use device_issue_tracking:
 
 - determining if cloud issue has synced to real clients
 - safe window for id renumbering (web → desktop collision)
