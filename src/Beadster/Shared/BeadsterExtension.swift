@@ -277,7 +277,7 @@ public class BeadsterExtension {
 
 // MARK: - Models
 
-struct SyncInfo {
+public struct SyncInfo {
     public let issueId: String
     public let cloudId: String
     public let syncedAt: Int
@@ -288,7 +288,7 @@ struct SyncInfo {
 
 // MARK: - Errors
 
-enum ExtensionError: Error {
+public enum ExtensionError: Error {
     case cantOpen
     case createFailed
     case queryFailed

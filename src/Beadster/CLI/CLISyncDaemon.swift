@@ -65,8 +65,9 @@ class CLISyncDaemon {
             print("    📝 Found \(issues.count) issue(s)")
 
             print("    ⬆️  Pushing to cloud...")
+            let sourceId = generateSourceId(from: source)
             let payload = SourcePayload(
-                id: generateSourceId(from: source),
+                id: sourceId,
                 name: source.name,
                 type: "local",
                 path: source.path

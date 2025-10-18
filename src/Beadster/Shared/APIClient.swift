@@ -8,7 +8,7 @@
 import Foundation
 
 public class APIClient {
-    static let shared = APIClient()
+    public static let shared = APIClient()
 
     // POC: hardcoded dev API token (from remote D1: anton@systemoperator.com)
     private let apiToken = "3ae6ab7b-3e95-49b5-8d96-5ab6e8102373"
@@ -172,7 +172,7 @@ public class APIClient {
 
 // MARK: - Device Tracking Models
 
-struct DeviceTracking: Codable {
+public struct DeviceTracking: Codable {
     public let issueId: String
     public let deviceId: String
     public let client: String
@@ -183,7 +183,7 @@ struct DeviceTracking: Codable {
     public let platform: String?
 }
 
-struct DeviceTrackingResponse: Codable {
+public struct DeviceTrackingResponse: Codable {
     public let tracking: [DeviceTracking]
 }
 

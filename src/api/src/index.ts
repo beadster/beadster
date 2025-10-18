@@ -656,15 +656,15 @@ app.post('/api/sources/:source_id/next-id', async (c) => {
     SET next_beads_id = next_beads_id + 1
     WHERE source_id = ?
     RETURNING next_beads_id - 1 as beads_id_num
-  `).bind(sourceId).first();
+  `).bind(sourceId).first<{ beads_id_num: number }>();
 
   if (!result) {
     return c.json({ error: 'Failed to generate beads_id' }, 500);
   }
 
   return c.json({
-    beads_id: `bd-${(result as any).beads_id_num}`,
-    beads_id_num: (result as any).beads_id_num
+    beads_id: `bd-${result.beads_id_num}`,
+    beads_id_num: result.beads_id_num
   });
 });
 
@@ -826,6 +826,16 @@ app.get('/api/sync-stats', async (c) => {
     params.push(sinceTimestamp);
   }
 
+  interface SyncStats {
+    total_syncs: number;
+    successful_syncs: number;
+    failed_syncs: number;
+    avg_duration_ms: number | null;
+    total_issues_synced: number | null;
+    total_issues_created: number | null;
+    total_issues_updated: number | null;
+  }
+
   // Get overall stats
   const stats = await c.env.DB.prepare(`
     SELECT
@@ -838,7 +848,7 @@ app.get('/api/sync-stats', async (c) => {
       SUM(issues_updated) as total_issues_updated
     FROM sync_logs
     ${whereClause}
-  `).bind(...params).first();
+  `).bind(...params).first<SyncStats>();
 
   // Get error breakdown
   const errorBreakdown = await c.env.DB.prepare(`
@@ -853,9 +863,8 @@ app.get('/api/sync-stats', async (c) => {
     return c.json({ error: 'Failed to get stats' }, 500);
   }
 
-  const statsAny = stats as any;
-  const successRate = statsAny.total_syncs > 0
-    ? (statsAny.successful_syncs / statsAny.total_syncs * 100).toFixed(2)
+  const successRate = stats.total_syncs > 0
+    ? (stats.successful_syncs / stats.total_syncs * 100).toFixed(2)
     : 0;
 
   return c.json({

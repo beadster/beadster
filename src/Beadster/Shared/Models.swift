@@ -34,6 +34,13 @@ public struct SourcePayload: Codable {
     public let name: String
     public let type: String
     public let path: String?
+
+    public init(id: String, name: String, type: String, path: String?) {
+        self.id = id
+        self.name = name
+        self.type = type
+        self.path = path
+    }
 }
 
 // MARK: - Issue

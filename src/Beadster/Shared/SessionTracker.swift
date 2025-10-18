@@ -1,6 +1,6 @@
 import Foundation
 
-struct SessionInfo {
+public struct SessionInfo {
     public let sessionId: String
     public let client: String
     public let projectName: String?
