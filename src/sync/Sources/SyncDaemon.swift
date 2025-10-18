@@ -13,23 +13,32 @@ class SyncDaemon {
 
     func start() async {
         print("🚀 Beadster sync daemon starting...")
+        print("📍 API: \(config.apiUrl)")
+        print("📁 Sources: \(config.sources.count)")
+        print("")
 
         // Initial sync
+        print("🔄 Initial sync...")
         for source in config.sources {
+            print("  → Syncing \(source.name) (\(source.path))...")
             await syncSource(source)
         }
+        print("")
 
         // Watch for changes
+        print("👁  Setting up file watchers...")
         for source in config.sources {
             watchSource(source)
         }
-
         print("👀 Watching \(config.sources.count) source(s)")
+        print("")
 
         // Pull changes every 10 seconds
+        print("⏱  Starting pull loop (every 10s)...")
         Task {
             while true {
                 try await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
+                print("🔽 Checking for cloud changes...")
                 for source in config.sources {
                     await pullChanges(source)
                 }
@@ -37,32 +46,39 @@ class SyncDaemon {
         }
 
         // Keep running
+        print("✅ Daemon running!")
+        print("")
         RunLoop.main.run()
     }
 
     func syncSource(_ source: Source) async {
         do {
+            print("    📂 Opening database...")
             let db = BeadsDatabase(beadsDir: source.path)
             try db.open()
             defer { db.close() }
 
+            print("    📊 Reading issues...")
             let issues = try db.getAllIssues()
+            print("    📝 Found \(issues.count) issue(s)")
 
             // Add session metadata to issues
+            print("    🏷  Adding session metadata...")
             let issuesWithSession = issues.map { issue in
                 sessionTracker.addSessionLabels(to: issue, beadsDir: source.path)
             }
 
+            print("    ⬆️  Pushing to cloud...")
             let api = CloudAPI(apiUrl: config.apiUrl, apiKey: config.apiKey)
             try await api.pushIssues(source: source, issues: issuesWithSession)
 
             lastSync[source.path] = Int(Date().timeIntervalSince1970)
 
-            print("✓ Synced \(issuesWithSession.count) issue(s) from \(source.name)")
+            print("    ✅ Synced \(issuesWithSession.count) issue(s) from \(source.name)")
         } catch DatabaseError.cantOpen {
-            print("⚠️  No .beads/ found in \(source.path)")
+            print("    ⚠️  No .beads/ found in \(source.path)")
         } catch {
-            print("✗ Sync failed for \(source.name): \(error)")
+            print("    ❌ Sync failed for \(source.name): \(error)")
         }
     }
 
@@ -74,7 +90,7 @@ class SyncDaemon {
             let changes = try await api.pullChanges(source: source, since: since)
 
             if !changes.isEmpty {
-                print("⬇  Pulling \(changes.count) change(s) for \(source.name)")
+                print("⬇️  Pulling \(changes.count) change(s) for \(source.name)")
 
                 // Apply changes via bd CLI
                 for issue in changes {
@@ -82,9 +98,11 @@ class SyncDaemon {
                 }
 
                 lastSync[source.path] = Int(Date().timeIntervalSince1970)
+            } else {
+                print("  ✓ No changes for \(source.name)")
             }
         } catch {
-            // Silent fail for pull (not critical)
+            print("  ⚠️  Pull failed for \(source.name): \(error)")
         }
     }
 
