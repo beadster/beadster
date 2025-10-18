@@ -26,6 +26,9 @@ class SyncDaemon: ObservableObject {
     private let maxRetries = 3
     private let baseRetryDelay: TimeInterval = 30 // 30 seconds
 
+    // reference to ProjectStore to get latest project data
+    weak var projectStore: ProjectStore?
+
     private init() {}
 
     // MARK: - Start/Stop
@@ -150,20 +153,26 @@ class SyncDaemon: ObservableObject {
             return
         }
 
+        // get latest project data from store (sourceId might have been updated)
+        guard let latestProject = projectStore?.projects.first(where: { $0.id == project.id }) else {
+            print("Project not found in store: \(project.name)")
+            return
+        }
+
         isSyncing = true
         defer { isSyncing = false }
 
         if retryCount > 0 {
-            print("🔁 Retry \(retryCount)/\(maxRetries) for \(project.name)")
+            print("🔁 Retry \(retryCount)/\(maxRetries) for \(latestProject.name)")
         } else {
-            print("Syncing project: \(project.name)")
+            print("Syncing project: \(latestProject.name)")
         }
 
         do {
             // resolve bookmark
             var isStale = false
             guard let projectURL = try? URL(
-                resolvingBookmarkData: project.bookmark,
+                resolvingBookmarkData: latestProject.bookmark,
                 options: .withSecurityScope,
                 relativeTo: nil,
                 bookmarkDataIsStale: &isStale
@@ -186,7 +195,7 @@ class SyncDaemon: ObservableObject {
             print("Found \(localIssues.count) local issues")
 
             // 2. Get or create source on cloud
-            guard let sourceId = project.sourceId else {
+            guard let sourceId = latestProject.sourceId else {
                 print("No source ID - skipping cloud sync for now")
                 lastSyncDate = Date()
                 syncError = nil
@@ -196,27 +205,27 @@ class SyncDaemon: ObservableObject {
             // 3. Push local changes to cloud
             let sourcePayload = SourcePayload(
                 id: sourceId,
-                name: project.name,
+                name: latestProject.name,
                 type: "local",
-                path: project.path
+                path: latestProject.path
             )
             try await APIClient.shared.pushIssues(source: sourcePayload, issues: localIssues)
             print("⬆️  Pushed \(localIssues.count) issue(s) to cloud")
 
             // 4. Pull remote changes and apply locally
-            try await pullAndApplyChanges(project: project, projectURL: projectURL, sourceId: sourceId)
+            try await pullAndApplyChanges(project: latestProject, projectURL: projectURL, sourceId: sourceId)
 
             // 5. Record device tracking for all synced issues
             try await recordDeviceTracking(sourceId: sourceId, issues: localIssues)
 
-            lastSync[project.id] = Date()
+            lastSync[latestProject.id] = Date()
             lastSyncDate = Date()
             syncError = nil
 
             print("✅ Sync completed successfully")
 
             // send success notification
-            sendNotification(title: "Sync Complete", body: "Successfully synced \(project.name)")
+            sendNotification(title: "Sync Complete", body: "Successfully synced \(latestProject.name)")
 
         } catch {
             print("❌ Sync failed: \(error)")
@@ -225,7 +234,7 @@ class SyncDaemon: ObservableObject {
             if isRetriableError(error) && retryCount < maxRetries {
                 let delay = exponentialBackoff(retryCount: retryCount)
                 print("⏳ Will retry in \(Int(delay))s (attempt \(retryCount + 1)/\(maxRetries))")
-                addToRetryQueue(project, retryCount: retryCount + 1, delay: delay)
+                addToRetryQueue(latestProject, retryCount: retryCount + 1, delay: delay)
                 syncError = "Sync failed, retrying in \(Int(delay))s: \(friendlyErrorMessage(error))"
             } else {
                 let message = retryCount > 0 ? "after \(retryCount) retries" : ""
@@ -235,7 +244,7 @@ class SyncDaemon: ObservableObject {
                 // send error notification
                 sendNotification(
                     title: "Sync Failed",
-                    body: "Failed to sync \(project.name): \(friendlyErrorMessage(error))"
+                    body: "Failed to sync \(latestProject.name): \(friendlyErrorMessage(error))"
                 )
             }
         }

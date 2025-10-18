@@ -21,6 +21,9 @@ class ProjectStore: ObservableObject {
         loadProjects()
         print("ProjectStore: Loaded \(projects.count) projects")
 
+        // set projectStore reference in SyncDaemon
+        SyncDaemon.shared.projectStore = self
+
         // register any projects without sourceId
         Task {
             await registerUnregisteredProjects()
