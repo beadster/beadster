@@ -111,28 +111,22 @@ class SyncDaemon {
 
         let existsLocally = try db.issueExists(beadsId: issue.beadsId)
 
-        let escapedTitle = issue.title.replacingOccurrences(of: "\"", with: "\\\"")
-        let escapedBody = (issue.body ?? "").replacingOccurrences(of: "\"", with: "\\\"")
-
-        let command: String
-        if existsLocally {
-            // Update existing issue
-            command = """
-            cd "\(source.path)" && bd update \(issue.beadsId) \
-            --title="\(escapedTitle)" \
-            --status=\(issue.status) \
-            --priority=\(issue.priority ?? "1")
-            """
-        } else {
-            // Create new issue with specific ID
-            // Note: bd doesn't support setting custom ID, so we need to use JSONL directly
-            command = """
-            cd "\(source.path)" && bd create "\(escapedTitle)" \
-            --description="\(escapedBody)" \
-            --priority=\(issue.priority ?? "1") \
-            --status=\(issue.status)
-            """
+        // Only sync updates to existing local issues
+        // Skip creating new issues from cloud (would create ID mismatch)
+        guard existsLocally else {
+            print("  ⊘ Skipping new issue from cloud: \(issue.title) (\(issue.beadsId))")
+            return
         }
+
+        let escapedTitle = issue.title.replacingOccurrences(of: "\"", with: "\\\"")
+
+        // Update existing issue
+        let command = """
+        cd "\(source.path)" && bd update \(issue.beadsId) \
+        --title="\(escapedTitle)" \
+        --status=\(issue.status) \
+        --priority=\(issue.priority ?? "1")
+        """
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
@@ -142,8 +136,7 @@ class SyncDaemon {
         process.waitUntilExit()
 
         if process.terminationStatus == 0 {
-            let action = existsLocally ? "Updated" : "Created"
-            print("  ✓ \(action): \(issue.title)")
+            print("  ✓ Updated: \(issue.title)")
         }
     }
 
