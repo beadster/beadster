@@ -1,15 +1,81 @@
 -- Beadster Database Schema
 
+-- Users table (Better Auth compatible)
 CREATE TABLE users (
   id TEXT PRIMARY KEY,
-  email TEXT UNIQUE,
+  email TEXT,
+  name TEXT,
+  image TEXT,
+  email_verified INTEGER DEFAULT 0,
+
+  -- GitHub OAuth fields
+  github_id INTEGER UNIQUE,
+  github_login TEXT,
+  github_name TEXT,
+  github_email TEXT,
+  github_avatar_url TEXT,
+
+  -- API key for CLI/MCP access
   api_key TEXT UNIQUE NOT NULL,
+
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
 
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_api_key ON users(api_key);
+CREATE INDEX idx_users_github_id ON users(github_id);
+
+-- Better Auth sessions table
+CREATE TABLE sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  token TEXT UNIQUE NOT NULL,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_sessions_user ON sessions(user_id);
+CREATE INDEX idx_sessions_expires ON sessions(expires_at);
+CREATE INDEX idx_sessions_token ON sessions(token);
+
+-- Better Auth OAuth accounts table
+CREATE TABLE accounts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  provider_id TEXT NOT NULL,
+  access_token TEXT,
+  refresh_token TEXT,
+  id_token TEXT,
+  access_token_expires_at INTEGER,
+  refresh_token_expires_at INTEGER,
+  scope TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE(provider_id, account_id)
+);
+
+CREATE INDEX idx_accounts_user ON accounts(user_id);
+CREATE INDEX idx_accounts_provider ON accounts(provider_id, account_id);
+
+-- Better Auth verification tokens table
+CREATE TABLE verifications (
+  id TEXT PRIMARY KEY,
+  identifier TEXT NOT NULL,
+  value TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_verifications_identifier ON verifications(identifier);
+CREATE INDEX idx_verifications_expires ON verifications(expires_at);
 
 CREATE TABLE sources (
   id TEXT PRIMARY KEY,
