@@ -156,6 +156,18 @@ struct MainView: View {
     // MARK: - Content Header
 
     var contentHeader: some View {
+        Group {
+            if case .issueDetail(let issue) = contentMode {
+                // Issue detail header
+                issueDetailHeader(issue: issue)
+            } else {
+                // Default header with search and tabs
+                issuesListHeader
+            }
+        }
+    }
+
+    var issuesListHeader: some View {
         HStack(spacing: 8) {
             // Search button or search input
             if showSearch {
@@ -236,6 +248,68 @@ struct MainView: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+        .padding(.horizontal, 12)
+        .frame(height: LayoutConstants.contentHeaderHeight)
+        .background(Color.green.opacity(0.3)) // DEBUG
+        .border(Color.green, width: 2) // DEBUG
+    }
+
+    func issueDetailHeader(issue: Issue) -> some View {
+        HStack(spacing: 12) {
+            // Back button
+            Button(action: {
+                contentMode = .issuesList
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 11))
+                    Text("Back")
+                        .font(.system(size: 12))
+                }
+                .foregroundColor(.blue)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // Mark as done/open button
+            Button(action: {
+                issueStore.toggleIssueStatus(issue)
+                // Update the contentMode to reflect the change
+                if let updatedIssue = issueStore.issues.first(where: { $0.id == issue.id }) {
+                    contentMode = .issueDetail(updatedIssue)
+                }
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: issue.status == "closed" ? "circle" : "checkmark.circle.fill")
+                        .font(.system(size: 13))
+                    Text(issue.status == "closed" ? "Reopen" : "Done")
+                        .font(.system(size: 12))
+                }
+                .foregroundColor(issue.status == "closed" ? .blue : .green)
+            }
+            .buttonStyle(.plain)
+
+            // Delete button
+            Button(action: {
+                if let project = projectStore.selectedProject {
+                    Task {
+                        do {
+                            try await issueStore.deleteIssue(projectPath: project.path, issueId: issue.id)
+                            await issueStore.loadIssues(for: project)
+                            contentMode = .issuesList
+                        } catch {
+                            print("Failed to delete issue: \(error)")
+                        }
+                    }
+                }
+            }) {
+                Image(systemName: "trash")
+                    .font(.system(size: 13))
+                    .foregroundColor(.red)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
         .frame(height: LayoutConstants.contentHeaderHeight)
@@ -345,22 +419,6 @@ struct MainView: View {
     func issueDetailView(issue: Issue) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                // Back button
-                Button(action: {
-                    contentMode = .issuesList
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 11))
-                        Text("Back")
-                            .font(.system(size: 12))
-                    }
-                    .foregroundColor(.blue)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
-
                 VStack(alignment: .leading, spacing: 12) {
                     // ID and status
                     HStack {
