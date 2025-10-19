@@ -449,16 +449,26 @@ struct MainView: View {
                                             .foregroundColor(.secondary)
                                     }
                                     .buttonStyle(.plain)
+                                    .help("Open in Finder")
 
                                     Button(action: {
                                         NSPasteboard.general.clearContents()
                                         NSPasteboard.general.setString(project.path, forType: .string)
+                                        copiedProjectId = project.id
+
+                                        // Clear after 3 seconds
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                            if copiedProjectId == project.id {
+                                                copiedProjectId = nil
+                                            }
+                                        }
                                     }) {
-                                        Image(systemName: "doc.on.doc")
+                                        Image(systemName: copiedProjectId == project.id ? "checkmark" : "doc.on.doc")
                                             .font(.system(size: 12))
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(copiedProjectId == project.id ? .green : .secondary)
                                     }
                                     .buttonStyle(.plain)
+                                    .help(copiedProjectId == project.id ? "Copied!" : "Copy path")
                                 }
                             }
                             .padding(.horizontal, 12)
@@ -851,38 +861,47 @@ struct IssueRowCompact: View {
             .buttonStyle(.plain)
 
             // Content
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
+                // Row 1: Title and Priority
+                HStack(spacing: 8) {
+                    Text(issue.title)
+                        .font(.system(size: 13))
+                        .strikethrough(issue.status == "closed")
+                        .lineLimit(1)
+
+                    Spacer()
+
                     PriorityBadge(priority: issue.priority)
-
-                    ForEach(issue.labels.prefix(2), id: \.self) { label in
-                        LabelBadge(label: label)
-                    }
-
-                    if issue.labels.count > 2 {
-                        Text("+\(issue.labels.count - 2)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
                 }
 
-                Text(issue.title)
-                    .font(.system(size: 13))
-                    .strikethrough(issue.status == "closed")
-                    .lineLimit(2)
-
+                // Row 2: Description (optional)
                 if let description = issue.body, !description.isEmpty {
                     Text(description)
-                        .font(.caption)
+                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
+
+                // Row 3: Labels
+                if !issue.labels.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(issue.labels.prefix(3), id: \.self) { label in
+                            LabelBadge(label: label)
+                        }
+
+                        if issue.labels.count > 3 {
+                            Text("+\(issue.labels.count - 3)")
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
             }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
     }
 }
 

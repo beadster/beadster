@@ -10,6 +10,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var projectStore: ProjectStore
     @ObservedObject var syncDaemon: SyncDaemon
+    @StateObject private var authManager = AuthManager.shared
     var onClose: () -> Void
 
     var body: some View {
@@ -32,9 +33,11 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(spacing: 24) {
+                    AccountSettings(authManager: authManager)
+
                     ProjectsSettings(projectStore: projectStore)
 
-                    SyncSettings(syncDaemon: syncDaemon)
+                    SyncSettings(syncDaemon: syncDaemon, authManager: authManager)
                 }
                 .padding(.top, 12)
             }
@@ -102,8 +105,88 @@ struct ProjectsSettings: View {
     }
 }
 
+struct AccountSettings: View {
+    @ObservedObject var authManager: AuthManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Account")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .padding(.horizontal)
+
+            VStack(alignment: .leading, spacing: 12) {
+                if authManager.isAuthenticated {
+                    // Signed in state
+                    if let user = authManager.currentUser {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Signed in as")
+                                Spacer()
+                            }
+                            HStack {
+                                Image(systemName: "person.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.blue)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(user.githubName ?? user.githubLogin ?? "Unknown")
+                                        .font(.body)
+                                    if let email = user.githubEmail {
+                                        Text(email)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                        }
+
+                        Button(action: {
+                            authManager.signOut()
+                        }) {
+                            Text("Sign Out")
+                                .font(.body)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                } else {
+                    // Signed out state
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Cloud sync is disabled")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+
+                        Text("Sign in with GitHub to sync your issues across devices and access them on the web.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Button(action: {
+                            authManager.signIn()
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text("Sign in with GitHub")
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(authManager.isLoading)
+                    }
+                }
+
+                if let error = authManager.error {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+}
+
 struct SyncSettings: View {
     @ObservedObject var syncDaemon: SyncDaemon
+    @ObservedObject var authManager: AuthManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -152,10 +235,24 @@ struct SyncSettings: View {
                 }
 
                 HStack {
-                    Text("Auto Sync")
+                    Text("Cloud Sync")
                     Spacer()
-                    Text("Every 1 minute")
-                        .foregroundColor(.secondary)
+                    if authManager.isAuthenticated {
+                        Text("Enabled")
+                            .foregroundColor(.green)
+                    } else {
+                        Text("Disabled")
+                            .foregroundColor(.orange)
+                    }
+                }
+
+                if authManager.isAuthenticated {
+                    HStack {
+                        Text("Auto Sync")
+                        Spacer()
+                        Text("Every 1 minute")
+                            .foregroundColor(.secondary)
+                    }
                 }
 
                 HStack {
