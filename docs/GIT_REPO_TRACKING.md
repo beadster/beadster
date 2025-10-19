@@ -141,25 +141,13 @@ func syncIssueToCloud(issue: Issue, projectPath: String) async throws {
 }
 
 func getGitInfo(at path: String) -> GitInfo {
-    let fm = FileManager.default
-    let gitDir = URL(fileURLWithPath: path).appendingPathComponent(".git")
+    let projectURL = URL(fileURLWithPath: path)
 
-    guard fm.fileExists(atPath: gitDir.path) else {
-        return GitInfo(remoteUrl: nil, currentBranch: nil)
-    }
+    // NOTE: Cannot use shell commands in sandboxed macOS app!
+    // Instead, read .git/config and .git/HEAD files directly.
+    // See GIT_INFO_SANDBOXED.md for full implementation.
 
-    // get remote URL
-    let remoteUrl = shell("cd \(path) && git remote get-url origin")
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-
-    // get current branch
-    let currentBranch = shell("cd \(path) && git branch --show-current")
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-
-    return GitInfo(
-        remoteUrl: normalizeGitUrl(remoteUrl),
-        currentBranch: currentBranch.isEmpty ? nil : currentBranch
-    )
+    return GitInfoReader.getGitInfo(at: projectURL)
 }
 
 func normalizeGitUrl(_ url: String) -> String? {
