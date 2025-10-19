@@ -10,18 +10,30 @@ import Foundation
 public class APIClient {
     public static let shared = APIClient()
 
-    // POC: hardcoded dev API token (from remote D1: anton@systemoperator.com)
-    private let apiToken = "3ae6ab7b-3e95-49b5-8d96-5ab6e8102373"
     private let baseURL = "https://api.beadster.ai"
 
     private init() {}
 
+    // Get current API key from AuthManager (if authenticated)
+    private var apiToken: String? {
+        // Try to get API key from Keychain via AuthManager
+        #if os(macOS)
+        return AuthManager.shared.getAPIKey()
+        #else
+        return nil
+        #endif
+    }
+
     // MARK: - Sources
 
     public func getSources() async throws -> [Source] {
+        guard let token = apiToken else {
+            throw APIError.notAuthenticated
+        }
+
         let url = URL(string: "\(baseURL)/api/sources")!
         var request = URLRequest(url: url)
-        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let (data, _) = try await URLSession.shared.data(for: request)
         let response = try JSONDecoder().decode(SourcesResponse.self, from: data)
@@ -31,13 +43,17 @@ public class APIClient {
     // MARK: - Pull Changes
 
     public func pullChanges(sourceId: String, since: Int) async throws -> [Issue] {
+        guard let token = apiToken else {
+            throw APIError.notAuthenticated
+        }
+
         let urlString = "\(baseURL)/api/sync/pull?source_id=\(sourceId)&since=\(since)"
         guard let url = URL(string: urlString) else {
             throw APIError.syncFailed
         }
 
         var request = URLRequest(url: url)
-        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let (data, _) = try await URLSession.shared.data(for: request)
         let decoder = JSONDecoder()
@@ -50,10 +66,14 @@ public class APIClient {
     // MARK: - Push Issues
 
     public func pushIssues(source: SourcePayload, issues: [Issue]) async throws {
+        guard let token = apiToken else {
+            throw APIError.notAuthenticated
+        }
+
         let url = URL(string: "\(baseURL)/api/sync/push")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         // Transform issues to match API format (add beads_id, format id)

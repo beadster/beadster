@@ -291,6 +291,7 @@ public enum DatabaseError: Error {
 }
 
 public enum APIError: Error {
+    case notAuthenticated
     case pushFailed
     case pullFailed
     case invalidResponse
