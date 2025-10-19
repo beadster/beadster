@@ -37,16 +37,21 @@ class AuthManager: NSObject, ObservableObject {
 
     /// Check if user is authenticated (has valid API key)
     func checkAuthentication() {
+        print("[auth] Checking authentication...")
         if let apiKey = keychainManager.getAPIKey() {
+            print("[auth] Found API key in keychain")
             isAuthenticated = true
             // Set API token for APIClient
             APIClient.shared.apiToken = apiKey
+            print("[auth] Set APIClient.apiToken")
             // TODO: Load user info from local DB or API
         } else {
+            print("[auth] No API key found in keychain")
             isAuthenticated = false
             currentUser = nil
             APIClient.shared.apiToken = nil
         }
+        print("[auth] isAuthenticated = \(isAuthenticated)")
     }
 
     // MARK: - Sign In

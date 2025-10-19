@@ -27,6 +27,9 @@ struct BeadsterApp: App {
     }
 
     init() {
+        // initialize auth manager first to set API token
+        _ = AuthManager.shared
+
         // start sync daemon on app launch
         Task { @MainActor in
             SyncDaemon.shared.start()
