@@ -56,6 +56,7 @@ export async function getIssues(db: D1Database, userId: string, filters?: {
   status?: string;
   source_id?: string;
   session_id?: string;
+  git_repo_url?: string;
 }): Promise<Issue[]> {
   let query = `
     SELECT
@@ -80,6 +81,11 @@ export async function getIssues(db: D1Database, userId: string, filters?: {
   if (filters?.session_id) {
     query += ' AND i.session_id = ?';
     params.push(filters.session_id);
+  }
+
+  if (filters?.git_repo_url) {
+    query += ' AND i.git_repo_url = ?';
+    params.push(filters.git_repo_url);
   }
 
   query += ' ORDER BY i.created_at DESC';

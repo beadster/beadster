@@ -66,6 +66,42 @@ try {
         </div>
       )}
 
+      {(issue.git_repo_url || issue.git_branch || issue.git_commit_hash) && (
+        <div class="git-section">
+          <h3>git context</h3>
+          <div class="metadata-grid">
+            {issue.git_repo_url && (
+              <div class="metadata-item">
+                <span class="metadata-label">repository</span>
+                <span class="metadata-value">
+                  <a href={`/?repo=${encodeURIComponent(issue.git_repo_url)}`}>{issue.git_repo_url}</a>
+                </span>
+              </div>
+            )}
+            {issue.git_branch && (
+              <div class="metadata-item">
+                <span class="metadata-label">branch</span>
+                <span class="metadata-value git-branch">{issue.git_branch}</span>
+              </div>
+            )}
+            {issue.git_commit_hash && (
+              <div class="metadata-item">
+                <span class="metadata-label">commit</span>
+                <span class="metadata-value git-commit">{issue.git_commit_hash.substring(0, 7)}</span>
+              </div>
+            )}
+            {issue.git_is_dirty && (
+              <div class="metadata-item">
+                <span class="metadata-label">status</span>
+                <span class="metadata-value">
+                  <span class="badge dirty">uncommitted changes</span>
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div class="metadata-section">
         <h3>metadata</h3>
         <div class="metadata-grid">
@@ -189,17 +225,40 @@ try {
   }
 
   .labels-section,
+  .git-section,
   .metadata-section,
   .actions-section {
     margin-bottom: 30px;
   }
 
   .labels-section h3,
+  .git-section h3,
   .metadata-section h3,
   .actions-section h3 {
     font-size: 18px;
     margin-bottom: 15px;
     color: #666;
+  }
+
+  .git-section {
+    padding: 20px;
+    background: #f5f9ff;
+    border-radius: 6px;
+    border: 1px solid #d0e4ff;
+  }
+
+  .git-branch,
+  .git-commit {
+    font-family: monospace;
+    background: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+  }
+
+  .badge.dirty {
+    background: #fff3cd;
+    color: #856404;
   }
 
   .labels-list {

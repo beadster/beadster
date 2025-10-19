@@ -5,13 +5,20 @@ import { getIssues } from '../../../shared/database';
 let issues: any[] = [];
 let error: string | null = null;
 
+// Get query parameters
+const repoUrl = Astro.url.searchParams.get('repo');
+
 // Get open issues using shared database module
 try {
   const db = Astro.locals.runtime?.env?.DB;
   const user = Astro.locals.user;
 
   if (db && user) {
-    issues = await getIssues(db, user.id, { status: 'open' });
+    const filters: any = { status: 'open' };
+    if (repoUrl) {
+      filters.git_repo_url = repoUrl;
+    }
+    issues = await getIssues(db, user.id, filters);
   } else if (!user) {
     error = 'Not logged in - sign in to see your issues';
   } else {
@@ -31,21 +38,39 @@ function getPriorityClass(priority: number | null): string {
   if (priority === 1) return 'priority p1';
   return 'priority p2';
 }
+
+function getRepoName(url: string): string {
+  // Extract repo name from git URL
+  try {
+    const match = url.match(/([^/:]+\/[^/:]+?)(\.git)?$/);
+    return match ? match[1] : url;
+  } catch {
+    return url;
+  }
+}
 ---
 
 <Layout title="issues">
   <nav class="tabs">
-    <a href="/" class="active">open</a>
+    <a href="/" class={!repoUrl ? "active" : ""}>open</a>
     <a href="/all">all</a>
     <a href="/closed">closed</a>
     <a href="/labels">labels</a>
     <a href="/tree">tree</a>
+    <a href="/repositories">repositories</a>
     <a href="/stats">stats</a>
   </nav>
 
   <div class="header-row">
-    <h2>open issues</h2>
-    <a href="/new" class="btn-new">+ new issue</a>
+    <h2>
+      {repoUrl ? `${getRepoName(repoUrl)} - open issues` : 'open issues'}
+    </h2>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      {repoUrl && (
+        <a href="/" class="btn-clear-filter">× clear filter</a>
+      )}
+      <a href="/new" class="btn-new">+ new issue</a>
+    </div>
   </div>
 
   {error && (
@@ -167,6 +192,21 @@ function getPriorityClass(priority: number | null): string {
 
   .btn-new:hover {
     background: #0052a3;
+  }
+
+  .btn-clear-filter {
+    background: #f0f0f0;
+    color: #666;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .btn-clear-filter:hover {
+    background: #e0e0e0;
+    color: #333;
   }
 
   .issue-header {

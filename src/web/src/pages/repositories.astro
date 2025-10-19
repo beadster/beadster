@@ -1,0 +1,271 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Require authentication
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
+let repositories: any[] = [];
+let error: string | null = null;
+
+try {
+  const apiUrl = import.meta.env.API_URL || 'https://api.beadster.ai';
+  const response = await fetch(`${apiUrl}/api/repositories`, {
+    headers: {
+      'Cookie': Astro.request.headers.get('cookie') || ''
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`API returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  repositories = data.repositories || [];
+} catch (e) {
+  error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
+}
+
+function getRepoName(url: string): string {
+  // Extract repo name from git URL
+  // https://github.com/user/repo.git -> user/repo
+  // git@github.com:user/repo.git -> user/repo
+  try {
+    const match = url.match(/([^/:]+\/[^/:]+?)(\.git)?$/);
+    return match ? match[1] : url;
+  } catch {
+    return url;
+  }
+}
+---
+
+<Layout title="repositories">
+  <nav class="tabs">
+    <a href="/">open</a>
+    <a href="/all">all</a>
+    <a href="/closed">closed</a>
+    <a href="/labels">labels</a>
+    <a href="/tree">tree</a>
+    <a href="/repositories" class="active">repositories</a>
+    <a href="/stats">stats</a>
+  </nav>
+
+  <h2>git repositories</h2>
+
+  {error && (
+    <div class="error">{error}</div>
+  )}
+
+  {!error && repositories.length === 0 && (
+    <div class="empty">
+      <p>no repositories found</p>
+      <p style="font-size: 14px; color: #666; margin-top: 10px;">
+        issues with git context will appear here automatically
+      </p>
+    </div>
+  )}
+
+  {!error && repositories.length > 0 && (
+    <ul class="repo-list">
+      {repositories.map(repo => (
+        <li class="repo-item">
+          <a href={`/?repo=${encodeURIComponent(repo.git_repo_url)}`} class="repo-link">
+            <div class="repo-header">
+              <h3 class="repo-name">{getRepoName(repo.git_repo_url)}</h3>
+              <div class="repo-stats-inline">
+                <span class="stat-badge open">{repo.open_issues} open</span>
+                <span class="stat-badge closed">{repo.closed_issues} closed</span>
+              </div>
+            </div>
+
+            <div class="repo-url">{repo.git_repo_url}</div>
+
+            <div class="repo-stats">
+              <div class="stat">
+                <span class="stat-value">{repo.total_issues}</span>
+                <span class="stat-label">total issues</span>
+              </div>
+              <div class="stat">
+                <span class="stat-value">{repo.open_issues}</span>
+                <span class="stat-label">open</span>
+              </div>
+              <div class="stat">
+                <span class="stat-value">{repo.closed_issues}</span>
+                <span class="stat-label">closed</span>
+              </div>
+              {repo.latest_activity && (
+                <div class="stat">
+                  <span class="stat-value">{formatRelativeTime(repo.latest_activity)}</span>
+                  <span class="stat-label">last activity</span>
+                </div>
+              )}
+            </div>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
+</Layout>
+
+<style>
+  h2 {
+    margin-bottom: 30px;
+    font-size: 24px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .tabs a {
+    padding: 10px 0;
+    color: #666;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tabs a:hover {
+    color: #0066cc;
+  }
+
+  .tabs a.active {
+    color: #0066cc;
+    border-bottom-color: #0066cc;
+  }
+
+  .error,
+  .empty {
+    padding: 20px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    color: #c00;
+  }
+
+  .empty {
+    background: #f9f9f9;
+    border-color: #ddd;
+    color: #666;
+    text-align: center;
+  }
+
+  .repo-list {
+    list-style: none;
+    display: grid;
+    gap: 15px;
+  }
+
+  .repo-item {
+    background: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    transition: all 0.2s;
+  }
+
+  .repo-item:hover {
+    border-color: #0066cc;
+    background: #f5f9ff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+  }
+
+  .repo-link {
+    display: block;
+    padding: 20px;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .repo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .repo-name {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .repo-stats-inline {
+    display: flex;
+    gap: 8px;
+  }
+
+  .stat-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .stat-badge.open {
+    background: #e8ffe8;
+    color: #006600;
+  }
+
+  .stat-badge.closed {
+    background: #f0f0f0;
+    color: #666;
+  }
+
+  .repo-url {
+    font-family: monospace;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 15px;
+    padding: 8px;
+    background: #fff;
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+
+  .repo-stats {
+    display: flex;
+    gap: 30px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+</style>
