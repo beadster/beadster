@@ -339,10 +339,16 @@ class IssueStore: ObservableObject {
             }
 
             let decoder = JSONDecoder()
-            let issues = try decoder.decode([Issue].self, from: data)
+
+            // API returns {"issues": [...]} not just [...]
+            struct IssuesResponse: Codable {
+                let issues: [Issue]
+            }
+
+            let apiResponse = try decoder.decode(IssuesResponse.self, from: data)
 
             // Return first matching issue
-            return issues.first(where: { $0.id == issueId })
+            return apiResponse.issues.first(where: { $0.id == issueId })
 
         } catch {
             print("IssueStore: Error fetching from cloud: \(error)")
