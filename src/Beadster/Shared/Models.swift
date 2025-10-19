@@ -22,9 +22,15 @@ public struct Source: Identifiable, Codable, Hashable {
     public let path: String?
     public var lastSync: Int?
 
+    // Git repository info
+    public var gitRepoUrl: String?
+    public var gitCurrentBranch: String?
+
     enum CodingKeys: String, CodingKey {
         case id, name, type, path
         case lastSync = "last_sync"
+        case gitRepoUrl = "git_repo_url"
+        case gitCurrentBranch = "git_current_branch"
     }
 }
 
@@ -34,12 +40,22 @@ public struct SourcePayload: Codable {
     public let name: String
     public let type: String
     public let path: String?
+    public let gitRepoUrl: String?
+    public let gitCurrentBranch: String?
 
-    public init(id: String, name: String, type: String, path: String?) {
+    enum CodingKeys: String, CodingKey {
+        case id, name, type, path
+        case gitRepoUrl = "git_repo_url"
+        case gitCurrentBranch = "git_current_branch"
+    }
+
+    public init(id: String, name: String, type: String, path: String?, gitRepoUrl: String? = nil, gitCurrentBranch: String? = nil) {
         self.id = id
         self.name = name
         self.type = type
         self.path = path
+        self.gitRepoUrl = gitRepoUrl
+        self.gitCurrentBranch = gitCurrentBranch
     }
 }
 
@@ -68,6 +84,12 @@ public struct Issue: Identifiable, Codable, Hashable {
     public var client: String?
     public var projectName: String?
 
+    // Git context (captured when issue created)
+    public var gitRepoUrl: String?
+    public var gitBranch: String?
+    public var gitCommitHash: String?
+    public var gitIsDirty: Bool?
+
     // For sync compatibility
     public var beadsId: String { id } // local beads ID (bd-1, bd-2)
 
@@ -84,13 +106,18 @@ public struct Issue: Identifiable, Codable, Hashable {
         case sessionId = "session_id"
         case client
         case projectName = "project_name"
+        case gitRepoUrl = "git_repo_url"
+        case gitBranch = "git_branch"
+        case gitCommitHash = "git_commit_hash"
+        case gitIsDirty = "git_is_dirty"
     }
 
     public init(id: String, title: String, body: String?, status: String, priority: Int,
          issueType: String? = nil, labels: [String] = [], assignee: String? = nil,
          design: String? = nil, acceptanceCriteria: String? = nil, notes: String? = nil,
          createdAt: Int, updatedAt: Int, closedAt: Int? = nil,
-         sessionId: String? = nil, client: String? = nil, projectName: String? = nil) {
+         sessionId: String? = nil, client: String? = nil, projectName: String? = nil,
+         gitRepoUrl: String? = nil, gitBranch: String? = nil, gitCommitHash: String? = nil, gitIsDirty: Bool? = nil) {
         self.id = id
         self.title = title
         self.body = body
@@ -108,6 +135,10 @@ public struct Issue: Identifiable, Codable, Hashable {
         self.sessionId = sessionId
         self.client = client
         self.projectName = projectName
+        self.gitRepoUrl = gitRepoUrl
+        self.gitBranch = gitBranch
+        self.gitCommitHash = gitCommitHash
+        self.gitIsDirty = gitIsDirty
     }
 
     public init(from decoder: Decoder) throws {
@@ -143,6 +174,20 @@ public struct Issue: Identifiable, Codable, Hashable {
         sessionId = try container.decodeIfPresent(String.self, forKey: .sessionId)
         client = try container.decodeIfPresent(String.self, forKey: .client)
         projectName = try container.decodeIfPresent(String.self, forKey: .projectName)
+
+        // Git context
+        gitRepoUrl = try container.decodeIfPresent(String.self, forKey: .gitRepoUrl)
+        gitBranch = try container.decodeIfPresent(String.self, forKey: .gitBranch)
+        gitCommitHash = try container.decodeIfPresent(String.self, forKey: .gitCommitHash)
+
+        // Handle gitIsDirty as Int or Bool
+        if let isDirtyInt = try? container.decode(Int.self, forKey: .gitIsDirty) {
+            gitIsDirty = isDirtyInt != 0
+        } else if let isDirtyBool = try? container.decode(Bool.self, forKey: .gitIsDirty) {
+            gitIsDirty = isDirtyBool
+        } else {
+            gitIsDirty = nil
+        }
 
         // Labels can be JSON string or array
         if let labelsString = try? container.decode(String.self, forKey: .labels) {

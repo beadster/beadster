@@ -11,11 +11,16 @@ let package = Package(
             targets: ["BeadsterCLI"]
         )
     ],
+    dependencies: [
+        .package(url: "https://github.com/SwiftGit2/SwiftGit2.git", from: "0.9.0")
+    ],
     targets: [
         // Shared code (used by both CLI and macOS app)
         .target(
             name: "Shared",
-            dependencies: [],
+            dependencies: [
+                .product(name: "SwiftGit2", package: "SwiftGit2")
+            ],
             path: "Shared"
         ),
 

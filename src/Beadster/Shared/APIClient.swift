@@ -72,16 +72,28 @@ public class APIClient {
             if let body = issue.body { dict["body"] = body }
             if issue.priority > 0 { dict["priority"] = issue.priority }
 
+            // Add git context if available
+            if let gitRepoUrl = issue.gitRepoUrl { dict["git_repo_url"] = gitRepoUrl }
+            if let gitBranch = issue.gitBranch { dict["git_branch"] = gitBranch }
+            if let gitCommitHash = issue.gitCommitHash { dict["git_commit_hash"] = gitCommitHash }
+            if let gitIsDirty = issue.gitIsDirty { dict["git_is_dirty"] = gitIsDirty }
+
             return dict
         }
 
+        var sourceDict: [String: Any] = [
+            "id": source.id,
+            "name": source.name,
+            "type": source.type
+        ]
+
+        // Add optional source fields
+        if let path = source.path { sourceDict["path"] = path }
+        if let gitRepoUrl = source.gitRepoUrl { sourceDict["git_repo_url"] = gitRepoUrl }
+        if let gitCurrentBranch = source.gitCurrentBranch { sourceDict["git_current_branch"] = gitCurrentBranch }
+
         let requestBody: [String: Any] = [
-            "source": [
-                "id": source.id,
-                "name": source.name,
-                "type": source.type,
-                "path": source.path
-            ],
+            "source": sourceDict,
             "issues": transformedIssues
         ]
 

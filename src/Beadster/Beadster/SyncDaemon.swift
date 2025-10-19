@@ -238,21 +238,37 @@ class SyncDaemon: ObservableObject {
                 return
             }
 
-            // 3. Push local changes to cloud
+            // 3. Capture git context for the project
+            let gitInfo = latestProject.path.map { GitInfoReader.readGitInfo(at: $0) } ?? nil
+
+            // 4. Push local changes to cloud with git context
             let sourcePayload = SourcePayload(
                 id: sourceId,
                 name: latestProject.name,
                 type: "local",
-                path: latestProject.path
+                path: latestProject.path,
+                gitRepoUrl: gitInfo?.repoUrl,
+                gitCurrentBranch: gitInfo?.currentBranch
             )
-            try await APIClient.shared.pushIssues(source: sourcePayload, issues: localIssues)
-            print("⬆️  Pushed \(localIssues.count) issue(s) to cloud")
 
-            // 4. Pull remote changes and apply locally
+            // Enrich issues with git context
+            let issuesWithGit = localIssues.map { issue in
+                var enrichedIssue = issue
+                enrichedIssue.gitRepoUrl = gitInfo?.repoUrl
+                enrichedIssue.gitBranch = gitInfo?.currentBranch
+                enrichedIssue.gitCommitHash = gitInfo?.commitHash
+                enrichedIssue.gitIsDirty = gitInfo?.isDirty
+                return enrichedIssue
+            }
+
+            try await APIClient.shared.pushIssues(source: sourcePayload, issues: issuesWithGit)
+            print("⬆️  Pushed \(issuesWithGit.count) issue(s) to cloud with git context")
+
+            // 5. Pull remote changes and apply locally
             try await pullAndApplyChanges(project: latestProject, projectURL: projectURL, sourceId: sourceId)
 
-            // 5. Record device tracking for all synced issues
-            try await recordDeviceTracking(sourceId: sourceId, issues: localIssues)
+            // 6. Record device tracking for all synced issues
+            try await recordDeviceTracking(sourceId: sourceId, issues: issuesWithGit)
 
             lastSync[latestProject.id] = Date()
             lastSyncDate = Date()
