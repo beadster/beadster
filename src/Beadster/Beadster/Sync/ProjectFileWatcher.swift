@@ -1,5 +1,5 @@
 //
-//  FileWatcher.swift
+//  ProjectFileWatcher.swift
 //  Beadster
 //
 //  Watches .beads database files for changes using DispatchSource
@@ -9,7 +9,7 @@ import Foundation
 import Dispatch
 
 @MainActor
-class FileWatcher: ObservableObject {
+class ProjectFileWatcher: ObservableObject {
     @Published var watchedProjectsCount: Int = 0
     @Published var lastLocalChangeDate: Date?
 

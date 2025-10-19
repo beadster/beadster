@@ -23,7 +23,7 @@ class SyncDaemon: ObservableObject, FileSyncDelegate {
         fileWatcher.watchedProjectsCount
     }
 
-    private var fileWatcher: FileWatcher!
+    private var fileWatcher: ProjectFileWatcher!
     private var syncTimer: Timer?
     private let syncInterval: TimeInterval = 60 // 1 minute
     private var lastSync: [String: Date] = [:] // project id -> last sync time
@@ -44,7 +44,7 @@ class SyncDaemon: ObservableObject, FileSyncDelegate {
         print("SyncDaemon initialized with device ID: \(deviceId)")
 
         // initialize file watcher with self as delegate
-        fileWatcher = FileWatcher(syncDelegate: self)
+        fileWatcher = ProjectFileWatcher(syncDelegate: self)
     }
 
     // MARK: - Start/Stop
