@@ -36,11 +36,11 @@ try {
   {issue && (
     <div class="issue-detail">
       <div class="issue-header">
-        <div>
+        <div class="header-left">
           <span class="issue-id">{issue.beads_id}</span>
           <h1 class="issue-title">{issue.title}</h1>
         </div>
-        <div class="issue-meta">
+        <div class="header-right">
           <span class={`badge status ${issue.status}`}>{issue.status}</span>
           {issue.priority && (
             <span class={`badge priority p${issue.priority.replace('P', '')}`}>
@@ -56,82 +56,42 @@ try {
         </div>
       )}
 
-      {issue.labels && issue.labels.length > 0 && (
-        <div class="labels-section">
-          <h3>labels</h3>
-          <div class="labels-list">
-            {issue.labels.map((label: string) => (
-              <span class="badge label">{label}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {(issue.git_repo_url || issue.git_branch || issue.git_commit_hash) && (
-        <div class="git-section">
-          <h3>git context</h3>
-          <div class="metadata-grid">
-            {issue.git_repo_url && (
-              <div class="metadata-item">
-                <span class="metadata-label">repository</span>
-                <span class="metadata-value">
-                  <a href={`/?repo=${encodeURIComponent(issue.git_repo_url)}`}>{issue.git_repo_url}</a>
-                </span>
-              </div>
-            )}
-            {issue.git_branch && (
-              <div class="metadata-item">
-                <span class="metadata-label">branch</span>
-                <span class="metadata-value git-branch">{issue.git_branch}</span>
-              </div>
-            )}
-            {issue.git_commit_hash && (
-              <div class="metadata-item">
-                <span class="metadata-label">commit</span>
-                <span class="metadata-value git-commit">{issue.git_commit_hash.substring(0, 7)}</span>
-              </div>
-            )}
-            {issue.git_is_dirty && (
-              <div class="metadata-item">
-                <span class="metadata-label">status</span>
-                <span class="metadata-value">
-                  <span class="badge dirty">uncommitted changes</span>
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div class="metadata-section">
-        <h3>metadata</h3>
-        <div class="metadata-grid">
-          <div class="metadata-item">
-            <span class="metadata-label">created</span>
-            <span class="metadata-value">
-              {new Date(issue.created_at * 1000).toLocaleDateString()}
-            </span>
-          </div>
-          <div class="metadata-item">
-            <span class="metadata-label">updated</span>
-            <span class="metadata-value">
-              {new Date(issue.updated_at * 1000).toLocaleDateString()}
-            </span>
-          </div>
-          {issue.session_id && (
-            <div class="metadata-item">
-              <span class="metadata-label">session</span>
-              <span class="metadata-value">
-                <a href={`/sessions/${issue.session_id}`}>{issue.session_id.substring(0, 8)}</a>
-              </span>
+      <div class="metadata-compact">
+        {issue.labels && issue.labels.length > 0 && (
+          <div class="meta-row">
+            <span class="meta-label">labels:</span>
+            <div class="labels-list">
+              {issue.labels.map((label: string) => (
+                <span class="badge label">{label}</span>
+              ))}
             </div>
-          )}
-          {issue.client && (
-            <div class="metadata-item">
-              <span class="metadata-label">client</span>
-              <span class="metadata-value">{issue.client}</span>
-            </div>
-          )}
+          </div>
+        )}
+
+        {(issue.git_branch || issue.git_commit_hash) && (
+          <div class="meta-row">
+            <span class="meta-label">git:</span>
+            <GitContext
+              repoUrl={issue.git_repo_url}
+              branch={issue.git_branch}
+              commit={issue.git_commit_hash}
+              isDirty={issue.git_is_dirty}
+            />
+          </div>
+        )}
+
+        <div class="meta-row">
+          <span class="meta-label">created:</span>
+          <span class="meta-value">
+            {new Date(issue.created_at * 1000).toLocaleDateString()}
+          </span>
+        </div>
+
+        <div class="meta-row">
+          <span class="meta-label">updated:</span>
+          <span class="meta-value">
+            {new Date(issue.updated_at * 1000).toLocaleDateString()}
+          </span>
         </div>
       </div>
 
@@ -176,11 +136,12 @@ try {
 
 <style>
   .error {
-    padding: 20px;
+    padding: 12px;
     background: #fee;
     border: 1px solid #fcc;
-    border-radius: 6px;
+    border-radius: 4px;
     color: #c00;
+    font-size: 14px;
   }
 
   .issue-detail {
@@ -192,140 +153,109 @@ try {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #eee;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .header-left,
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .issue-id {
     font-family: monospace;
-    color: #666;
-    font-size: 14px;
-    display: block;
-    margin-bottom: 5px;
+    color: #999;
+    font-size: 13px;
   }
 
   .issue-title {
-    font-size: 32px;
+    font-size: 20px;
     margin: 0;
-  }
-
-  .issue-meta {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
+    font-weight: 600;
   }
 
   .issue-body {
-    padding: 20px;
+    padding: 12px;
     background: #f9f9f9;
-    border-radius: 6px;
-    margin-bottom: 30px;
+    border-radius: 4px;
+    margin-bottom: 12px;
     white-space: pre-wrap;
-    line-height: 1.6;
+    line-height: 1.5;
+    font-size: 14px;
   }
 
-  .labels-section,
-  .git-section,
-  .metadata-section,
-  .actions-section {
-    margin-bottom: 30px;
+  .metadata-compact {
+    margin-bottom: 20px;
+    font-size: 13px;
+    padding: 8px 0;
+    border-top: 1px solid #f0f0f0;
+    border-bottom: 1px solid #f0f0f0;
   }
 
-  .labels-section h3,
-  .git-section h3,
-  .metadata-section h3,
-  .actions-section h3 {
-    font-size: 18px;
-    margin-bottom: 15px;
-    color: #666;
+  .meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
   }
 
-  .git-section {
-    padding: 20px;
-    background: #f5f9ff;
-    border-radius: 6px;
-    border: 1px solid #d0e4ff;
+  .meta-label {
+    color: #999;
+    min-width: 60px;
+    font-size: 12px;
   }
 
-  .git-branch,
-  .git-commit {
-    font-family: monospace;
-    background: #fff;
-    padding: 2px 6px;
-    border-radius: 3px;
-    border: 1px solid #ddd;
-  }
-
-  .badge.dirty {
-    background: #fff3cd;
-    color: #856404;
+  .meta-value {
+    color: #333;
   }
 
   .labels-list {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
   }
 
   .badge.label {
     background: #e8f4ff;
     color: #0066cc;
+    font-size: 11px;
+    padding: 2px 8px;
   }
 
-  .metadata-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
+  .actions-section {
+    margin-top: 20px;
   }
 
-  .metadata-item {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .metadata-label {
-    font-size: 12px;
-    color: #999;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .metadata-value {
+  .actions-section h3 {
     font-size: 14px;
-    color: #333;
-  }
-
-  .metadata-value a {
-    color: #0066cc;
-    text-decoration: none;
-  }
-
-  .metadata-value a:hover {
-    text-decoration: underline;
+    margin-bottom: 10px;
+    color: #666;
+    font-weight: 600;
   }
 
   .update-form {
     background: #f9f9f9;
-    padding: 20px;
-    border-radius: 6px;
+    padding: 16px;
+    border-radius: 4px;
   }
 
   .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
   }
 
   .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 12px;
   }
 
   .form-group label {
     display: block;
-    margin-bottom: 5px;
-    font-size: 14px;
+    margin-bottom: 4px;
+    font-size: 12px;
     font-weight: 500;
     color: #666;
   }
@@ -334,10 +264,10 @@ try {
   .form-group textarea,
   .form-group select {
     width: 100%;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
+    border-radius: 3px;
+    font-size: 13px;
     font-family: inherit;
   }
 
@@ -347,15 +277,15 @@ try {
 
   .form-actions {
     display: flex;
-    gap: 10px;
-    margin-top: 20px;
+    gap: 8px;
+    margin-top: 12px;
   }
 
   .btn {
-    padding: 10px 20px;
+    padding: 6px 14px;
     border: none;
-    border-radius: 4px;
-    font-size: 14px;
+    border-radius: 3px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     text-decoration: none;

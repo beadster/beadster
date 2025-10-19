@@ -389,6 +389,26 @@ export async function getIssuesByLabel(db: D1Database, userId: string): Promise<
 }
 
 /**
+ * Get repositories with issue counts
+ */
+export async function getRepositories(db: D1Database, userId: string): Promise<any[]> {
+  const result = await db.prepare(`
+    SELECT
+      git_repo_url,
+      COUNT(*) as total_issues,
+      SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_issues,
+      SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_issues,
+      MAX(updated_at) as latest_activity
+    FROM issues
+    WHERE user_id = ? AND git_repo_url IS NOT NULL AND git_repo_url != ''
+    GROUP BY git_repo_url
+    ORDER BY latest_activity DESC
+  `).bind(userId).all();
+
+  return result.results || [];
+}
+
+/**
  * Get statistics for a user
  */
 export async function getUserStats(db: D1Database, userId: string): Promise<{

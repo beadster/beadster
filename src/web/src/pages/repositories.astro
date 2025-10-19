@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getRepositories } from '../../../shared/database';
 
 // Require authentication
 if (!Astro.locals.user) {
@@ -10,19 +11,12 @@ let repositories: any[] = [];
 let error: string | null = null;
 
 try {
-  const apiUrl = import.meta.env.API_URL || 'https://api.beadster.ai';
-  const response = await fetch(`${apiUrl}/api/repositories`, {
-    headers: {
-      'Cookie': Astro.request.headers.get('cookie') || ''
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`API returned ${response.status}`);
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db) {
+    repositories = await getRepositories(db, Astro.locals.user.id);
+  } else {
+    error = 'Database binding not available';
   }
-
-  const data = await response.json();
-  repositories = data.repositories || [];
 } catch (e) {
   error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
 }
