@@ -60,9 +60,8 @@ class IssueStore: ObservableObject {
             projectURL.stopAccessingSecurityScopedResource()
         }
 
-        // read from .beads/beads.db
-        let dbPath = projectURL.appendingPathComponent(".beads/beads.db")
-        print("IssueStore: Reading from \(dbPath.path)")
+        // read from .beads database
+        print("IssueStore: Reading from beads database")
 
         do {
             let db = BeadsDatabase(beadsDir: projectURL)
@@ -75,7 +74,7 @@ class IssueStore: ObservableObject {
                 self.issues = localIssues
             }
         } catch DatabaseError.cantOpen {
-            print("IssueStore: ERROR - No .beads/beads.db found")
+            print("IssueStore: ERROR - No beads database found")
             await MainActor.run {
                 self.issues = []
             }

@@ -4,223 +4,193 @@ understanding what's saved where and what gets committed to git
 
 ## beads core architecture
 
-beads uses event sourcing with JSONL as source of truth:
+beads uses JSONL as source of truth with SQLite as query cache:
 
 ```
 .beads/
-├── issues/
-│   ├── bd-1.jsonl    ← SOURCE OF TRUTH (append-only event log)
-│   ├── bd-2.jsonl
-│   └── bd-3.jsonl
-└── beads.db          ← CACHE (rebuilt from JSONL)
+├── issues.jsonl      ← SOURCE OF TRUTH (complete issue snapshots)
+└── beads.db          ← CACHE (for fast queries)
 ```
 
-### JSONL = event log
+### JSONL = source of truth
 
-each JSONL file is an append-only log of events:
+single `issues.jsonl` file contains one complete issue per line:
 
 ```json
-// .beads/issues/bd-1.jsonl
-{"type":"create","time":1234567890,"user":"anton","title":"Fix bug","body":"Details here"}
-{"type":"update","time":1234567895,"user":"anton","status":"closed"}
-{"type":"comment","time":1234567900,"user":"anton","text":"Fixed in commit abc123"}
+{"id":"bd-1","title":"Fix bug","status":"open","priority":2,"created_at":"2025-10-17T22:19:13Z","updated_at":"2025-10-17T22:19:13Z"}
+{"id":"bd-2","title":"Add feature","status":"closed","priority":1,"created_at":"2025-10-18T10:42:48Z","updated_at":"2025-10-18T11:30:00Z","closed_at":"2025-10-18T11:30:00Z"}
 ```
 
-beads reads these events and builds SQLite database for fast queries.
+each line is a complete issue snapshot (not events). when issue is updated, the entire line is replaced.
 
 ### SQLite = query cache
 
-`beads.db` is rebuilt whenever:
-- beads detects JSONL is newer than DB
-- beads runs any command
-- JSONL is modified
+`beads.db` is a cache for fast queries:
+- bd CLI auto-imports from JSONL when JSONL is newer
+- bd CLI auto-exports to JSONL after create/update/close operations
+- both files stay in sync automatically
 
 **NEVER committed to git** - always regenerated from JSONL.
 
-## beadster extension: separate metadata
+## how bd CLI keeps files in sync
 
-beadster adds cloud sync metadata WITHOUT touching beads JSONL files.
+bd CLI has automatic sync flags (enabled by default):
+- `--no-auto-flush` - disable automatic JSONL export after CRUD operations
+- `--no-auto-import` - disable automatic JSONL import when JSONL is newer than DB
 
-### what beadster adds
+default behavior (both enabled):
+1. `bd create "Fix bug"` writes to SQLite AND exports to JSONL
+2. `bd close bd-1` updates SQLite AND exports to JSONL
+3. `bd list` auto-imports from JSONL if it's newer than DB
 
-```
-.beads/
-├── issues/              (beads - git tracked)
-│   ├── bd-1.jsonl
-│   └── bd-2.jsonl
-│
-├── beads.db             (beads cache - git ignored)
-│   ├── issues           (rebuilt from JSONL)
-│   ├── dependencies     (rebuilt from JSONL)
-│   └── beadster_sync    (beadster extension table)
-│
-└── .gitignore
-    beads.db
-```
+this means both files stay in sync automatically.
 
-**beadster_sync table** lives in same `beads.db` but stores separate metadata:
+## beadster macOS app approach
+
+current implementation matches bd architecture:
+
+### reading
+reads from `.beads/beads.db` for fast queries (IssueStore.swift:68-76)
+
+### writing
+writes directly to `.beads/issues.jsonl` (IssueStore.swift:165-289)
+- maintains source of truth
+- git sync works correctly
+- bd CLI will auto-import changes on next run
+
+### sync behavior
+no need to manually trigger `bd import` because:
+- bd CLI auto-imports when JSONL is newer than DB
+- database is just a cache
+- JSONL is what gets committed to git
+
+## beadster cloud sync extension
+
+beadster adds cloud sync metadata in `beads.db` without touching JSONL files.
+
+### beadster_sync table
+
+lives in same `beads.db` but stores separate metadata:
 
 ```sql
 CREATE TABLE beadster_sync (
   issue_id TEXT PRIMARY KEY,
-  cloud_id TEXT,
-  synced_at INTEGER,
+  cloud_id TEXT NOT NULL,
+  synced_at INTEGER NOT NULL,
   cloud_updated_at INTEGER,
-  FOREIGN KEY (issue_id) REFERENCES issues(id)
+  local_updated_at INTEGER,
+  sync_status TEXT DEFAULT 'synced',
+  last_error TEXT,
+  FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
 );
 ```
 
 ### why not in JSONL?
 
 cloud sync metadata should NOT go in issues JSONL because:
+- per-machine state (each device has different sync state)
+- not portable (cloud IDs only matter for sync, not issue tracking)
+- ephemeral (can be rebuilt by re-syncing)
+- beads purity (beads should work without cloud)
 
-1. **per-machine state** - each device has different sync state
-2. **not portable** - cloud IDs only matter for sync, not issue tracking
-3. **ephemeral** - can be rebuilt by re-syncing
-4. **beads purity** - beads should work without cloud
+### beadster_source table
+
+source-level sync metadata:
+
+```sql
+CREATE TABLE beadster_source (
+  id TEXT PRIMARY KEY DEFAULT '1',
+  source_id TEXT,
+  last_full_sync INTEGER,
+  last_pull INTEGER,
+  last_push INTEGER
+);
+```
 
 ## what gets committed to git
 
 ```
 git tracked:
-✅ .beads/issues/*.jsonl     (beads event logs)
-✅ .beads/config.toml        (beads config)
+✅ .beads/issues.jsonl       (source of truth)
+✅ .beads/config.toml        (if exists)
 
 git ignored:
-❌ .beads/beads.db           (cache, rebuilt from JSONL)
-❌ .beads/beadster/          (if we add separate files)
+❌ .beads/beads.db           (cache + sync metadata)
 ```
 
-## what gets rebuilt
+## verified behavior
 
-when you clone repo or pull changes:
+tested with beadster project:
+- `bd create "test bd behavior"` - both `.db` and `.jsonl` updated simultaneously
+- `bd close beadster-88` - both files updated simultaneously
+- `bd show beadster-88` from database matched JSONL content exactly
+- modification timestamps confirmed both files update together
 
-```bash
-git pull                    # gets JSONL files
-bd list                     # beads rebuilds beads.db from JSONL
-                           # beadster_sync table starts empty
+## multi-device sync flow
 
-beadster-sync              # sync daemon runs
-                           # reads issues from beads tables
-                           # syncs with cloud
-                           # populates beadster_sync table
-```
-
-each machine builds its own `beadster_sync` state through syncing.
-
-## cloud IDs: not in git
-
-**example flow:**
+when using beadster cloud sync across multiple machines:
 
 ```
-Desktop A:
-1. bd create "Fix bug"        → writes .beads/issues/bd-1.jsonl
+Machine A:
+1. bd create "Fix bug"        → writes to issues.jsonl
 2. git add + commit + push    → JSONL to git
-3. sync daemon runs           → pushes to cloud, gets cloud_id "01HQXYZ"
-4. writes to beadster_sync    → stores mapping (bd-1 → 01HQXYZ)
+3. sync daemon runs           → pushes to cloud, gets cloud_id
+4. writes to beadster_sync    → stores mapping (bd-1 → cloud_id)
    (NOT committed to git)
 
-Desktop B:
-5. git pull                   → gets .beads/issues/bd-1.jsonl
-6. bd list                    → rebuilds beads.db (no sync data yet)
+Machine B:
+5. git pull                   → gets issues.jsonl
+6. bd list                    → auto-imports JSONL to beads.db
 7. sync daemon runs           → pulls from cloud
-8. finds cloud issue 01HQXYZ  → matches bd-1 by (source_id, beads_id)
-9. writes to beadster_sync    → stores mapping (bd-1 → 01HQXYZ)
+8. finds cloud issue          → matches by source_id + beads_id
+9. writes to beadster_sync    → stores mapping (bd-1 → cloud_id)
 
 Both machines now have:
 - Same JSONL (from git)
-- Same beads tables (rebuilt from JSONL)
+- Same issues table (rebuilt from JSONL by bd)
 - Same beadster_sync mappings (from cloud sync)
 ```
 
-## schema architecture
+## why this works
 
-### beads core (rebuilt from JSONL)
-
-```sql
-CREATE TABLE issues (
-  id TEXT PRIMARY KEY,
-  title TEXT,
-  status TEXT,
-  created_at DATETIME,
-  updated_at DATETIME
-);
-
-CREATE TABLE dependencies (
-  issue_id TEXT,
-  depends_on_id TEXT,
-  type TEXT
-);
-```
-
-### beadster extension (persistent across rebuilds)
-
-```sql
-CREATE TABLE beadster_sync (
-  issue_id TEXT PRIMARY KEY,
-  cloud_id TEXT NOT NULL,
-  synced_at INTEGER,
-  cloud_updated_at INTEGER,
-  FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
-);
-```
-
-**important:** when beads rebuilds from JSONL, it should:
-- drop and recreate `issues`, `dependencies` tables
-- preserve `beadster_*` extension tables
-
-## conflict resolution
-
-when both machines modify same issue:
-
-1. **local change:**
-   - bd update bd-1 --title="New title"
-   - writes event to bd-1.jsonl
-   - git commit + push
-
-2. **cloud change:**
-   - different machine updates cloud
-   - sync daemon pulls change
-   - applies via bd update (writes to JSONL)
-
-3. **conflict detection:**
-   - beadster_sync table tracks last sync timestamps
-   - can detect if both local and cloud changed
-   - resolution: last-write-wins (for now)
+1. bd CLI reads from database (fast queries)
+2. bd CLI writes to both database AND JSONL (auto-flush)
+3. macOS app reads from database (fast queries)
+4. macOS app writes to JSONL (source of truth)
+5. bd CLI auto-imports JSONL changes when JSONL is newer
+6. git workflow uses JSONL for collaboration
+7. cloud sync uses beadster_sync table for metadata
+8. bd CLI, macOS app, and cloud sync can coexist without conflicts
 
 ## summary
 
 ### source of truth layers
 
-1. **issues.jsonl** - ultimate source of truth for issue data
-2. **beads.db** - query cache, rebuilt from JSONL
-3. **beadster_sync** - sync metadata, rebuilt from cloud
-4. **cloud** - aggregation layer for multi-device sync
-
-### commit rules
-
-```
-git commit:
-  ✅ JSONL event logs (beads data)
-  ❌ SQLite database (cache)
-  ❌ sync metadata (per-machine)
-
-cloud sync:
-  ✅ issue data (from beads tables)
-  ✅ cloud IDs (generated by cloud)
-  ✅ sync timestamps (track state)
-```
+1. `issues.jsonl` - ultimate source of truth for issue data, committed to git
+2. `beads.db/issues` - query cache, never committed, auto-rebuilt from JSONL by bd CLI
+3. `beads.db/beadster_sync` - cloud sync metadata, never committed, rebuilt from cloud
+4. cloud database - aggregation layer for multi-device sync
 
 ### data flow
 
 ```
-Developer action     → JSONL event     → git commit
-                        ↓
-Beads rebuild        ← JSONL read      ← git pull
-                        ↓
-Sync daemon          → Cloud API       → Cloud DB
-                        ↓                  ↓
-beadster_sync table  ← Cloud response  ← Cloud DB
+bd CLI:
+  bd create/update/close → writes SQLite + exports JSONL
+  bd list/show          → auto-imports JSONL if newer → reads SQLite
+
+macOS app:
+  read operations       → reads SQLite (issues table)
+  write operations      → writes JSONL directly
+
+cloud sync:
+  sync daemon           → reads SQLite (issues + beadster_sync tables)
+                        → syncs with cloud API
+                        → writes to beadster_sync table
+
+git workflow:
+  git commit/push       → commits JSONL only
+  git pull              → receives JSONL
+  bd list               → auto-imports JSONL to SQLite
 ```
 
-beads stays pure, cloud stays separate, both work together.
+all components (bd CLI, macOS app, cloud sync) stay in sync through JSONL as shared source of truth.

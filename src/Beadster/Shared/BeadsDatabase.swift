@@ -1,20 +1,31 @@
 import Foundation
 import SQLite3
 
-/// Reads from beads.db (beads core tables)
-/// Note: beads.db is rebuilt from JSONL by beads automatically
+/// Reads from beads database (beads core tables)
+/// Note: database is rebuilt from JSONL by beads automatically
+/// Database is named after the project (e.g., myproject.db)
 public class BeadsDatabase {
     private let dbPath: String
     private var db: OpaquePointer?
 
     // Init with String path (for CLI)
     public init(beadsDir: String) {
-        self.dbPath = "\(beadsDir)/.beads/beads.db"
+        if let foundPath = BeadsHelper.findDatabasePath(in: beadsDir) {
+            self.dbPath = foundPath
+        } else {
+            // Fallback to old hardcoded name (for backwards compatibility)
+            self.dbPath = "\(beadsDir)/.beads/beads.db"
+        }
     }
 
     // Init with URL (for macOS app)
     public init(beadsDir: URL) {
-        self.dbPath = beadsDir.appendingPathComponent(".beads/beads.db").path
+        if let foundURL = BeadsHelper.findDatabaseFile(in: beadsDir) {
+            self.dbPath = foundURL.path
+        } else {
+            // Fallback to old hardcoded name (for backwards compatibility)
+            self.dbPath = beadsDir.appendingPathComponent(".beads/beads.db").path
+        }
     }
 
     public func open() throws {

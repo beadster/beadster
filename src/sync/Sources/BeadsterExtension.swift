@@ -1,14 +1,20 @@
 import Foundation
 import SQLite3
 
-/// Manages beadster extension tables in .beads/beads.db
+/// Manages beadster extension tables in beads database
 /// Following beads EXTENDING.md pattern: add custom tables with beadster_ prefix
+/// Database is named after the project (e.g., myproject.db)
 class BeadsterExtension {
     private let dbPath: String
     private var db: OpaquePointer?
 
     init(beadsDir: String) {
-        self.dbPath = "\(beadsDir)/.beads/beads.db"
+        if let foundPath = BeadsHelper.findDatabasePath(in: beadsDir) {
+            self.dbPath = foundPath
+        } else {
+            // Fallback to old hardcoded name (for backwards compatibility)
+            self.dbPath = "\(beadsDir)/.beads/beads.db"
+        }
     }
 
     /// Initialize beadster extension tables in beads.db
