@@ -340,15 +340,78 @@ class IssueStore: ObservableObject {
 
             let decoder = JSONDecoder()
 
-            // API returns {"issues": [...]} not just [...]
+            // API returns {"issues": [...]} with database id, not beads_id
+            // We need to decode manually and fix the id field
+            struct APIIssue: Codable {
+                let id: String  // database composite id
+                let beads_id: String  // the actual beadster id we want
+                let title: String
+                let body: String?
+                let status: String
+                let priority: String
+                let labels: [String]  // Already parsed array
+                let created_at: Int
+                let updated_at: Int
+                let closed_at: Int?
+                let git_repo_url: String?
+                let git_branch: String?
+                let git_commit_hash: String?
+                let git_is_dirty: Int?
+            }
+
             struct IssuesResponse: Codable {
-                let issues: [Issue]
+                let issues: [APIIssue]
             }
 
             let apiResponse = try decoder.decode(IssuesResponse.self, from: data)
 
-            // Return first matching issue
-            return apiResponse.issues.first(where: { $0.id == issueId })
+            // Find the issue and convert to Issue model with beads_id as id
+            guard let apiIssue = apiResponse.issues.first(where: { $0.beads_id == issueId }) else {
+                return nil
+            }
+
+            // Convert priority string to int (handling "1.0" -> 1)
+            let priority: Int
+            if let priorityDouble = Double(apiIssue.priority) {
+                priority = Int(priorityDouble)
+            } else {
+                priority = 2  // default
+            }
+
+            // Convert git_is_dirty from Int to Bool
+            let gitIsDirty: Bool?
+            if let isDirtyInt = apiIssue.git_is_dirty {
+                gitIsDirty = isDirtyInt != 0
+            } else {
+                gitIsDirty = nil
+            }
+
+            // Create Issue with beads_id as id
+            let issue = Issue(
+                id: apiIssue.beads_id,  // Use beads_id, not database id!
+                title: apiIssue.title,
+                body: apiIssue.body,
+                status: apiIssue.status,
+                priority: priority,
+                issueType: nil,
+                labels: apiIssue.labels,
+                assignee: nil,
+                design: nil,
+                acceptanceCriteria: nil,
+                notes: nil,
+                createdAt: apiIssue.created_at,
+                updatedAt: apiIssue.updated_at,
+                closedAt: apiIssue.closed_at,
+                sessionId: nil,
+                client: nil,
+                projectName: nil,
+                gitRepoUrl: apiIssue.git_repo_url,
+                gitBranch: apiIssue.git_branch,
+                gitCommitHash: apiIssue.git_commit_hash,
+                gitIsDirty: gitIsDirty
+            )
+
+            return issue
 
         } catch {
             print("IssueStore: Error fetching from cloud: \(error)")
