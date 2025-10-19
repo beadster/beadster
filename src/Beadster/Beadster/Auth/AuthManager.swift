@@ -14,6 +14,9 @@ class AuthManager: NSObject, ObservableObject {
     private let keychainManager = KeychainManager.shared
     private let baseURL = "https://beadster.ai"
 
+    // GitHub OAuth app for native/desktop clients
+    private let githubClientId = "Ov23liavcvvoCTeFIshc"
+
     private var authSession: ASWebAuthenticationSession?
 
     // URLSession with cookie storage for OAuth
@@ -50,75 +53,47 @@ class AuthManager: NSObject, ObservableObject {
         isLoading = true
         error = nil
 
-        // Initiate OAuth by POSTing to the sign-in endpoint
-        Task {
-            do {
-                var request = URLRequest(url: URL(string: "\(baseURL)/api/auth/sign-in/social")!)
-                request.httpMethod = "POST"
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Build GitHub OAuth URL directly (not using Better Auth for native apps)
+        let state = UUID().uuidString
+        let redirectURI = "beadster://callback"
 
-                // Use web callback URL - server will redirect to beadster:// after handling OAuth
-                let body = ["provider": "github", "callbackURL": "\(baseURL)/"]
-                request.httpBody = try JSONEncoder().encode(body)
+        var components = URLComponents(string: "https://github.com/login/oauth/authorize")!
+        components.queryItems = [
+            URLQueryItem(name: "client_id", value: githubClientId),
+            URLQueryItem(name: "redirect_uri", value: redirectURI),
+            URLQueryItem(name: "scope", value: "read:user user:email"),
+            URLQueryItem(name: "state", value: state)
+        ]
 
-                let (data, response) = try await urlSession.data(for: request)
-
-                guard let httpResponse = response as? HTTPURLResponse,
-                      httpResponse.statusCode == 200 else {
-                    throw AuthError.invalidResponse
-                }
-
-                let result = try JSONDecoder().decode(OAuthURLResponse.self, from: data)
-
-                // Now open the OAuth URL in a web authentication session
-                await startAuthSession(url: result.url)
-
-            } catch {
-                await MainActor.run {
-                    self.isLoading = false
-                    self.error = "Failed to start OAuth: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
-
-    /// Start the web authentication session with the OAuth URL
-    private func startAuthSession(url: String) async {
-        guard let authURL = URL(string: url) else {
-            await MainActor.run {
-                self.isLoading = false
-                self.error = "Invalid OAuth URL"
-            }
+        guard let authURL = components.url else {
+            self.isLoading = false
+            self.error = "Failed to build OAuth URL"
             return
         }
 
-        await MainActor.run {
-            // Create web authentication session
-            // This will intercept any redirect to https://beadster.ai after OAuth
-            authSession = ASWebAuthenticationSession(
-                url: authURL,
-                callbackURLScheme: "https"
-            ) { [weak self] callbackURL, error in
-                Task { @MainActor in
-                    await self?.handleOAuthCallback(callbackURL: callbackURL, error: error)
-                }
+        // Create web authentication session
+        authSession = ASWebAuthenticationSession(
+            url: authURL,
+            callbackURLScheme: "beadster"
+        ) { [weak self] callbackURL, error in
+            Task { @MainActor in
+                await self?.handleOAuthCallback(callbackURL: callbackURL, error: error, expectedState: state)
             }
+        }
 
-            authSession?.presentationContextProvider = self
-            authSession?.prefersEphemeralWebBrowserSession = false
+        authSession?.presentationContextProvider = self
+        authSession?.prefersEphemeralWebBrowserSession = false
 
-            if !authSession!.start() {
-                self.isLoading = false
-                self.error = "Failed to start authentication"
-            }
+        if !authSession!.start() {
+            self.isLoading = false
+            self.error = "Failed to start authentication"
         }
     }
 
     /// Handle OAuth callback
-    private func handleOAuthCallback(callbackURL: URL?, error: Error?) {
-        isLoading = false
-
+    private func handleOAuthCallback(callbackURL: URL?, error: Error?, expectedState: String) {
         if let error = error {
+            isLoading = false
             if (error as NSError).code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
                 // User cancelled - not an error
                 return
@@ -128,27 +103,46 @@ class AuthManager: NSObject, ObservableObject {
         }
 
         guard let callbackURL = callbackURL else {
+            isLoading = false
             self.error = "No callback URL received"
             return
         }
 
         print("[auth] OAuth callback received: \(callbackURL)")
 
-        // After successful OAuth, session cookies are set
-        // Now get the API key using the session
+        // Parse callback URL to get code and state
+        guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
+              let code = components.queryItems?.first(where: { $0.name == "code" })?.value,
+              let state = components.queryItems?.first(where: { $0.name == "state" })?.value else {
+            isLoading = false
+            self.error = "Invalid callback parameters"
+            return
+        }
+
+        // Verify state matches
+        guard state == expectedState else {
+            isLoading = false
+            self.error = "Invalid state parameter"
+            return
+        }
+
+        // Exchange code for API key via our backend
         Task {
-            await fetchAPIKey()
+            await exchangeCodeForAPIKey(code: code)
         }
     }
 
-    /// Fetch API key from server after successful OAuth
-    private func fetchAPIKey() async {
+    /// Exchange OAuth code for API key via backend
+    private func exchangeCodeForAPIKey(code: String) async {
         isLoading = true
 
         do {
-            var request = URLRequest(url: URL(string: "\(baseURL)/api/auth/api-key")!)
-            request.httpMethod = "GET"
+            var request = URLRequest(url: URL(string: "\(baseURL)/api/auth/native/exchange")!)
+            request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            let body = ["code": code, "client_id": githubClientId]
+            request.httpBody = try JSONEncoder().encode(body)
 
             let (data, response) = try await urlSession.data(for: request)
 
