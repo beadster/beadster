@@ -420,6 +420,7 @@ app.get('/api/issues', async (c) => {
   const repoUrl = c.req.query('repo');
   const status = c.req.query('status');
   const sourceId = c.req.query('source_id');
+  const beadsId = c.req.query('beads_id');
 
   // Build dynamic query
   let whereClause = 'WHERE i.user_id = ?';
@@ -438,6 +439,11 @@ app.get('/api/issues', async (c) => {
   if (sourceId) {
     whereClause += ' AND i.source_id = ?';
     params.push(sourceId);
+  }
+
+  if (beadsId) {
+    whereClause += ' AND i.beads_id = ?';
+    params.push(beadsId);
   }
 
   const issues = await c.env.DB.prepare(`

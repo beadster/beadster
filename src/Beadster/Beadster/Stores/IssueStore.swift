@@ -222,15 +222,35 @@ class IssueStore: ObservableObject {
         var allIssues = try JSONLManager.readIssues(from: projectURL)
         print("IssueStore: Read \(allIssues.count) issues from JSONL")
 
-        // find and update the issue
-        guard let index = allIssues.firstIndex(where: { $0.id == issueId }) else {
-            print("IssueStore: ERROR - Issue \(issueId) not found in JSONL")
+        // find the issue - if not found, try to pull from cloud first
+        var index = allIssues.firstIndex(where: { $0.id == issueId })
+
+        if index == nil {
+            print("IssueStore: Issue \(issueId) not found in JSONL - attempting to pull from cloud")
+
+            // try to fetch from cloud and add to local JSONL
+            if let cloudIssue = try await fetchIssueFromCloud(issueId: issueId) {
+                print("IssueStore: Found issue in cloud, adding to local JSONL")
+                allIssues.append(cloudIssue)
+                index = allIssues.count - 1
+
+                // write to JSONL to persist the cloud issue locally
+                try JSONLManager.writeIssues(allIssues, to: projectURL)
+                print("IssueStore: Added cloud issue to JSONL")
+            } else {
+                print("IssueStore: ERROR - Issue \(issueId) not found in JSONL or cloud")
+                throw IssueEditError.issueNotFound(issueId)
+            }
+        }
+
+        guard let issueIndex = index else {
+            print("IssueStore: ERROR - Issue \(issueId) not found")
             throw IssueEditError.issueNotFound(issueId)
         }
 
-        print("IssueStore: Found issue at index \(index)")
+        print("IssueStore: Found issue at index \(issueIndex)")
 
-        var updated = allIssues[index]
+        var updated = allIssues[issueIndex]
         let oldStatus = updated.status
 
         if let title = title {
@@ -250,7 +270,7 @@ class IssueStore: ObservableObject {
         }
         updated.updatedAt = Int(Date().timeIntervalSince1970)
 
-        allIssues[index] = updated
+        allIssues[issueIndex] = updated
 
         print("IssueStore: Updated issue status from '\(oldStatus)' to '\(updated.status)'")
 
@@ -289,6 +309,44 @@ class IssueStore: ObservableObject {
         // update local state
         await MainActor.run {
             self.issues.removeAll(where: { $0.id == issueId })
+        }
+    }
+
+    private func fetchIssueFromCloud(issueId: String) async throws -> Issue? {
+        // Get API token from AuthManager
+        guard let apiToken = AuthManager.shared.getAPIKey() else {
+            print("IssueStore: No API token - cannot fetch from cloud")
+            return nil
+        }
+
+        // Call API to get issue by beads_id
+        let urlString = "https://api.beadster.ai/api/issues?beads_id=\(issueId)"
+        guard let url = URL(string: urlString) else {
+            print("IssueStore: Invalid URL")
+            return nil
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                print("IssueStore: Failed to fetch issue from cloud - invalid response")
+                return nil
+            }
+
+            let decoder = JSONDecoder()
+            let issues = try decoder.decode([Issue].self, from: data)
+
+            // Return first matching issue
+            return issues.first(where: { $0.id == issueId })
+
+        } catch {
+            print("IssueStore: Error fetching from cloud: \(error)")
+            return nil
         }
     }
 
