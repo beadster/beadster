@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getUserStats } from '../../../shared/database';
 
 // Require authentication
 if (!Astro.locals.user) {
@@ -25,54 +26,7 @@ try {
   if (!db) {
     error = 'Database binding not available';
   } else {
-    const userId = Astro.locals.user.id;
-
-    // Total issues
-    const totalResult = await db.prepare('SELECT COUNT(*) as count FROM issues WHERE user_id = ?').bind(userId).first();
-    stats.total_issues = totalResult?.count || 0;
-
-    // Open/closed
-    const openResult = await db.prepare('SELECT COUNT(*) as count FROM issues WHERE user_id = ? AND status = ?').bind(userId, 'open').first();
-    stats.open_issues = openResult?.count || 0;
-
-    const closedResult = await db.prepare('SELECT COUNT(*) as count FROM issues WHERE user_id = ? AND status = ?').bind(userId, 'closed').first();
-    stats.closed_issues = closedResult?.count || 0;
-
-    // Sources
-    const sourcesResult = await db.prepare('SELECT COUNT(*) as count FROM sources WHERE user_id = ?').bind(userId).first();
-    stats.total_sources = sourcesResult?.count || 0;
-
-    // Sessions
-    const sessionsResult = await db.prepare('SELECT COUNT(*) as count FROM issue_sessions WHERE user_id = ?').bind(userId).first();
-    stats.total_sessions = sessionsResult?.count || 0;
-
-    // By priority
-    const priorityResults = await db.prepare(
-      'SELECT priority, COUNT(*) as count FROM issues WHERE user_id = ? AND priority IS NOT NULL GROUP BY priority ORDER BY priority'
-    ).bind(userId).all();
-    stats.issues_by_priority = priorityResults.results as { priority: number; count: number }[];
-
-    // By source
-    const sourceResults = await db.prepare(`
-      SELECT s.name as source_name, COUNT(i.id) as count
-      FROM sources s
-      LEFT JOIN issues i ON i.source_id = s.id AND i.user_id = ?
-      WHERE s.user_id = ?
-      GROUP BY s.id, s.name
-      ORDER BY count DESC
-    `).bind(userId, userId).all();
-    stats.issues_by_source = sourceResults.results as { source_name: string; count: number }[];
-
-    // Recent activity (last 7 days)
-    const activityResults = await db.prepare(`
-      SELECT DATE(created_at, 'unixepoch') as date, COUNT(*) as count
-      FROM issues
-      WHERE user_id = ? AND created_at > ?
-      GROUP BY date
-      ORDER BY date DESC
-      LIMIT 7
-    `).bind(userId, Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60).all();
-    stats.recent_activity = activityResults.results as { date: string; count: number }[];
+    stats = await getUserStats(db, Astro.locals.user.id);
   }
 } catch (e) {
   error = `Failed to fetch stats: ${e instanceof Error ? e.message : String(e)}`;

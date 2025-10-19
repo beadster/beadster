@@ -1,54 +1,19 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getIssuesByLabel } from '../../../shared/database';
 
 // Require authentication
 if (!Astro.locals.user) {
   return Astro.redirect('/login');
 }
 
-interface Issue {
-  id: string;
-  beads_id: string;
-  title: string;
-  status: string;
-  labels: string | null;
-}
-
-let labelGroups: Map<string, Issue[]> = new Map();
+let labelGroups: Map<string, any[]> = new Map();
 let error: string | null = null;
 
 try {
   const db = Astro.locals.runtime?.env?.DB;
   if (db) {
-    const result = await db.prepare(
-      'SELECT id, beads_id, title, status, labels FROM issues WHERE user_id = ? AND status = ? ORDER BY beads_id'
-    ).bind(Astro.locals.user.id, 'open').all();
-
-    const issues = result.results as Issue[];
-
-    // Group by labels
-    for (const issue of issues) {
-      if (!issue.labels) continue;
-
-      const labels = JSON.parse(issue.labels) as string[];
-
-      // Skip system labels
-      const userLabels = labels.filter(l => !l.startsWith('-x-'));
-
-      if (userLabels.length === 0) {
-        if (!labelGroups.has('no labels')) {
-          labelGroups.set('no labels', []);
-        }
-        labelGroups.get('no labels')!.push(issue);
-      } else {
-        for (const label of userLabels) {
-          if (!labelGroups.has(label)) {
-            labelGroups.set(label, []);
-          }
-          labelGroups.get(label)!.push(issue);
-        }
-      }
-    }
+    labelGroups = await getIssuesByLabel(db, Astro.locals.user.id);
   } else {
     error = 'Database binding not available';
   }

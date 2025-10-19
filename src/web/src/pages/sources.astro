@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getSourcesWithStats } from '../../../shared/database';
 
 // Require authentication
 if (!Astro.locals.user) {
@@ -12,25 +13,7 @@ let error: string | null = null;
 try {
   const db = Astro.locals.runtime?.env?.DB;
   if (db) {
-    const result = await db.prepare(`
-      SELECT
-        s.id,
-        s.name,
-        s.type,
-        s.path,
-        s.last_issue_number,
-        s.last_sync,
-        s.created_at,
-        COUNT(i.id) as issue_count,
-        SUM(CASE WHEN i.status = 'open' THEN 1 ELSE 0 END) as open_count
-      FROM sources s
-      LEFT JOIN issues i ON i.source_id = s.id
-      WHERE s.user_id = ?
-      GROUP BY s.id
-      ORDER BY s.name ASC
-    `).bind(Astro.locals.user.id).all();
-
-    sources = result.results || [];
+    sources = await getSourcesWithStats(db, Astro.locals.user.id);
   } else {
     error = 'Database binding not available';
   }

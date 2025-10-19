@@ -27,6 +27,7 @@ enum AppTab: String, CaseIterable {
 
 enum ContentMode: Equatable {
     case onboarding
+    case projectsList
     case issuesList
     case issueDetail(Issue)
     case settings
@@ -238,8 +239,7 @@ struct MainView: View {
                 Button(action: {
                     selectedTab = tab
                     if tab == .projects {
-                        // TODO: Show projects view in future
-                        contentMode = .onboarding
+                        contentMode = .projectsList
                     } else {
                         // Update filter based on tab
                         switch tab {
@@ -370,6 +370,8 @@ struct MainView: View {
             switch contentMode {
             case .onboarding:
                 onboardingView
+            case .projectsList:
+                projectsListView
             case .issuesList:
                 issuesListView
             case .issueDetail(let issue):
@@ -378,6 +380,70 @@ struct MainView: View {
                 settingsView
             }
         }
+    }
+
+    // MARK: - Projects List View
+
+    var projectsListView: some View {
+        VStack(spacing: 20) {
+            if projectStore.projects.isEmpty {
+                Text("No projects connected")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.black.opacity(0.9))
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(projectStore.projects) { project in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(project.name)
+                                        .font(.system(size: 15, weight: .medium))
+                                    Spacer()
+                                    if let sourceId = project.sourceId {
+                                        Text(sourceId)
+                                            .font(.caption.monospaced())
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+
+                                Text(project.path)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+
+                                if let lastSync = project.lastSync {
+                                    Text("Last sync: \(lastSync.formatted(.relative(presentation: .named)))")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding()
+                            .contentShape(Rectangle())
+                            .contextMenu {
+                                Button("Remove", role: .destructive) {
+                                    projectStore.removeProject(project)
+                                }
+                            }
+
+                            Divider()
+                        }
+                    }
+                }
+            }
+
+            Button(action: {
+                projectStore.selectFolderToScan()
+            }) {
+                HStack {
+                    Image(systemName: "folder.badge.plus")
+                    Text("Add Projects")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.horizontal, 40)
+        }
+        .padding(40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Onboarding View
