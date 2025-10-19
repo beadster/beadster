@@ -692,7 +692,7 @@ struct MainView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 12) {
-                    // ID and status
+                    // ID and status/priority in top right
                     HStack {
                         Text(issue.id)
                             .font(.caption.monospaced())
@@ -700,13 +700,17 @@ struct MainView: View {
 
                         Spacer()
 
-                        Text(issue.status.capitalized)
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(statusColor(issue.status).opacity(0.2))
-                            .foregroundColor(statusColor(issue.status))
-                            .cornerRadius(4)
+                        HStack(spacing: 6) {
+                            Text(issue.status.capitalized)
+                                .font(.caption)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(statusColor(issue.status).opacity(0.2))
+                                .foregroundColor(statusColor(issue.status))
+                                .cornerRadius(4)
+
+                            PriorityBadge(priority: issue.priority)
+                        }
                     }
 
                     // Title
@@ -714,22 +718,22 @@ struct MainView: View {
                         .font(.title3)
                         .fontWeight(.semibold)
 
-                    // Metadata
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            PriorityBadge(priority: issue.priority)
-
-                            if let type = issue.issueType {
-                                Text(type.capitalized)
-                                    .font(.caption)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.gray.opacity(0.2))
-                                    .cornerRadius(4)
-                            }
+                    // Type and dates
+                    HStack(spacing: 8) {
+                        if let type = issue.issueType {
+                            Text(type.capitalized)
+                                .font(.caption)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(4)
                         }
 
                         Text("Created \(Date(timeIntervalSince1970: TimeInterval(issue.createdAt)).formatted(.relative(presentation: .named)))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Text("•")
                             .font(.caption)
                             .foregroundColor(.secondary)
 
@@ -759,6 +763,112 @@ struct MainView: View {
                             .font(.body)
                             .foregroundColor(.secondary)
                             .italic()
+                    }
+
+                    // Dependencies
+                    let blockingIssues = issueStore.dependencies.filter { $0.issueId == issue.id }
+                    let blockedByIssues = issueStore.dependencies.filter { $0.dependsOnId == issue.id }
+
+                    if !blockingIssues.isEmpty || !blockedByIssues.isEmpty {
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Dependencies")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+
+                            // Blocks (what this issue depends on - must be done first)
+                            if !blockingIssues.isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Blocked by:")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+
+                                    ForEach(blockingIssues, id: \.dependsOnId) { dep in
+                                        if let blockingIssue = issueStore.issues.first(where: { $0.id == dep.dependsOnId }) {
+                                            Button(action: {
+                                                contentMode = .issueDetail(blockingIssue)
+                                            }) {
+                                                HStack(spacing: 6) {
+                                                    Image(systemName: "arrow.up.circle.fill")
+                                                        .font(.system(size: 10))
+                                                        .foregroundColor(.orange)
+
+                                                    Text(blockingIssue.id)
+                                                        .font(.caption.monospaced())
+                                                        .foregroundColor(.secondary)
+
+                                                    Text(blockingIssue.title)
+                                                        .font(.caption)
+                                                        .lineLimit(1)
+
+                                                    Spacer()
+
+                                                    Text(blockingIssue.status.capitalized)
+                                                        .font(.system(size: 9))
+                                                        .padding(.horizontal, 4)
+                                                        .padding(.vertical, 2)
+                                                        .background(statusColor(blockingIssue.status).opacity(0.2))
+                                                        .foregroundColor(statusColor(blockingIssue.status))
+                                                        .cornerRadius(3)
+                                                }
+                                                .padding(.vertical, 4)
+                                                .padding(.horizontal, 8)
+                                                .background(Color.gray.opacity(0.05))
+                                                .cornerRadius(6)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Blocked by (what depends on this issue - waiting for this)
+                            if !blockedByIssues.isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Blocks:")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+
+                                    ForEach(blockedByIssues, id: \.issueId) { dep in
+                                        if let blockedIssue = issueStore.issues.first(where: { $0.id == dep.issueId }) {
+                                            Button(action: {
+                                                contentMode = .issueDetail(blockedIssue)
+                                            }) {
+                                                HStack(spacing: 6) {
+                                                    Image(systemName: "arrow.down.circle.fill")
+                                                        .font(.system(size: 10))
+                                                        .foregroundColor(.blue)
+
+                                                    Text(blockedIssue.id)
+                                                        .font(.caption.monospaced())
+                                                        .foregroundColor(.secondary)
+
+                                                    Text(blockedIssue.title)
+                                                        .font(.caption)
+                                                        .lineLimit(1)
+
+                                                    Spacer()
+
+                                                    Text(blockedIssue.status.capitalized)
+                                                        .font(.system(size: 9))
+                                                        .padding(.horizontal, 4)
+                                                        .padding(.vertical, 2)
+                                                        .background(statusColor(blockedIssue.status).opacity(0.2))
+                                                        .foregroundColor(statusColor(blockedIssue.status))
+                                                        .cornerRadius(3)
+                                                }
+                                                .padding(.vertical, 4)
+                                                .padding(.horizontal, 8)
+                                                .background(Color.gray.opacity(0.05))
+                                                .cornerRadius(6)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 12)
