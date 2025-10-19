@@ -46,8 +46,9 @@ struct MainView: View {
     @State private var selectedTab: AppTab = .openIssues
     @State private var contentMode: ContentMode = .onboarding
     @State private var showSearch = false
-    @State private var isPinned = false
+    @AppStorage("isPinned") private var isPinned = false
     @FocusState private var isSearchFocused: Bool
+    @State private var copiedProjectId: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -78,7 +79,7 @@ struct MainView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.white)
-        .background(WindowAccessor(isHovering: $isHoveringWindow, alwaysShow: true))
+        .background(WindowAccessor(isHovering: $isHoveringWindow, alwaysShow: true, isPinned: $isPinned))
         .edgesIgnoringSafeArea(.top)
         .onChange(of: projectStore.selectedProject) { oldValue, newValue in
             if let project = newValue {
@@ -385,38 +386,83 @@ struct MainView: View {
     // MARK: - Projects List View
 
     var projectsListView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
             if projectStore.projects.isEmpty {
-                Text("No projects connected")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.black.opacity(0.9))
+                VStack(spacing: 20) {
+                    Text("No projects connected")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.black.opacity(0.9))
+
+                    Button(action: {
+                        projectStore.selectFolderToScan()
+                    }) {
+                        HStack {
+                            Image(systemName: "folder.badge.plus")
+                            Text("Add Projects")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.horizontal, 40)
+                }
+                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     VStack(spacing: 0) {
                         ForEach(projectStore.projects) { project in
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text(project.name)
-                                        .font(.system(size: 15, weight: .medium))
-                                    Spacer()
-                                    if let sourceId = project.sourceId {
-                                        Text(sourceId)
-                                            .font(.caption.monospaced())
+                            HStack(spacing: 10) {
+                                // Project icon
+                                Image(systemName: "folder.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.blue)
+
+                                // Project info
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack {
+                                        Text(project.name)
+                                            .font(.system(size: 13))
+
+                                        if let sourceId = project.sourceId {
+                                            Text(sourceId)
+                                                .font(.system(size: 10).monospaced())
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+
+                                    if let lastSync = project.lastSync {
+                                        Text("Synced \(lastSync.formatted(.relative(presentation: .named)))")
+                                            .font(.system(size: 11))
                                             .foregroundColor(.secondary)
                                     }
                                 }
 
-                                Text(project.path)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                Spacer()
 
-                                if let lastSync = project.lastSync {
-                                    Text("Last sync: \(lastSync.formatted(.relative(presentation: .named)))")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                // Actions
+                                HStack(spacing: 8) {
+                                    Button(action: {
+                                        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: project.path)
+                                    }) {
+                                        Image(systemName: "folder")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    Button(action: {
+                                        NSPasteboard.general.clearContents()
+                                        NSPasteboard.general.setString(project.path, forType: .string)
+                                    }) {
+                                        Image(systemName: "doc.on.doc")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
-                            .padding()
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
                             .contentShape(Rectangle())
                             .contextMenu {
                                 Button("Remove", role: .destructive) {
@@ -429,21 +475,7 @@ struct MainView: View {
                     }
                 }
             }
-
-            Button(action: {
-                projectStore.selectFolderToScan()
-            }) {
-                HStack {
-                    Image(systemName: "folder.badge.plus")
-                    Text("Add Projects")
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.horizontal, 40)
         }
-        .padding(40)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Onboarding View
@@ -946,6 +978,7 @@ struct FlowLayout: Layout {
 struct WindowAccessor: NSViewRepresentable {
     @Binding var isHovering: Bool
     var alwaysShow: Bool = false
+    @Binding var isPinned: Bool
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
@@ -956,6 +989,9 @@ struct WindowAccessor: NSViewRepresentable {
                 window.standardWindowButton(.closeButton)?.alphaValue = alpha
                 window.standardWindowButton(.miniaturizeButton)?.alphaValue = alpha
                 window.standardWindowButton(.zoomButton)?.alphaValue = alpha
+
+                // Set window level based on pin state
+                window.level = isPinned ? .floating : .normal
             }
         }
         return view
@@ -970,6 +1006,9 @@ struct WindowAccessor: NSViewRepresentable {
                 window.standardWindowButton(.miniaturizeButton)?.animator().alphaValue = alpha
                 window.standardWindowButton(.zoomButton)?.animator().alphaValue = alpha
             }
+
+            // Update window level when pin state changes
+            window.level = isPinned ? .floating : .normal
         }
     }
 }
