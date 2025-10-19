@@ -11,6 +11,7 @@ import Foundation
 @MainActor
 class IssueStore: ObservableObject {
     @Published var issues: [Issue] = []
+    @Published var dependencies: [IssueDependency] = []
     @Published var isLoading = false
     @Published var filter: IssueFilter = .open
     @Published var searchText: String = ""
@@ -69,19 +70,23 @@ class IssueStore: ObservableObject {
             defer { db.close() }
 
             let localIssues = try db.getAllIssues()
-            print("IssueStore: Loaded \(localIssues.count) issues")
+            let localDependencies = try db.getAllDependencies()
+            print("IssueStore: Loaded \(localIssues.count) issues and \(localDependencies.count) dependencies")
             await MainActor.run {
                 self.issues = localIssues
+                self.dependencies = localDependencies
             }
         } catch DatabaseError.cantOpen {
             print("IssueStore: ERROR - No beads database found")
             await MainActor.run {
                 self.issues = []
+                self.dependencies = []
             }
         } catch {
             print("IssueStore: ERROR loading issues: \(error)")
             await MainActor.run {
                 self.issues = []
+                self.dependencies = []
             }
         }
     }

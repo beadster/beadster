@@ -83,6 +83,11 @@ CREATE TABLE sources (
   name TEXT NOT NULL,
   type TEXT NOT NULL,  -- 'local', 'virtual', 'inbox'
   path TEXT,
+
+  -- Git repository info
+  git_repo_url TEXT,      -- remote origin URL
+  git_current_branch TEXT, -- current branch
+
   last_sync INTEGER,
   last_issue_number INTEGER DEFAULT 0,
   created_at INTEGER NOT NULL,
@@ -110,6 +115,12 @@ CREATE TABLE issues (
   client TEXT,  -- 'claude-code', 'claude-desktop', etc
   project_name TEXT,
 
+  -- Git context (captured when issue created)
+  git_repo_url TEXT,      -- remote origin URL
+  git_branch TEXT,        -- branch name when created
+  git_commit_hash TEXT,   -- commit hash when created
+  git_is_dirty INTEGER DEFAULT 0,  -- had uncommitted changes
+
   -- Sync
   synced_at INTEGER,
 
@@ -127,6 +138,7 @@ CREATE INDEX idx_issues_source ON issues(source_id);
 CREATE INDEX idx_issues_status ON issues(status);
 CREATE INDEX idx_issues_session ON issues(session_id);
 CREATE INDEX idx_issues_client ON issues(client);
+CREATE INDEX idx_issues_git_repo ON issues(git_repo_url);
 
 -- Ensure beads_id is unique per source
 CREATE UNIQUE INDEX idx_issues_source_beads_id ON issues(source_id, beads_id);

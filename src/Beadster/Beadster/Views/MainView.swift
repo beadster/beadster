@@ -16,6 +16,22 @@ private enum LayoutConstants {
     static let footerHeight: CGFloat = 24
 }
 
+// MARK: - Tree Node
+
+struct IssueTreeNode: Identifiable {
+    let id: String
+    let issue: Issue
+    let children: [IssueTreeNode]
+    let depth: Int
+
+    init(issue: Issue, children: [IssueTreeNode] = [], depth: Int = 0) {
+        self.id = issue.id
+        self.issue = issue
+        self.children = children
+        self.depth = depth
+    }
+}
+
 // MARK: - App State
 
 enum AppTab: String, CaseIterable {
@@ -593,19 +609,81 @@ struct MainView: View {
                     }
                     .padding()
                 } else {
-                    ForEach(issueStore.filteredIssues()) { issue in
-                        IssueRowCompact(issue: issue, issueStore: issueStore, viewMode: viewMode)
-                            .environmentObject(projectStore)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                contentMode = .issueDetail(issue)
-                            }
+                    if viewMode == .tree {
+                        // Tree view: show issues in dependency hierarchy
+                        let treeNodes = buildIssueTree(
+                            issues: issueStore.filteredIssues(),
+                            dependencies: issueStore.dependencies
+                        )
+                        ForEach(treeNodes) { node in
+                            renderTreeNode(node)
+                        }
+                    } else {
+                        // List view: show flat list
+                        ForEach(issueStore.filteredIssues()) { issue in
+                            IssueRowCompact(issue: issue, issueStore: issueStore, viewMode: viewMode, depth: 0)
+                                .environmentObject(projectStore)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    contentMode = .issueDetail(issue)
+                                }
 
-                        Divider()
+                            Divider()
+                        }
                     }
                 }
             }
         }
+    }
+
+    func renderTreeNode(_ node: IssueTreeNode) -> AnyView {
+        AnyView(
+            Group {
+                IssueRowCompact(issue: node.issue, issueStore: issueStore, viewMode: viewMode, depth: node.depth)
+                    .environmentObject(projectStore)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        contentMode = .issueDetail(node.issue)
+                    }
+
+                Divider()
+
+                ForEach(node.children) { child in
+                    renderTreeNode(child)
+                }
+            }
+        )
+    }
+
+    func buildIssueTree(issues: [Issue], dependencies: [IssueDependency]) -> [IssueTreeNode] {
+        // Build lookup maps
+        let issueMap = Dictionary(uniqueKeysWithValues: issues.map { ($0.id, $0) })
+
+        // Build children map: for each issue, find what it blocks
+        var childrenMap: [String: [String]] = [:]
+        for dep in dependencies {
+            if dep.type == "blocks" {
+                // dep.issueId blocks dep.dependsOnId
+                // So dep.dependsOnId should have dep.issueId as a child
+                childrenMap[dep.dependsOnId, default: []].append(dep.issueId)
+            }
+        }
+
+        // Find root issues (issues that are not blocked by anything)
+        let blockedIssueIds = Set(dependencies.filter { $0.type == "blocks" }.map { $0.issueId })
+        let rootIssues = issues.filter { !blockedIssueIds.contains($0.id) }
+
+        // Build tree recursively
+        func buildNode(issueId: String, depth: Int) -> IssueTreeNode? {
+            guard let issue = issueMap[issueId] else { return nil }
+
+            let childIds = childrenMap[issueId] ?? []
+            let children = childIds.compactMap { buildNode(issueId: $0, depth: depth + 1) }
+
+            return IssueTreeNode(issue: issue, children: children, depth: depth)
+        }
+
+        return rootIssues.compactMap { buildNode(issueId: $0.id, depth: 0) }
     }
 
     // MARK: - Issue Detail View
@@ -868,10 +946,18 @@ struct IssueRowCompact: View {
     let issue: Issue
     @ObservedObject var issueStore: IssueStore
     let viewMode: ViewMode
+    let depth: Int
     @EnvironmentObject var projectStore: ProjectStore
 
     var body: some View {
         HStack(spacing: 10) {
+            // Indentation for tree view
+            if depth > 0 {
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(width: CGFloat(depth) * 20)
+            }
+
             // Checkbox
             Button(action: {
                 if let project = projectStore.selectedProject {

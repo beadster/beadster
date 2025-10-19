@@ -223,6 +223,36 @@ public class BeadsDatabase {
         return false
     }
 
+    public func getAllDependencies() throws -> [IssueDependency] {
+        var dependencies: [IssueDependency] = []
+
+        let query = """
+        SELECT issue_id, depends_on_id, type
+        FROM dependencies
+        """
+
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, query, -1, &statement, nil) == SQLITE_OK else {
+            throw DatabaseError.queryFailed
+        }
+
+        defer { sqlite3_finalize(statement) }
+
+        while sqlite3_step(statement) == SQLITE_ROW {
+            let issueId = String(cString: sqlite3_column_text(statement, 0))
+            let dependsOnId = String(cString: sqlite3_column_text(statement, 1))
+            let type = String(cString: sqlite3_column_text(statement, 2))
+
+            dependencies.append(IssueDependency(
+                issueId: issueId,
+                dependsOnId: dependsOnId,
+                type: type
+            ))
+        }
+
+        return dependencies
+    }
+
     private func extractLabel(from labels: [String], prefix: String) -> String? {
         return labels.first { $0.hasPrefix(prefix) }?
             .replacingOccurrences(of: prefix, with: "")

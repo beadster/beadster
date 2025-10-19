@@ -216,6 +216,26 @@ public struct IssuesResponse: Codable {
     public let issues: [Issue]
 }
 
+// MARK: - Dependencies
+
+public struct IssueDependency: Codable, Hashable {
+    public let issueId: String
+    public let dependsOnId: String
+    public let type: String
+
+    enum CodingKeys: String, CodingKey {
+        case issueId = "issue_id"
+        case dependsOnId = "depends_on_id"
+        case type
+    }
+
+    public init(issueId: String, dependsOnId: String, type: String = "blocks") {
+        self.issueId = issueId
+        self.dependsOnId = dependsOnId
+        self.type = type
+    }
+}
+
 // MARK: - Errors
 
 public enum DatabaseError: Error {
