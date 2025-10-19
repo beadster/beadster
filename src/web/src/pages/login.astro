@@ -1,0 +1,23 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Check if already logged in
+const user = Astro.locals.user;
+if (user) {
+  return Astro.redirect('/');
+}
+---
+
+<Layout title="Sign In">
+  <div style="text-align: center; padding: 60px 20px;">
+    <h1 style="font-size: 32px; margin-bottom: 20px;">beadster</h1>
+    <p style="color: #666; margin-bottom: 40px;">issue tracker for AI agents and developers</p>
+
+    <a
+      href="/api/auth/sign-in/social?provider=github"
+      style="display: inline-block; padding: 12px 24px; background: #24292e; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;"
+    >
+      sign in with github
+    </a>
+  </div>
+</Layout>

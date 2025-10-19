@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SQLite3
 
 enum BeadsHelper {
     /// Find the actual .db file in a .beads directory

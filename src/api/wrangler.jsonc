@@ -16,7 +16,7 @@
 
   "vars": {
     "ENVIRONMENT": "development",
-    "BASE_URL": "https://beadster-dev-api.systemoperator.workers.dev",
+    "BASE_URL": "https://beadster.ai",
     "GITHUB_CLIENT_ID": "placeholder_add_via_dashboard_or_dev_vars"
   },
 

@@ -4,6 +4,7 @@ interface Props {
 }
 
 const { title } = Astro.props;
+const user = Astro.locals.user;
 ---
 
 <!doctype html>
@@ -197,6 +198,13 @@ const { title } = Astro.props;
           <a href="/">issues</a>
           <a href="/sources">projects</a>
           <a href="/sessions">sessions</a>
+          {user ? (
+            <span style="margin-left: auto;">
+              {user.name || user.github_login} | <a href="/api/auth/sign-out">sign out</a>
+            </span>
+          ) : (
+            <a href="/login" style="margin-left: auto;">sign in</a>
+          )}
         </nav>
       </header>
       <main>

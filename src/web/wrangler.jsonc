@@ -23,6 +23,8 @@
   "vars": {
     "BEADSTER_API_URL": "https://beadster-dev-api.systemoperator.workers.dev",
     "BEADSTER_API_KEY": "3ae6ab7b-3e95-49b5-8d96-5ab6e8102373",
+    "BASE_URL": "https://beadster.ai",
+    "GITHUB_CLIENT_ID": "Ov23liBzvwLWw3pPzWZ0"
   },
   "routes": [
     {
