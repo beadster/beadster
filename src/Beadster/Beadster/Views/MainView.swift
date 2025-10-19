@@ -430,6 +430,7 @@ struct MainView: View {
                 } else {
                     ForEach(issueStore.filteredIssues()) { issue in
                         IssueRowCompact(issue: issue, issueStore: issueStore)
+                            .environmentObject(projectStore)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 contentMode = .issueDetail(issue)
