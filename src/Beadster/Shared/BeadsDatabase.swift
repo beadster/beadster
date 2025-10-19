@@ -10,22 +10,18 @@ public class BeadsDatabase {
 
     // Init with String path (for CLI)
     public init(beadsDir: String) {
-        if let foundPath = BeadsHelper.findDatabasePath(in: beadsDir) {
-            self.dbPath = foundPath
-        } else {
-            // Fallback to old hardcoded name (for backwards compatibility)
-            self.dbPath = "\(beadsDir)/.beads/beads.db"
+        guard let foundPath = BeadsHelper.findDatabasePath(in: beadsDir) else {
+            fatalError("No beads database found in \(beadsDir)")
         }
+        self.dbPath = foundPath
     }
 
     // Init with URL (for macOS app)
     public init(beadsDir: URL) {
-        if let foundURL = BeadsHelper.findDatabaseFile(in: beadsDir) {
-            self.dbPath = foundURL.path
-        } else {
-            // Fallback to old hardcoded name (for backwards compatibility)
-            self.dbPath = beadsDir.appendingPathComponent(".beads/beads.db").path
+        guard let foundURL = BeadsHelper.findDatabaseFile(in: beadsDir) else {
+            fatalError("No beads database found in \(beadsDir.path)")
         }
+        self.dbPath = foundURL.path
     }
 
     public func open() throws {

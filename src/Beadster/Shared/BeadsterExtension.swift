@@ -9,12 +9,10 @@ public class BeadsterExtension {
     private var db: OpaquePointer?
 
     public init(beadsDir: String) {
-        if let foundPath = BeadsHelper.findDatabasePath(in: beadsDir) {
-            self.dbPath = foundPath
-        } else {
-            // Fallback to old hardcoded name (for backwards compatibility)
-            self.dbPath = "\(beadsDir)/.beads/beads.db"
+        guard let foundPath = BeadsHelper.findDatabasePath(in: beadsDir) else {
+            fatalError("No beads database found in \(beadsDir)")
         }
+        self.dbPath = foundPath
     }
 
     /// Initialize beadster extension tables in beads.db
