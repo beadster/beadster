@@ -12,7 +12,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/SwiftGit2/SwiftGit2.git", from: "0.9.0")
+        .package(url: "https://github.com/SwiftGit2/SwiftGit2.git", from: "0.6.0")
     ],
     targets: [
         // Shared code (used by both CLI and macOS app)

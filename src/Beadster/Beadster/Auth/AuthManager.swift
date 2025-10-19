@@ -57,7 +57,8 @@ class AuthManager: NSObject, ObservableObject {
                 request.httpMethod = "POST"
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-                let body = ["provider": "github", "callbackURL": "beadster://callback"]
+                // Use web callback URL - server will redirect to beadster:// after handling OAuth
+                let body = ["provider": "github", "callbackURL": "\(baseURL)/"]
                 request.httpBody = try JSONEncoder().encode(body)
 
                 let (data, response) = try await urlSession.data(for: request)
@@ -93,9 +94,10 @@ class AuthManager: NSObject, ObservableObject {
 
         await MainActor.run {
             // Create web authentication session
+            // This will intercept any redirect to https://beadster.ai after OAuth
             authSession = ASWebAuthenticationSession(
                 url: authURL,
-                callbackURLScheme: "beadster"
+                callbackURLScheme: "https"
             ) { [weak self] callbackURL, error in
                 Task { @MainActor in
                     await self?.handleOAuthCallback(callbackURL: callbackURL, error: error)
@@ -130,7 +132,10 @@ class AuthManager: NSObject, ObservableObject {
             return
         }
 
-        // After successful OAuth, get the API key
+        print("[auth] OAuth callback received: \(callbackURL)")
+
+        // After successful OAuth, session cookies are set
+        // Now get the API key using the session
         Task {
             await fetchAPIKey()
         }
