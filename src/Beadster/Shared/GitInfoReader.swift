@@ -1,7 +1,6 @@
 import Foundation
-import SwiftGit2
 
-/// Helper to read git information from a repository
+/// Helper to read git information from a repository using git CLI
 public class GitInfoReader {
 
     /// Git information for a repository
@@ -23,21 +22,22 @@ public class GitInfoReader {
     /// - Parameter path: Path to the directory (can be anywhere in the git repo)
     /// - Returns: GitInfo if the directory is in a git repository, nil otherwise
     public static func readGitInfo(at path: String) -> GitInfo? {
-        guard let repo = try? Repository.at(URL(fileURLWithPath: path)) else {
+        // Check if this is a git repository
+        guard isGitRepository(at: path) else {
             return nil
         }
 
         // Get remote URL (origin)
-        let repoUrl = getRemoteUrl(repo: repo)
+        let repoUrl = getRemoteUrl(at: path)
 
         // Get current branch name
-        let currentBranch = getCurrentBranch(repo: repo)
+        let currentBranch = getCurrentBranch(at: path)
 
         // Get current commit hash
-        let commitHash = getCommitHash(repo: repo)
+        let commitHash = getCommitHash(at: path)
 
         // Check if working directory is dirty (has uncommitted changes)
-        let isDirty = isWorkingDirectoryDirty(repo: repo)
+        let isDirty = isWorkingDirectoryDirty(at: path)
 
         return GitInfo(
             repoUrl: repoUrl,
@@ -49,47 +49,53 @@ public class GitInfoReader {
 
     // MARK: - Private Helpers
 
-    private static func getRemoteUrl(repo: Repository) -> String? {
-        // Try to get origin remote
-        guard let remote = try? repo.remote(named: "origin") else {
-            return nil
-        }
-        return remote.URL
+    private static func isGitRepository(at path: String) -> Bool {
+        return runGitCommand(["rev-parse", "--git-dir"], in: path) != nil
     }
 
-    private static func getCurrentBranch(repo: Repository) -> String? {
-        guard let head = try? repo.HEAD(),
-              case let .branch(branch) = head else {
-            return nil
-        }
-
-        // Extract branch name from full reference
-        // e.g., "refs/heads/main" -> "main"
-        let branchName = branch.name
-        if branchName.hasPrefix("refs/heads/") {
-            return String(branchName.dropFirst("refs/heads/".count))
-        }
-        return branchName
+    private static func getRemoteUrl(at path: String) -> String? {
+        return runGitCommand(["config", "--get", "remote.origin.url"], in: path)
     }
 
-    private static func getCommitHash(repo: Repository) -> String? {
-        guard let head = try? repo.HEAD() else {
-            return nil
-        }
-
-        // Get the OID (Object ID) of the HEAD commit
-        let oid = head.oid
-        return oid.description
+    private static func getCurrentBranch(at path: String) -> String? {
+        return runGitCommand(["rev-parse", "--abbrev-ref", "HEAD"], in: path)
     }
 
-    private static func isWorkingDirectoryDirty(repo: Repository) -> Bool {
+    private static func getCommitHash(at path: String) -> String? {
+        return runGitCommand(["rev-parse", "HEAD"], in: path)
+    }
+
+    private static func isWorkingDirectoryDirty(at path: String) -> Bool {
         // Check if there are any uncommitted changes
-        // This includes both staged and unstaged changes
-        guard let statusEntries = try? repo.statusEntries() else {
-            return false
-        }
+        let status = runGitCommand(["status", "--porcelain"], in: path)
+        return status != nil && !status!.isEmpty
+    }
 
-        // If there are any status entries, the working directory is dirty
-        return statusEntries.count > 0
+    private static func runGitCommand(_ arguments: [String], in directory: String) -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = arguments
+        process.currentDirectoryURL = URL(fileURLWithPath: directory)
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            guard process.terminationStatus == 0 else {
+                return nil
+            }
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            return output?.isEmpty == true ? nil : output
+        } catch {
+            return nil
+        }
     }
 }
