@@ -239,7 +239,7 @@ class SyncDaemon: ObservableObject {
             }
 
             // 3. Capture git context for the project
-            let gitInfo = latestProject.path.map { GitInfoReader.readGitInfo(at: $0) } ?? nil
+            let gitInfo = latestProject.path.flatMap { GitInfoReader.readGitInfo(at: $0) }
 
             // 4. Push local changes to cloud with git context
             let sourcePayload = SourcePayload(
