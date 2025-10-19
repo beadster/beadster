@@ -320,7 +320,7 @@ class IssueStore: ObservableObject {
         }
 
         // Call API to get issue by beads_id
-        let urlString = "https://api.beadster.ai/api/issues?beads_id=\(issueId)"
+        let urlString = "https://api.beadster.ai/v1/issues?beads_id=\(issueId)"
         guard let url = URL(string: urlString) else {
             print("IssueStore: Invalid URL")
             return nil
