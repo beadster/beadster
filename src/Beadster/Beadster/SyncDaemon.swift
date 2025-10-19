@@ -93,11 +93,16 @@ class SyncDaemon: ObservableObject {
             return
         }
 
-        let dbFile = projectURL.appendingPathComponent(".beads/beads.db")
+        // find actual database file (bd names it after project)
+        guard let dbFile = BeadsHelper.findDatabaseFile(in: projectURL) else {
+            projectURL.stopAccessingSecurityScopedResource()
+            print("No beads database found for \(project.name)")
+            return
+        }
 
         guard FileManager.default.fileExists(atPath: dbFile.path) else {
             projectURL.stopAccessingSecurityScopedResource()
-            print("No beads.db found for \(project.name)")
+            print("Beads database file not accessible for \(project.name)")
             return
         }
 
