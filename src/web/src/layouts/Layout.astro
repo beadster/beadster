@@ -28,21 +28,45 @@ const user = Astro.locals.user;
         /* status colors */
         --color-success: #060;
         --color-success-bg: #e8ffe8;
+        --color-success-dark: #006600;
+        --color-success-hover: #d0ffd0;
         --color-error: #c00;
         --color-error-bg: #fee;
+        --color-error-dark: #cc0000;
+        --color-error-darker: #990000;
         --color-warning: #880;
         --color-warning-bg: #ffe;
+
+        /* additional colors */
+        --color-primary-hover: #0052a3;
+        --color-primary-light: #e8f4ff;
+        --color-primary-lighter: #f5f9ff;
+        --color-github: #24292e;
+        --color-neutral: #f0f0f0;
+        --color-neutral-dark: #e0e0e0;
+        --color-neutral-text: #555;
+        --color-purple: #660099;
+        --color-purple-bg: #f5e6ff;
 
         /* fonts */
         --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         --font-mono: monospace;
 
-        /* spacing */
-        --space-xs: 4px;
-        --space-sm: 8px;
-        --space-md: 12px;
-        --space-lg: 16px;
-        --space-xl: 20px;
+        /* font sizes */
+        --font-xs: 10px;
+        --font-sm: 11px;
+        --font-md: 13px;
+        --font-base: 14px;
+        --font-lg: 16px;
+        --font-xl: 20px;
+        --font-2xl: 24px;
+
+        /* spacing - compact design */
+        --space-xs: 2px;
+        --space-sm: 4px;
+        --space-md: 8px;
+        --space-lg: 12px;
+        --space-xl: 16px;
 
         /* sizes */
         --border-radius: 4px;
@@ -61,10 +85,10 @@ const user = Astro.locals.user;
 
       body {
         font-family: var(--font-sans);
-        line-height: 1.6;
+        line-height: 1.5;
         color: var(--color-text);
         background: var(--color-bg);
-        padding: var(--space-xl);
+        padding: var(--space-md);
       }
 
       .container {
@@ -73,19 +97,17 @@ const user = Astro.locals.user;
       }
 
       header {
-        border-bottom: 2px solid var(--color-border);
-        padding-bottom: var(--space-xl);
-        margin-bottom: 30px;
+        margin-bottom: var(--space-sm);
       }
 
       header h1 {
-        font-size: 28px;
-        margin-bottom: var(--space-sm);
+        font-size: var(--font-2xl);
+        margin-bottom: var(--space-xs);
       }
 
       nav {
         display: flex;
-        gap: var(--space-xl);
+        gap: var(--space-lg);
       }
 
       nav a {
@@ -108,8 +130,7 @@ const user = Astro.locals.user;
       }
 
       .issue-item {
-        padding: 15px 0;
-        border-bottom: 1px solid var(--color-border);
+        padding: var(--space-md) 0;
       }
 
       .issue-item:hover {
@@ -120,17 +141,17 @@ const user = Astro.locals.user;
         display: flex;
         align-items: center;
         gap: var(--space-sm);
-        margin-bottom: 5px;
+        margin-bottom: var(--space-xs);
       }
 
       .issue-id {
         font-family: var(--font-mono);
         color: var(--color-text-light);
-        font-size: 14px;
+        font-size: var(--font-base);
       }
 
       .issue-title {
-        font-size: 16px;
+        font-size: var(--font-lg);
         font-weight: 500;
         color: var(--color-primary);
         text-decoration: none;
@@ -142,9 +163,9 @@ const user = Astro.locals.user;
 
       .badge {
         display: inline-block;
-        padding: 2px var(--space-sm);
+        padding: var(--space-xs) var(--space-sm);
         border-radius: var(--border-radius);
-        font-size: 12px;
+        font-size: var(--font-sm);
         font-weight: 500;
       }
 
@@ -164,7 +185,7 @@ const user = Astro.locals.user;
       }
 
       .badge.status {
-        background: #e8f4ff;
+        background: var(--color-primary-light);
         color: var(--color-primary);
       }
 
@@ -174,18 +195,18 @@ const user = Astro.locals.user;
       }
 
       .badge.session {
-        background: #f0f0f0;
-        color: #555;
+        background: var(--color-neutral);
+        color: var(--color-neutral-text);
         font-family: var(--font-mono);
       }
 
       .badge.client {
-        background: #f5e6ff;
-        color: #660099;
+        background: var(--color-purple-bg);
+        color: var(--color-purple);
       }
 
       .issue-meta {
-        font-size: 14px;
+        font-size: var(--font-base);
         color: var(--color-text-light);
         display: flex;
         gap: var(--space-sm);
@@ -198,48 +219,48 @@ const user = Astro.locals.user;
       }
 
       .session-item {
-        padding: var(--space-xl) 0;
+        padding: var(--space-md) 0;
         border: 1px solid var(--color-border);
-        border-radius: 6px;
-        margin-bottom: 15px;
+        border-radius: var(--border-radius);
+        margin-bottom: var(--space-md);
       }
 
       .session-item:hover {
         border-color: var(--color-primary);
-        background: #f9f9ff;
+        background: var(--color-primary-lighter);
       }
 
       .session-header {
-        font-size: 18px;
+        font-size: var(--font-lg);
         font-weight: 500;
-        margin-bottom: var(--space-sm);
+        margin-bottom: var(--space-xs);
       }
 
       .session-meta {
         display: flex;
-        gap: 15px;
-        font-size: 14px;
+        gap: var(--space-md);
+        font-size: var(--font-md);
         color: var(--color-text-light);
       }
 
       .empty {
         text-align: center;
-        padding: 60px var(--space-xl);
+        padding: 40px var(--space-xl);
         color: var(--color-text-lighter);
       }
 
       h2 {
-        margin-bottom: var(--space-lg);
-        font-size: 18px;
+        margin-bottom: var(--space-md);
+        font-size: var(--font-lg);
       }
 
       .error {
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
         background: var(--color-error-bg);
         border: 1px solid #fcc;
         border-radius: var(--border-radius);
         color: var(--color-error);
-        font-size: 14px;
+        font-size: var(--font-md);
       }
 
       .stats-grid {
@@ -262,7 +283,7 @@ const user = Astro.locals.user;
       }
 
       .login-container h1 {
-        font-size: 32px;
+        font-size: var(--font-2xl);
         margin-bottom: var(--space-xl);
       }
 
@@ -274,29 +295,29 @@ const user = Astro.locals.user;
       .btn-github {
         display: inline-block;
         padding: var(--space-md) 24px;
-        background: #24292e;
+        background: var(--color-github);
         color: white;
         border: none;
         border-radius: 6px;
         font-weight: 500;
         cursor: pointer;
-        font-size: 16px;
+        font-size: var(--font-lg);
       }
 
       /* tabs navigation */
       .tabs {
         display: flex;
-        gap: var(--space-xl);
-        margin-bottom: 30px;
+        gap: var(--space-lg);
+        margin-bottom: var(--space-lg);
         border-bottom: 1px solid var(--color-border-dark);
-        padding-bottom: var(--space-sm);
+        padding-bottom: var(--space-xs);
       }
 
       .tabs a {
         text-decoration: none;
         color: var(--color-text-light);
-        font-size: 16px;
-        padding: var(--space-sm) 0;
+        font-size: var(--font-base);
+        padding: var(--space-xs) 0;
         border-bottom: 2px solid transparent;
         transition: all 0.2s;
       }
@@ -322,7 +343,7 @@ const user = Astro.locals.user;
 
       .notice h3 {
         margin: 0 0 15px 0;
-        font-size: 20px;
+        font-size: var(--font-xl);
         color: var(--color-text-light);
       }
 
@@ -334,7 +355,7 @@ const user = Astro.locals.user;
 
       .notice pre {
         display: inline-block;
-        background: #f0f0f0;
+        background: var(--color-neutral);
         padding: var(--space-sm) var(--space-xl);
         border-radius: var(--border-radius);
         margin-top: 15px;
@@ -356,7 +377,7 @@ const user = Astro.locals.user;
       .back-link {
         color: var(--color-primary);
         text-decoration: none;
-        font-size: 14px;
+        font-size: var(--font-base);
       }
 
       .back-link:hover {
@@ -389,7 +410,7 @@ const user = Astro.locals.user;
         margin-bottom: var(--space-sm);
         font-weight: 500;
         color: var(--color-text);
-        font-size: 12px;
+        font-size: var(--font-sm);
       }
 
       input[type="text"],
@@ -400,7 +421,7 @@ const user = Astro.locals.user;
         border: 1px solid var(--color-border-dark);
         border-radius: var(--border-radius);
         font-family: inherit;
-        font-size: 14px;
+        font-size: var(--font-base);
       }
 
       input[type="text"]:focus,
@@ -423,7 +444,7 @@ const user = Astro.locals.user;
       .btn-danger {
         padding: var(--space-sm) var(--space-xl);
         border-radius: var(--border-radius);
-        font-size: 14px;
+        font-size: var(--font-base);
         font-weight: 500;
         cursor: pointer;
         border: none;
@@ -437,25 +458,25 @@ const user = Astro.locals.user;
       }
 
       .btn-primary:hover {
-        background: #0052a3;
+        background: var(--color-primary-hover);
       }
 
       .btn-secondary {
-        background: #f0f0f0;
+        background: var(--color-neutral);
         color: var(--color-text);
       }
 
       .btn-secondary:hover {
-        background: #e0e0e0;
+        background: var(--color-neutral-dark);
       }
 
       .btn-danger {
-        background: #cc0000;
+        background: var(--color-error-dark);
         color: white;
       }
 
       .btn-danger:hover {
-        background: #990000;
+        background: var(--color-error-darker);
       }
 
       .btn-new {
@@ -464,26 +485,26 @@ const user = Astro.locals.user;
         padding: var(--space-sm) var(--space-lg);
         border-radius: var(--border-radius);
         text-decoration: none;
-        font-size: 14px;
+        font-size: var(--font-base);
         font-weight: 500;
       }
 
       .btn-new:hover {
-        background: #0052a3;
+        background: var(--color-primary-hover);
       }
 
       .btn-clear-filter {
-        background: #f0f0f0;
+        background: var(--color-neutral);
         color: var(--color-text-light);
         padding: var(--space-sm) var(--space-lg);
         border-radius: var(--border-radius);
         text-decoration: none;
-        font-size: 14px;
+        font-size: var(--font-base);
         font-weight: 500;
       }
 
       .btn-clear-filter:hover {
-        background: #e0e0e0;
+        background: var(--color-neutral-dark);
         color: var(--color-text);
       }
 
@@ -493,13 +514,13 @@ const user = Astro.locals.user;
         border: 1px solid #cfc;
         padding: var(--space-xs) var(--space-md);
         border-radius: var(--border-radius);
-        font-size: 12px;
+        font-size: var(--font-sm);
         cursor: pointer;
         font-weight: 500;
       }
 
       .btn-close:hover {
-        background: #d0ffd0;
+        background: var(--color-success-hover);
       }
 
       /* header row */
@@ -519,7 +540,7 @@ const user = Astro.locals.user;
 
       .label-group h3 {
         margin-bottom: var(--space-md);
-        font-size: 18px;
+        font-size: var(--font-lg);
         display: flex;
         align-items: center;
         gap: var(--space-sm);
@@ -527,7 +548,7 @@ const user = Astro.locals.user;
 
       .count {
         color: var(--color-text-light);
-        font-size: 14px;
+        font-size: var(--font-base);
         font-weight: normal;
       }
 
@@ -547,7 +568,7 @@ const user = Astro.locals.user;
 
       .source-item:hover {
         border-color: var(--color-primary);
-        background: #f5f9ff;
+        background: var(--color-primary-lighter);
       }
 
       .source-header {
@@ -559,7 +580,7 @@ const user = Astro.locals.user;
 
       .source-name {
         margin: 0;
-        font-size: 20px;
+        font-size: var(--font-xl);
         font-weight: 500;
       }
 
@@ -569,24 +590,24 @@ const user = Astro.locals.user;
       }
 
       .badge.type {
-        background: #e8f4ff;
+        background: var(--color-primary-light);
         color: var(--color-primary);
       }
 
       .badge.type.local {
         background: var(--color-success-bg);
-        color: #006600;
+        color: var(--color-success-dark);
       }
 
       .badge.type.virtual {
-        background: #f5e6ff;
-        color: #660099;
+        background: var(--color-purple-bg);
+        color: var(--color-purple);
       }
 
       .source-path,
       .repo-url {
         font-family: var(--font-mono);
-        font-size: 12px;
+        font-size: var(--font-sm);
         color: var(--color-text-light);
         margin-bottom: 15px;
         padding: var(--space-sm);
@@ -612,20 +633,20 @@ const user = Astro.locals.user;
       }
 
       .stat-value {
-        font-size: 24px;
+        font-size: var(--font-2xl);
         font-weight: 600;
         color: var(--color-text);
       }
 
       .stat-label {
-        font-size: 12px;
+        font-size: var(--font-sm);
         color: var(--color-text-lighter);
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
 
       .source-meta {
-        font-size: 14px;
+        font-size: var(--font-base);
         color: var(--color-text-lighter);
       }
 
@@ -645,7 +666,7 @@ const user = Astro.locals.user;
 
       .repo-item:hover {
         border-color: var(--color-primary);
-        background: #f5f9ff;
+        background: var(--color-primary-lighter);
         transform: translateY(-1px);
         box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
       }
@@ -666,7 +687,7 @@ const user = Astro.locals.user;
 
       .repo-name {
         margin: 0;
-        font-size: 20px;
+        font-size: var(--font-xl);
         font-weight: 500;
         color: var(--color-text);
       }
@@ -679,17 +700,17 @@ const user = Astro.locals.user;
       .stat-badge {
         padding: var(--space-xs) var(--space-md);
         border-radius: 12px;
-        font-size: 12px;
+        font-size: var(--font-sm);
         font-weight: 500;
       }
 
       .stat-badge.open {
         background: var(--color-success-bg);
-        color: #006600;
+        color: var(--color-success-dark);
       }
 
       .stat-badge.closed {
-        background: #f0f0f0;
+        background: var(--color-neutral);
         color: var(--color-text-light);
       }
 
@@ -715,7 +736,7 @@ const user = Astro.locals.user;
       }
 
       .issue-detail .issue-title {
-        font-size: 16px;
+        font-size: var(--font-lg);
         margin: 0;
         font-weight: 600;
       }
@@ -727,12 +748,12 @@ const user = Astro.locals.user;
         margin-bottom: var(--space-md);
         white-space: pre-wrap;
         line-height: 1.5;
-        font-size: 14px;
+        font-size: var(--font-base);
       }
 
       .metadata-compact {
         margin-bottom: var(--space-lg);
-        font-size: 13px;
+        font-size: var(--font-md);
         padding: 6px 0;
         border-top: 1px solid #f0f0f0;
         border-bottom: 1px solid #f0f0f0;
@@ -748,7 +769,7 @@ const user = Astro.locals.user;
       .meta-label {
         color: var(--color-text-lighter);
         min-width: 60px;
-        font-size: 12px;
+        font-size: var(--font-sm);
       }
 
       .meta-value {
@@ -762,9 +783,9 @@ const user = Astro.locals.user;
       }
 
       .badge.label {
-        background: #e8f4ff;
+        background: var(--color-primary-light);
         color: var(--color-primary);
-        font-size: 11px;
+        font-size: var(--font-sm);
         padding: 2px var(--space-sm);
       }
 
@@ -773,7 +794,7 @@ const user = Astro.locals.user;
       }
 
       .actions-section h3 {
-        font-size: 14px;
+        font-size: var(--font-base);
         margin-bottom: var(--space-sm);
         color: var(--color-text-light);
         font-weight: 600;
@@ -787,20 +808,20 @@ const user = Astro.locals.user;
       /* stat card component */
       .stat-card {
         background: var(--color-bg-light);
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
         border-radius: var(--border-radius);
         text-align: center;
       }
 
       .stat-card .stat-value {
-        font-size: 24px;
+        font-size: var(--font-xl);
         font-weight: 600;
         color: var(--color-primary);
         margin-bottom: var(--space-xs);
       }
 
       .stat-card .stat-label {
-        font-size: 12px;
+        font-size: var(--font-sm);
         color: var(--color-text-light);
         text-transform: lowercase;
       }
@@ -808,20 +829,20 @@ const user = Astro.locals.user;
       /* chart section component */
       .chart-section {
         background: var(--color-bg-light);
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
         border-radius: var(--border-radius);
       }
 
       .chart-section h3 {
         margin-bottom: var(--space-sm);
-        font-size: 14px;
+        font-size: var(--font-md);
         font-weight: 500;
       }
 
       .chart-bars {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: var(--space-xs);
       }
 
       .chart-bar {
@@ -832,14 +853,14 @@ const user = Astro.locals.user;
       }
 
       .bar-label {
-        font-size: 12px;
+        font-size: var(--font-sm);
         color: var(--color-text-light);
         text-align: right;
       }
 
       .bar-container {
         background: var(--bar-bg);
-        height: 16px;
+        height: 12px;
         border-radius: var(--border-radius-sm);
         overflow: hidden;
       }
@@ -852,7 +873,7 @@ const user = Astro.locals.user;
       }
 
       .bar-value {
-        font-size: 12px;
+        font-size: var(--font-sm);
         font-weight: 500;
         color: var(--color-text);
         text-align: center;

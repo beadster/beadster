@@ -15,25 +15,3 @@ const { repoUrl, branch, commit, isDirty } = Astro.props;
   {!!isDirty && <span class="dirty">*</span>}
 </div>
 
-<style>
-  .git-context {
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-    font-size: 12px;
-  }
-
-  .git-branch,
-  .git-commit {
-    font-family: monospace;
-    background: #f0f0f0;
-    padding: 2px 6px;
-    border-radius: 3px;
-    color: #666;
-  }
-
-  .dirty {
-    color: #f59e0b;
-    font-weight: bold;
-  }
-</style>
