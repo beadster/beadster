@@ -29,6 +29,7 @@ enum ContentMode: Equatable {
     case onboarding
     case issuesList
     case issueDetail(Issue)
+    case settings
 }
 
 // MARK: - Main View
@@ -55,13 +56,21 @@ struct MainView: View {
             // Content Header
             contentHeader
 
-            Divider()
+            if case .settings = contentMode {
+                // No divider for settings
+            } else {
+                Divider()
+            }
 
             // Content Area (takes remaining space)
             contentArea
                 .frame(maxHeight: .infinity)
 
-            Divider()
+            if case .settings = contentMode {
+                // No divider for settings
+            } else {
+                Divider()
+            }
 
             // Footer
             footer
@@ -110,27 +119,31 @@ struct MainView: View {
             Spacer()
 
             Button(action: {
-                // TODO: settings action
+                print("⚙️  Gear icon clicked! Current mode: \(contentMode)")
+                contentMode = .settings
+                print("⚙️  Changed to settings mode")
             }) {
                 Image(systemName: "gearshape")
                     .font(.system(size: 13))
                     .foregroundColor(.black.opacity(0.6))
+                    .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
-            .background(Color.purple.opacity(0.3)) // DEBUG
-            .border(Color.purple) // DEBUG
+            .background(Color.purple.opacity(0.5)) // DEBUG
+            .border(Color.purple, width: 2) // DEBUG
 
             Button(action: {
                 isPinned.toggle()
-                // TODO: implement window pin functionality
+                print("📌 Pin clicked!")
             }) {
                 Image(systemName: isPinned ? "pin.fill" : "pin")
                     .font(.system(size: 13))
                     .foregroundColor(.black.opacity(0.6))
+                    .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
-            .background(Color.orange.opacity(0.3)) // DEBUG
-            .border(Color.orange) // DEBUG
+            .background(Color.orange.opacity(0.5)) // DEBUG
+            .border(Color.orange, width: 2) // DEBUG
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 0)
@@ -143,6 +156,8 @@ struct MainView: View {
                 .foregroundColor(.black)
                 .position(x: 200, y: 14)
         )
+        .allowsHitTesting(true) // DEBUG: ensure hit testing is enabled
+        .zIndex(100) // DEBUG: bring to front
         // TODO: Restore hover behavior after layout is working
 //        .onHover { hovering in
 //            withAnimation(.easeInOut(duration: 0.2)) {
@@ -157,7 +172,11 @@ struct MainView: View {
 
     var contentHeader: some View {
         Group {
-            if case .issueDetail(let issue) = contentMode {
+            if case .settings = contentMode {
+                // Settings has its own header, hide this one
+                EmptyView()
+                    .frame(height: 0)
+            } else if case .issueDetail(let issue) = contentMode {
                 // Issue detail header
                 issueDetailHeader(issue: issue)
             } else {
@@ -356,6 +375,8 @@ struct MainView: View {
                 issuesListView
             case .issueDetail(let issue):
                 issueDetailView(issue: issue)
+            case .settings:
+                settingsView
             }
         }
     }
@@ -657,6 +678,18 @@ struct MainView: View {
 //                isHoveringFooter = hovering
 //            }
 //        }
+    }
+
+    // MARK: - Settings View
+
+    var settingsView: some View {
+        SettingsView(
+            projectStore: projectStore,
+            syncDaemon: syncDaemon,
+            onClose: {
+                contentMode = .issuesList
+            }
+        )
     }
 
     // MARK: - Helpers

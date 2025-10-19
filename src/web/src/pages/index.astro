@@ -1,35 +1,19 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getIssues } from '../../../shared/database';
 
-interface Issue {
-  id: string;
-  user_id: string;
-  beads_id: string;
-  title: string;
-  body: string | null;
-  status: string;
-  priority: number | null;
-  labels: string | null;
-  session_id: string | null;
-  client: string | null;
-  project_name: string | null;
-  created_at: number;
-  updated_at: number;
-  closed_at: number | null;
-}
-
-let issues: Issue[] = [];
+let issues: any[] = [];
 let error: string | null = null;
 
-// Use D1 binding directly - show only open issues
+// Get open issues using shared database module
 try {
   const db = Astro.locals.runtime?.env?.DB;
-  if (db) {
-    const result = await db.prepare(
-      'SELECT * FROM issues WHERE status = ? ORDER BY created_at DESC'
-    ).bind('open').all();
+  const user = Astro.locals.user;
 
-    issues = result.results as Issue[];
+  if (db && user) {
+    issues = await getIssues(db, user.id, { status: 'open' });
+  } else if (!user) {
+    error = 'Not logged in - sign in to see your issues';
   } else {
     error = 'Database binding not available';
   }

@@ -23,7 +23,7 @@ class SyncDaemon: ObservableObject {
 
     private var watchers: [String: DispatchSourceFileSystemObject] = [:]
     private var syncTimer: Timer?
-    private let syncInterval: TimeInterval = 300 // 5 minutes
+    private let syncInterval: TimeInterval = 60 // 1 minute
     private var lastSync: [String: Date] = [:] // project id -> last sync time
     private var retryQueue: [(project: ProjectInfo, retryCount: Int, nextRetry: Date)] = []
     private var retryTimer: Timer?
@@ -46,6 +46,11 @@ class SyncDaemon: ObservableObject {
 
     func start() {
         print("Starting sync daemon...")
+
+        // trigger initial sync
+        Task { @MainActor in
+            await syncAll()
+        }
 
         // start periodic sync
         syncTimer = Timer.scheduledTimer(withTimeInterval: syncInterval, repeats: true) { [weak self] _ in
@@ -164,7 +169,18 @@ class SyncDaemon: ObservableObject {
 
     func syncAll() async {
         print("Syncing all projects...")
-        // TODO: implement when we have project store reference
+        guard let projectStore = projectStore else {
+            print("No project store reference")
+            return
+        }
+
+        for project in projectStore.projects {
+            guard project.sourceId != nil else {
+                print("Skipping \(project.name) - no source ID")
+                continue
+            }
+            await syncProject(project)
+        }
     }
 
     func syncProject(_ project: ProjectInfo, retryCount: Int = 0) async {

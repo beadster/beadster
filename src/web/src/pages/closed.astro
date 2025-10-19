@@ -1,35 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getIssues } from '../../../shared/database';
 
-interface Issue {
-  id: string;
-  user_id: string;
-  beads_id: string;
-  title: string;
-  body: string | null;
-  status: string;
-  priority: number | null;
-  labels: string | null;
-  session_id: string | null;
-  client: string | null;
-  project_name: string | null;
-  created_at: number;
-  updated_at: number;
-  closed_at: number | null;
+// Require authentication
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
 }
 
-let issues: Issue[] = [];
+let issues: any[] = [];
 let error: string | null = null;
 
-// Use D1 binding directly - show closed issues
+// Get closed issues for this user
 try {
   const db = Astro.locals.runtime?.env?.DB;
   if (db) {
-    const result = await db.prepare(
-      'SELECT * FROM issues WHERE status = ? ORDER BY closed_at DESC'
-    ).bind('closed').all();
-
-    issues = result.results as Issue[];
+    issues = await getIssues(db, Astro.locals.user.id, { status: 'closed' });
   } else {
     error = 'Database binding not available';
   }
@@ -49,13 +34,14 @@ function getPriorityClass(priority: number | null): string {
 }
 ---
 
-<Layout title="issues">
+<Layout title="closed issues">
   <nav class="tabs">
     <a href="/">open</a>
     <a href="/all">all</a>
     <a href="/closed" class="active">closed</a>
     <a href="/labels">labels</a>
     <a href="/tree">tree</a>
+    <a href="/stats">stats</a>
   </nav>
 
   <h2>closed issues</h2>
@@ -63,15 +49,12 @@ function getPriorityClass(priority: number | null): string {
   {error && (
     <div class="error">
       <p>{error}</p>
-      <p style="font-size: 14px; color: #666; margin-top: 10px;">
-        configure BEADSTER_API_URL environment variable or update src/pages/index.astro
-      </p>
     </div>
   )}
 
   {!error && issues.length === 0 && (
     <div class="empty">
-      <p>no issues yet</p>
+      <p>no closed issues</p>
     </div>
   )}
 
@@ -101,7 +84,7 @@ function getPriorityClass(priority: number | null): string {
             {issue.project_name && (
               <span class="badge">{issue.project_name}</span>
             )}
-            <span>created {formatDate(issue.created_at)}</span>
+            <span>closed {issue.closed_at ? formatDate(issue.closed_at) : 'unknown'}</span>
           </div>
           {issue.body && (
             <div style="margin-top: 8px; font-size: 14px; color: #666;">

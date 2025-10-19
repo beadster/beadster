@@ -8,66 +8,40 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @StateObject private var projectStore = ProjectStore()
+    @ObservedObject var projectStore: ProjectStore
+    @ObservedObject var syncDaemon: SyncDaemon
+    var onClose: () -> Void
 
     var body: some View {
-        TabView {
-            GeneralSettings()
-                .tabItem {
-                    Label("General", systemImage: "gear")
-                }
-
-            ProjectsSettings(projectStore: projectStore)
-                .tabItem {
-                    Label("Projects", systemImage: "folder")
-                }
-
-            SyncSettings()
-                .tabItem {
-                    Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-                }
-        }
-        .frame(width: 600, height: 500)
-        .padding()
-    }
-}
-
-struct GeneralSettings: View {
-    @AppStorage("apiEndpoint") private var apiEndpoint = "https://beadster-dev-app.systemoperator.workers.dev"
-    @AppStorage("apiToken") private var apiToken = "dev-token-placeholder"
-
-    var body: some View {
-        Form {
-            Section("API Configuration") {
-                TextField("Endpoint", text: $apiEndpoint)
-                    .font(.body.monospaced())
-
-                SecureField("API Token", text: $apiToken)
-                    .font(.body.monospaced())
-
-                Text("For production, use Sign in with Apple (coming soon)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Section("About") {
-                HStack {
-                    Text("Version:")
-                    Spacer()
-                    Text("0.1.0 (POC)")
+        VStack(spacing: 0) {
+            // Header with close button
+            HStack {
+                Text("Settings")
+                    .font(.headline)
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
                         .foregroundColor(.secondary)
                 }
+                .buttonStyle(.plain)
+            }
+            .padding()
 
-                HStack {
-                    Text("Database:")
-                    Spacer()
-                    Text("SQLite (.beads/<project>.db)")
-                        .foregroundColor(.secondary)
-                        .font(.caption)
+            Divider()
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    ProjectsSettings(projectStore: projectStore)
+
+                    Divider()
+                        .padding(.vertical, 12)
+
+                    SyncSettings(syncDaemon: syncDaemon)
                 }
             }
+            .background(Color.white)
         }
-        .formStyle(.grouped)
     }
 }
 
@@ -75,62 +49,85 @@ struct ProjectsSettings: View {
     @ObservedObject var projectStore: ProjectStore
 
     var body: some View {
-        VStack(alignment: .leading) {
-            Form {
-                Section("Registered Projects") {
-                    if projectStore.projects.isEmpty {
-                        Text("No projects registered")
-                            .foregroundColor(.secondary)
-                    } else {
-                        ForEach(projectStore.projects) { project in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(project.name)
-                                        .font(.body)
-                                    Spacer()
-                                    if let sourceId = project.sourceId {
-                                        Text(sourceId)
-                                            .font(.caption.monospaced())
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Projects")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .padding(.horizontal)
 
-                                Text(project.path)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-
-                                if let lastSync = project.lastSync {
-                                    Text("Last sync: \(lastSync.formatted(.relative(presentation: .named)))")
-                                        .font(.caption2)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Registered Projects")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .padding(.horizontal)
+                if projectStore.projects.isEmpty {
+                    Text("No projects registered")
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                } else {
+                    ForEach(projectStore.projects) { project in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(project.name)
+                                    .font(.body)
+                                Spacer()
+                                if let sourceId = project.sourceId {
+                                    Text(sourceId)
+                                        .font(.caption.monospaced())
                                         .foregroundColor(.secondary)
                                 }
                             }
-                            .padding(.vertical, 4)
-                            .contextMenu {
-                                Button("Remove", role: .destructive) {
-                                    projectStore.removeProject(project)
-                                }
+
+                            Text(project.path)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            if let lastSync = project.lastSync {
+                                Text("Last sync: \(lastSync.formatted(.relative(presentation: .named)))")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                        )
+                        .contextMenu {
+                            Button("Remove", role: .destructive) {
+                                projectStore.removeProject(project)
                             }
                         }
                     }
+                    .padding(.horizontal)
                 }
 
-                Section {
-                    Button("Add Projects...") {
-                        projectStore.selectFolderToScan()
-                    }
+                Button(action: {
+                    projectStore.selectFolderToScan()
+                }) {
+                    Text("Add Projects...")
+                        .font(.body)
                 }
+                .buttonStyle(.bordered)
+                .padding(.horizontal)
             }
         }
-        .formStyle(.grouped)
     }
-}
+
 
 struct SyncSettings: View {
-    @ObservedObject private var syncDaemon = SyncDaemon.shared
+    @ObservedObject var syncDaemon: SyncDaemon
 
     var body: some View {
-        Form {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Sync")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .padding(.horizontal)
+
+            Form {
             Section("Status") {
                 HStack {
                     Text("Sync Status:")
@@ -172,7 +169,7 @@ struct SyncSettings: View {
                 HStack {
                     Text("Auto Sync:")
                     Spacer()
-                    Text("Every 5 minutes")
+                    Text("Every 1 minute")
                         .foregroundColor(.secondary)
                 }
 
@@ -182,18 +179,30 @@ struct SyncSettings: View {
                     Text("Enabled")
                         .foregroundColor(.green)
                 }
+
+                HStack {
+                    Text("Watching Projects:")
+                    Spacer()
+                    Text("\(syncDaemon.watchedProjectsCount)")
+                        .foregroundColor(.secondary)
+                }
             }
 
             Section {
-                Text("Sync automatically triggers on file changes and every 5 minutes")
+                Text("Sync automatically triggers on file changes and every 1 minute")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+            }
+            .formStyle(.grouped)
         }
-        .formStyle(.grouped)
     }
 }
 
 #Preview {
-    SettingsView()
+    SettingsView(
+        projectStore: ProjectStore(),
+        syncDaemon: SyncDaemon.shared,
+        onClose: {}
+    )
 }

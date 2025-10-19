@@ -24,10 +24,6 @@ struct BeadsterApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
         }
-
-        Settings {
-            SettingsView()
-        }
     }
 
     init() {
