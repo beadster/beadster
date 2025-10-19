@@ -6,7 +6,6 @@
 //
 
 import Foundation
-
 import Dispatch
 import UserNotifications
 
@@ -239,7 +238,7 @@ class SyncDaemon: ObservableObject {
             }
 
             // 3. Capture git context for the project
-            let gitInfo = latestProject.path.flatMap { GitInfoReader.readGitInfo(at: $0) }
+            let gitInfo = GitInfoReader.readGitInfo(at: latestProject.path)
 
             // 4. Push local changes to cloud with git context
             let sourcePayload = SourcePayload(
