@@ -185,3 +185,271 @@ export async function getLabelStats(db: D1Database, userId: string): Promise<{ l
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
 }
+
+/**
+ * Create a new issue
+ */
+export async function createIssue(
+  db: D1Database,
+  userId: string,
+  data: {
+    source_id: string;
+    title: string;
+    body?: string | null;
+    status?: string;
+    priority?: number;
+  }
+): Promise<{ id: string; beads_id: string }> {
+  const { source_id, title, body, status, priority } = data;
+
+  // Generate IDs
+  const id = crypto.randomUUID();
+  const now = Math.floor(Date.now() / 1000);
+
+  // Get source and increment issue number
+  const source: any = await db.prepare(`
+    SELECT id, name, last_issue_number FROM sources WHERE id = ? AND user_id = ?
+  `).bind(source_id, userId).first();
+
+  if (!source) {
+    throw new Error('Source not found');
+  }
+
+  // Generate beads_id using source name as prefix
+  const issueNumber = (source.last_issue_number || 0) + 1;
+  const beadsId = `${source.name}-${issueNumber}`;
+
+  // Update source's last_issue_number
+  await db.prepare(`
+    UPDATE sources SET last_issue_number = ?, updated_at = ? WHERE id = ?
+  `).bind(issueNumber, now, source.id).run();
+
+  const result = await db.prepare(`
+    INSERT INTO issues (
+      id, user_id, source_id, beads_id, title, body,
+      status, priority, labels,
+      synced_at, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    id,
+    userId,
+    source.id,
+    beadsId,
+    title,
+    body || null,
+    status || 'open',
+    priority !== undefined ? String(Math.floor(priority)) : '1',
+    '[]',
+    now,
+    now,
+    now
+  ).run();
+
+  if (!result.success) {
+    throw new Error('Database insert failed');
+  }
+
+  return { id, beads_id: beadsId };
+}
+
+/**
+ * Update an issue
+ */
+export async function updateIssue(
+  db: D1Database,
+  userId: string,
+  issueId: string,
+  data: {
+    title?: string;
+    body?: string;
+    priority?: string;
+    status?: string;
+  }
+): Promise<void> {
+  const { title, body, priority, status } = data;
+  const now = Math.floor(Date.now() / 1000);
+
+  const updates: string[] = [];
+  const values: any[] = [];
+
+  if (title !== undefined) {
+    updates.push('title = ?');
+    values.push(title);
+  }
+  if (body !== undefined) {
+    updates.push('body = ?');
+    values.push(body);
+  }
+  if (priority !== undefined) {
+    updates.push('priority = ?');
+    values.push(priority);
+  }
+  if (status !== undefined) {
+    updates.push('status = ?');
+    values.push(status);
+    if (status === 'closed') {
+      updates.push('closed_at = ?');
+      values.push(now);
+    }
+  }
+
+  updates.push('updated_at = ?');
+  values.push(now);
+  values.push(issueId);
+  values.push(userId);
+
+  await db.prepare(`
+    UPDATE issues
+    SET ${updates.join(', ')}
+    WHERE id = ? AND user_id = ?
+  `).bind(...values).run();
+}
+
+/**
+ * Close an issue
+ */
+export async function closeIssue(db: D1Database, userId: string, issueId: string): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+
+  await db.prepare(`
+    UPDATE issues
+    SET status = ?, closed_at = ?, updated_at = ?
+    WHERE id = ? AND user_id = ?
+  `).bind('closed', now, now, issueId, userId).run();
+}
+
+/**
+ * Get sources with issue counts for a user
+ */
+export async function getSourcesWithStats(db: D1Database, userId: string): Promise<any[]> {
+  const result = await db.prepare(`
+    SELECT
+      s.id,
+      s.name,
+      s.type,
+      s.path,
+      s.last_issue_number,
+      s.last_sync,
+      s.created_at,
+      COUNT(i.id) as issue_count,
+      SUM(CASE WHEN i.status = 'open' THEN 1 ELSE 0 END) as open_count
+    FROM sources s
+    LEFT JOIN issues i ON i.source_id = s.id
+    WHERE s.user_id = ?
+    GROUP BY s.id
+    ORDER BY s.name ASC
+  `).bind(userId).all();
+
+  return result.results || [];
+}
+
+/**
+ * Get issues grouped by label
+ */
+export async function getIssuesByLabel(db: D1Database, userId: string): Promise<Map<string, any[]>> {
+  const result = await db.prepare(
+    'SELECT id, beads_id, title, status, labels FROM issues WHERE user_id = ? AND status = ? ORDER BY beads_id'
+  ).bind(userId, 'open').all();
+
+  const issues = result.results as any[];
+  const labelGroups = new Map<string, any[]>();
+
+  // Group by labels
+  for (const issue of issues) {
+    if (!issue.labels) continue;
+
+    const labels = JSON.parse(issue.labels) as string[];
+
+    // Skip system labels
+    const userLabels = labels.filter((l: string) => !l.startsWith('-x-'));
+
+    if (userLabels.length === 0) {
+      if (!labelGroups.has('no labels')) {
+        labelGroups.set('no labels', []);
+      }
+      labelGroups.get('no labels')!.push(issue);
+    } else {
+      for (const label of userLabels) {
+        if (!labelGroups.has(label)) {
+          labelGroups.set(label, []);
+        }
+        labelGroups.get(label)!.push(issue);
+      }
+    }
+  }
+
+  return labelGroups;
+}
+
+/**
+ * Get statistics for a user
+ */
+export async function getUserStats(db: D1Database, userId: string): Promise<{
+  total_issues: number;
+  open_issues: number;
+  closed_issues: number;
+  total_sources: number;
+  total_sessions: number;
+  issues_by_priority: { priority: number; count: number }[];
+  issues_by_source: { source_name: string; count: number }[];
+  recent_activity: { date: string; count: number }[];
+}> {
+  // Total issues
+  const totalResult = await db.prepare('SELECT COUNT(*) as count FROM issues WHERE user_id = ?').bind(userId).first();
+  const total_issues = totalResult?.count || 0;
+
+  // Open/closed
+  const openResult = await db.prepare('SELECT COUNT(*) as count FROM issues WHERE user_id = ? AND status = ?').bind(userId, 'open').first();
+  const open_issues = openResult?.count || 0;
+
+  const closedResult = await db.prepare('SELECT COUNT(*) as count FROM issues WHERE user_id = ? AND status = ?').bind(userId, 'closed').first();
+  const closed_issues = closedResult?.count || 0;
+
+  // Sources
+  const sourcesResult = await db.prepare('SELECT COUNT(*) as count FROM sources WHERE user_id = ?').bind(userId).first();
+  const total_sources = sourcesResult?.count || 0;
+
+  // Sessions
+  const sessionsResult = await db.prepare('SELECT COUNT(*) as count FROM issue_sessions WHERE user_id = ?').bind(userId).first();
+  const total_sessions = sessionsResult?.count || 0;
+
+  // By priority
+  const priorityResults = await db.prepare(
+    'SELECT priority, COUNT(*) as count FROM issues WHERE user_id = ? AND priority IS NOT NULL GROUP BY priority ORDER BY priority'
+  ).bind(userId).all();
+  const issues_by_priority = priorityResults.results as { priority: number; count: number }[];
+
+  // By source
+  const sourceResults = await db.prepare(`
+    SELECT s.name as source_name, COUNT(i.id) as count
+    FROM sources s
+    LEFT JOIN issues i ON i.source_id = s.id AND i.user_id = ?
+    WHERE s.user_id = ?
+    GROUP BY s.id, s.name
+    ORDER BY count DESC
+  `).bind(userId, userId).all();
+  const issues_by_source = sourceResults.results as { source_name: string; count: number }[];
+
+  // Recent activity (last 7 days)
+  const activityResults = await db.prepare(`
+    SELECT DATE(created_at, 'unixepoch') as date, COUNT(*) as count
+    FROM issues
+    WHERE user_id = ? AND created_at > ?
+    GROUP BY date
+    ORDER BY date DESC
+    LIMIT 7
+  `).bind(userId, Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60).all();
+  const recent_activity = activityResults.results as { date: string; count: number }[];
+
+  return {
+    total_issues,
+    open_issues,
+    closed_issues,
+    total_sources,
+    total_sessions,
+    issues_by_priority,
+    issues_by_source,
+    recent_activity
+  };
+}

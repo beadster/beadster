@@ -1,10 +1,20 @@
 import type { APIRoute } from 'astro';
+import { updateIssue } from '../../../../../../shared/database';
 
 export const POST: APIRoute = async ({ params, request, locals }) => {
   const db = locals.runtime?.env?.DB;
+  const user = locals.user;
+
   if (!db) {
     return new Response(JSON.stringify({ error: 'Database not available' }), {
       status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Not authenticated' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
   }
@@ -20,41 +30,13 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
   try {
     const data = await request.json();
     const { title, body, priority, status } = data;
-    const now = Math.floor(Date.now() / 1000);
 
-    const updates: string[] = [];
-    const values: any[] = [];
-
-    if (title !== undefined) {
-      updates.push('title = ?');
-      values.push(title);
-    }
-    if (body !== undefined) {
-      updates.push('body = ?');
-      values.push(body);
-    }
-    if (priority !== undefined) {
-      updates.push('priority = ?');
-      values.push(priority);
-    }
-    if (status !== undefined) {
-      updates.push('status = ?');
-      values.push(status);
-      if (status === 'closed') {
-        updates.push('closed_at = ?');
-        values.push(now);
-      }
-    }
-
-    updates.push('updated_at = ?');
-    values.push(now);
-    values.push(id);
-
-    await db.prepare(`
-      UPDATE issues
-      SET ${updates.join(', ')}
-      WHERE id = ?
-    `).bind(...values).run();
+    await updateIssue(db, user.id, id, {
+      title,
+      body,
+      priority,
+      status
+    });
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

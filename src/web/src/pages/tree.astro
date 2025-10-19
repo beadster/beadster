@@ -1,5 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+// Require authentication
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
 ---
 
 <Layout title="tree">

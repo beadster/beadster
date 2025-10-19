@@ -1,10 +1,20 @@
 import type { APIRoute } from 'astro';
+import { closeIssue } from '../../../../../../shared/database';
 
 export const POST: APIRoute = async ({ params, locals }) => {
   const db = locals.runtime?.env?.DB;
+  const user = locals.user;
+
   if (!db) {
     return new Response(JSON.stringify({ error: 'Database not available' }), {
       status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Not authenticated' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
   }
@@ -18,13 +28,7 @@ export const POST: APIRoute = async ({ params, locals }) => {
   }
 
   try {
-    const now = Math.floor(Date.now() / 1000);
-
-    await db.prepare(`
-      UPDATE issues
-      SET status = ?, closed_at = ?, updated_at = ?
-      WHERE id = ?
-    `).bind('closed', now, now, id).run();
+    await closeIssue(db, user.id, id);
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

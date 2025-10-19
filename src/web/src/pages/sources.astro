@@ -1,6 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
+// Require authentication
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
 let sources: any[] = [];
 let error: string | null = null;
 
@@ -20,9 +25,10 @@ try {
         SUM(CASE WHEN i.status = 'open' THEN 1 ELSE 0 END) as open_count
       FROM sources s
       LEFT JOIN issues i ON i.source_id = s.id
+      WHERE s.user_id = ?
       GROUP BY s.id
       ORDER BY s.name ASC
-    `).all();
+    `).bind(Astro.locals.user.id).all();
 
     sources = result.results || [];
   } else {

@@ -1,5 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getSources } from '../../../shared/database';
+
+// Require authentication
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
 
 let sources: any[] = [];
 let error: string | null = null;
@@ -7,13 +13,7 @@ let error: string | null = null;
 try {
   const db = Astro.locals.runtime?.env?.DB;
   if (db) {
-    const result = await db.prepare(`
-      SELECT id, name, type, last_issue_number
-      FROM sources
-      ORDER BY name ASC
-    `).all();
-
-    sources = result.results || [];
+    sources = await getSources(db, Astro.locals.user.id);
   } else {
     error = 'Database binding not available';
   }

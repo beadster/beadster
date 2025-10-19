@@ -1,5 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getSessions } from '../../../shared/database';
+
+// Require authentication
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
 
 interface Session {
   id: string;
@@ -17,15 +23,10 @@ interface Session {
 let sessions: Session[] = [];
 let error: string | null = null;
 
-// Use D1 binding directly
 try {
   const db = Astro.locals.runtime?.env?.DB;
   if (db) {
-    const result = await db.prepare(
-      'SELECT * FROM sessions ORDER BY last_issue_at DESC'
-    ).all();
-
-    sessions = result.results as Session[];
+    sessions = await getSessions(db, Astro.locals.user.id) as Session[];
   } else {
     error = 'Database binding not available';
   }

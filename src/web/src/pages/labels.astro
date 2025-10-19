@@ -1,6 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
+// Require authentication
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
 interface Issue {
   id: string;
   beads_id: string;
@@ -16,8 +21,8 @@ try {
   const db = Astro.locals.runtime?.env?.DB;
   if (db) {
     const result = await db.prepare(
-      'SELECT id, beads_id, title, status, labels FROM issues WHERE status = ? ORDER BY beads_id'
-    ).bind('open').all();
+      'SELECT id, beads_id, title, status, labels FROM issues WHERE user_id = ? AND status = ? ORDER BY beads_id'
+    ).bind(Astro.locals.user.id, 'open').all();
 
     const issues = result.results as Issue[];
 

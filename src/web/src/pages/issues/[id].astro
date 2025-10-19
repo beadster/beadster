@@ -1,20 +1,27 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { getIssue } from '../../../../shared/database';
+
+// Require authentication
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
 
 const { id } = Astro.params;
-const apiKey = Astro.locals.runtime.env.BEADSTER_API_KEY;
-const apiUrl = Astro.locals.runtime.env.BEADSTER_API_URL;
 
 let issue: any = null;
 let error: string | null = null;
 
 try {
-  const response = await fetch(`${apiUrl}/api/issues/${id}?api_key=${apiKey}`);
-  if (!response.ok) {
-    throw new Error('Failed to load issue');
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db && id) {
+    issue = await getIssue(db, Astro.locals.user.id, id);
+    if (!issue) {
+      error = 'Issue not found';
+    }
+  } else {
+    error = 'Database binding not available';
   }
-  const data = await response.json();
-  issue = data.issue;
 } catch (e) {
   error = e instanceof Error ? e.message : 'Unknown error';
 }

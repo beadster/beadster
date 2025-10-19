@@ -1,12 +1,13 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { getSessionIssues } from '../../../../shared/database';
+
+// Require authentication
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
 
 const { id } = Astro.params;
-
-// Fetch session issues from API
-const runtime = Astro.locals.runtime;
-const API_URL = runtime?.env?.BEADSTER_API_URL || 'https://beadster-dev-api.systemoperator.workers.dev';
-const API_KEY = runtime?.env?.BEADSTER_API_KEY;
 
 interface Issue {
   id: string;
@@ -30,11 +31,9 @@ let error: string | null = null;
 let sessionInfo: { client: string; project_name: string | null } | null = null;
 
 try {
-  const url = API_KEY ? `${API_URL}/api/sessions/${id}/issues?api_key=${API_KEY}` : `${API_URL}/api/sessions/${id}/issues`;
-  const response = await fetch(url);
-  if (response.ok) {
-    const data = await response.json();
-    issues = data.issues || [];
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db && id) {
+    issues = await getSessionIssues(db, Astro.locals.user.id, id) as Issue[];
 
     // Extract session info from first issue
     if (issues.length > 0) {
@@ -44,10 +43,10 @@ try {
       };
     }
   } else {
-    error = `API error: ${response.status}`;
+    error = 'Database binding not available';
   }
 } catch (e) {
-  error = `Failed to fetch: ${e}`;
+  error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
 }
 
 function formatDate(timestamp: number): string {

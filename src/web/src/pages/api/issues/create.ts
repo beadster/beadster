@@ -1,10 +1,20 @@
 import type { APIRoute } from 'astro';
+import { createIssue } from '../../../../../shared/database';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const db = locals.runtime?.env?.DB;
+  const user = locals.user;
+
   if (!db) {
     return new Response(JSON.stringify({ error: 'Database not available' }), {
       status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Not authenticated' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
   }
@@ -27,69 +37,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Generate IDs
-    const id = crypto.randomUUID();
-    const now = Math.floor(Date.now() / 1000);
-
-    // Get user (first available for demo)
-    const user = await db.prepare('SELECT id FROM users LIMIT 1').first();
-    if (!user) {
-      return new Response(JSON.stringify({
-        error: 'No user found. Sync daemon needs to run first.'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Get source and increment issue number
-    const source: any = await db.prepare(`
-      SELECT id, name, last_issue_number FROM sources WHERE id = ? AND user_id = ?
-    `).bind(source_id, user.id).first();
-
-    if (!source) {
-      return new Response(JSON.stringify({ error: 'Source not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Generate beads_id using source name as prefix
-    const issueNumber = (source.last_issue_number || 0) + 1;
-    const beadsId = `${source.name}-${issueNumber}`;
-
-    // Update source's last_issue_number
-    await db.prepare(`
-      UPDATE sources SET last_issue_number = ?, updated_at = ? WHERE id = ?
-    `).bind(issueNumber, now, source.id).run();
-
-    const result = await db.prepare(`
-      INSERT INTO issues (
-        id, user_id, source_id, beads_id, title, body,
-        status, priority, labels,
-        synced_at, created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      id,
-      user.id,
-      source.id,
-      beadsId,
+    const result = await createIssue(db, user.id, {
+      source_id,
       title,
-      body || null,
-      status || 'open',
-      priority !== undefined ? String(Math.floor(priority)) : '1',
-      '[]',
-      now,
-      now,
-      now
-    ).run();
+      body,
+      status,
+      priority
+    });
 
-    if (!result.success) {
-      throw new Error('Database insert failed');
-    }
-
-    return new Response(JSON.stringify({ id, beads_id: beadsId }), {
+    return new Response(JSON.stringify(result), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
     });
