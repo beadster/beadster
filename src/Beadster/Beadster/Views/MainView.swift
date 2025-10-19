@@ -600,12 +600,29 @@ struct MainView: View {
 struct IssueRowCompact: View {
     let issue: Issue
     @ObservedObject var issueStore: IssueStore
+    @EnvironmentObject var projectStore: ProjectStore
 
     var body: some View {
         HStack(spacing: 10) {
             // Checkbox
             Button(action: {
-                issueStore.toggleIssueStatus(issue)
+                if let project = projectStore.selectedProject {
+                    let newStatus = issue.status == "closed" ? "open" : "closed"
+                    Task {
+                        do {
+                            try await issueStore.updateIssue(
+                                projectPath: project.path,
+                                issueId: issue.id,
+                                title: nil,
+                                description: nil,
+                                status: newStatus,
+                                priority: nil
+                            )
+                        } catch {
+                            print("Failed to update issue: \(error)")
+                        }
+                    }
+                }
             }) {
                 Image(systemName: issue.status == "closed" ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 16))
