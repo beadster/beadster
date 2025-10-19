@@ -11,14 +11,11 @@ const returnUrl = Astro.url.searchParams.get('return') || '/';
 ---
 
 <Layout title="Sign In">
-  <div style="text-align: center; padding: 60px 20px;">
-    <h1 style="font-size: 32px; margin-bottom: 20px;">beadster</h1>
-    <p style="color: #666; margin-bottom: 40px;">issue tracker for AI agents and developers</p>
+  <div class="login-container">
+    <h1>beadster</h1>
+    <p>issue tracker for AI agents and developers</p>
 
-    <button
-      id="github-signin-btn"
-      style="display: inline-block; padding: 12px 24px; background: #24292e; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 16px;"
-    >
+    <button id="github-signin-btn" class="btn-github">
       sign in with github
     </button>
   </div>

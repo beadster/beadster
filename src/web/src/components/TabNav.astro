@@ -1,0 +1,45 @@
+---
+interface Props {
+  active: 'open' | 'all' | 'closed' | 'labels' | 'tree' | 'stats';
+}
+
+const { active } = Astro.props;
+---
+
+<nav class="tabs">
+  <a href="/" class:list={{ active: active === 'open' }}>open</a>
+  <a href="/all" class:list={{ active: active === 'all' }}>all</a>
+  <a href="/closed" class:list={{ active: active === 'closed' }}>closed</a>
+  <a href="/labels" class:list={{ active: active === 'labels' }}>labels</a>
+  <a href="/tree" class:list={{ active: active === 'tree' }}>tree</a>
+  <a href="/stats" class:list={{ active: active === 'stats' }}>stats</a>
+</nav>
+
+<style>
+  .tabs {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+    border-bottom: 1px solid var(--color-border-dark);
+    padding-bottom: var(--space-sm);
+  }
+
+  .tabs a {
+    text-decoration: none;
+    color: var(--color-text-light);
+    font-size: 14px;
+    padding: var(--space-xs) 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tabs a:hover {
+    color: var(--color-text);
+  }
+
+  .tabs a.active {
+    color: var(--color-text);
+    border-bottom-color: var(--color-text);
+    font-weight: 500;
+  }
+</style>

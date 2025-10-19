@@ -450,8 +450,8 @@ export async function getUserStats(db: D1Database, userId: string): Promise<{
   const sourceResults = await db.prepare(`
     SELECT s.name as source_name, COUNT(i.id) as count
     FROM sources s
-    LEFT JOIN issues i ON i.source_id = s.id AND i.user_id = ?
-    WHERE s.user_id = ?
+    INNER JOIN issues i ON i.source_id = s.id
+    WHERE s.user_id = ? AND i.user_id = ?
     GROUP BY s.id, s.name
     ORDER BY count DESC
   `).bind(userId, userId).all();

@@ -1,5 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import TabNav from '../components/TabNav.astro';
+import StatCard from '../components/StatCard.astro';
+import ChartSection from '../components/ChartSection.astro';
 import { getUserStats } from '../../../shared/database';
 
 // Require authentication
@@ -33,19 +36,16 @@ try {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString();
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
+
+const completionRate = stats.closed_issues && stats.total_issues
+  ? Math.round((stats.closed_issues / stats.total_issues) * 100)
+  : 0;
 ---
 
 <Layout title="stats">
-  <nav class="tabs">
-    <a href="/">open</a>
-    <a href="/all">all</a>
-    <a href="/closed">closed</a>
-    <a href="/labels">labels</a>
-    <a href="/tree">tree</a>
-    <a href="/stats" class="active">stats</a>
-  </nav>
+  <TabNav active="stats" />
 
   <h2>statistics</h2>
 
@@ -54,229 +54,49 @@ function formatDate(dateStr: string): string {
   )}
 
   {!error && (
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-value">{stats.total_issues || 0}</div>
-        <div class="stat-label">total issues</div>
+    <>
+      <div class="stats-grid">
+        <StatCard value={stats.total_issues || 0} label="total issues" />
+        <StatCard value={stats.open_issues || 0} label="open issues" />
+        <StatCard value={stats.closed_issues || 0} label="closed issues" />
+        <StatCard value={stats.total_sources || 0} label="sources" />
+        <StatCard value={stats.total_sessions || 0} label="sessions" />
+        <StatCard value={`${completionRate}%`} label="completion rate" />
       </div>
 
-      <div class="stat-card">
-        <div class="stat-value">{stats.open_issues || 0}</div>
-        <div class="stat-label">open issues</div>
+      <div class="charts">
+        {stats.issues_by_priority && stats.issues_by_priority.length > 0 && (
+          <ChartSection
+            title="issues by priority"
+            items={stats.issues_by_priority.map(item => ({
+              label: `P${item.priority}`,
+              value: item.count
+            }))}
+            maxValue={stats.total_issues}
+          />
+        )}
+
+        {stats.issues_by_source && stats.issues_by_source.length > 0 && (
+          <ChartSection
+            title="issues by source"
+            items={stats.issues_by_source.map(item => ({
+              label: item.source_name,
+              value: item.count
+            }))}
+            maxValue={stats.total_issues}
+          />
+        )}
+
+        {stats.recent_activity && stats.recent_activity.length > 0 && (
+          <ChartSection
+            title="recent activity (last 7 days)"
+            items={stats.recent_activity.map(item => ({
+              label: formatDate(item.date),
+              value: item.count
+            }))}
+          />
+        )}
       </div>
-
-      <div class="stat-card">
-        <div class="stat-value">{stats.closed_issues || 0}</div>
-        <div class="stat-label">closed issues</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-value">{stats.total_sources || 0}</div>
-        <div class="stat-label">sources</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-value">{stats.total_sessions || 0}</div>
-        <div class="stat-label">sessions</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-value">
-          {stats.closed_issues && stats.total_issues
-            ? Math.round((stats.closed_issues / stats.total_issues) * 100)
-            : 0}%
-        </div>
-        <div class="stat-label">completion rate</div>
-      </div>
-    </div>
-
-    <div class="charts">
-      {stats.issues_by_priority && stats.issues_by_priority.length > 0 && (
-        <div class="chart-section">
-          <h3>issues by priority</h3>
-          <div class="chart-bars">
-            {stats.issues_by_priority.map(item => (
-              <div class="chart-bar">
-                <div class="bar-label">P{item.priority}</div>
-                <div class="bar-container">
-                  <div
-                    class="bar-fill"
-                    style={`width: ${(item.count / (stats.total_issues || 1)) * 100}%`}
-                  ></div>
-                </div>
-                <div class="bar-value">{item.count}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {stats.issues_by_source && stats.issues_by_source.length > 0 && (
-        <div class="chart-section">
-          <h3>issues by source</h3>
-          <div class="chart-bars">
-            {stats.issues_by_source.map(item => (
-              <div class="chart-bar">
-                <div class="bar-label">{item.source_name}</div>
-                <div class="bar-container">
-                  <div
-                    class="bar-fill"
-                    style={`width: ${(item.count / (stats.total_issues || 1)) * 100}%`}
-                  ></div>
-                </div>
-                <div class="bar-value">{item.count}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {stats.recent_activity && stats.recent_activity.length > 0 && (
-        <div class="chart-section">
-          <h3>recent activity (last 7 days)</h3>
-          <div class="chart-bars">
-            {stats.recent_activity.map(item => (
-              <div class="chart-bar">
-                <div class="bar-label">{formatDate(item.date)}</div>
-                <div class="bar-container">
-                  <div
-                    class="bar-fill"
-                    style={`width: ${(item.count / Math.max(...stats.recent_activity!.map(a => a.count))) * 100}%`}
-                  ></div>
-                </div>
-                <div class="bar-value">{item.count}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   )}
 </Layout>
-
-<style>
-  .tabs {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 30px;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 10px;
-  }
-
-  .tabs a {
-    text-decoration: none;
-    color: #666;
-    font-size: 16px;
-    padding: 8px 0;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-  }
-
-  .tabs a:hover {
-    color: #000;
-  }
-
-  .tabs a.active {
-    color: #000;
-    border-bottom-color: #000;
-    font-weight: 500;
-  }
-
-  h2 {
-    margin-bottom: 30px;
-    font-size: 24px;
-  }
-
-  h3 {
-    margin-bottom: 15px;
-    font-size: 18px;
-    font-weight: 500;
-  }
-
-  .error {
-    padding: 20px;
-    background: #fee;
-    border: 1px solid #fcc;
-    border-radius: 6px;
-    color: #c00;
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 40px;
-  }
-
-  .stat-card {
-    background: #f9f9f9;
-    padding: 24px;
-    border-radius: 8px;
-    text-align: center;
-  }
-
-  .stat-value {
-    font-size: 36px;
-    font-weight: 600;
-    color: #0066cc;
-    margin-bottom: 8px;
-  }
-
-  .stat-label {
-    font-size: 14px;
-    color: #666;
-    text-transform: lowercase;
-  }
-
-  .charts {
-    display: flex;
-    flex-direction: column;
-    gap: 40px;
-  }
-
-  .chart-section {
-    background: #f9f9f9;
-    padding: 24px;
-    border-radius: 8px;
-  }
-
-  .chart-bars {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .chart-bar {
-    display: grid;
-    grid-template-columns: 120px 1fr 60px;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .bar-label {
-    font-size: 14px;
-    color: #666;
-    text-align: right;
-  }
-
-  .bar-container {
-    background: #e0e0e0;
-    height: 24px;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    background: #0066cc;
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.3s ease;
-  }
-
-  .bar-value {
-    font-size: 14px;
-    font-weight: 500;
-    color: #333;
-    text-align: center;
-  }
-</style>

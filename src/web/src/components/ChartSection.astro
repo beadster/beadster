@@ -1,0 +1,82 @@
+---
+interface Props {
+  title: string;
+  items: { label: string; value: number }[];
+  maxValue?: number;
+}
+
+const { title, items, maxValue } = Astro.props;
+const max = maxValue || Math.max(...items.map(i => i.value));
+---
+
+<div class="chart-section">
+  <h3>{title}</h3>
+  <div class="chart-bars">
+    {items.map(item => (
+      <div class="chart-bar">
+        <div class="bar-label">{item.label}</div>
+        <div class="bar-container">
+          <div
+            class="bar-fill"
+            style={`width: ${max > 0 ? (item.value / max) * 100 : 0}%`}
+          ></div>
+        </div>
+        <div class="bar-value">{item.value}</div>
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .chart-section {
+    background: var(--color-bg-light);
+    padding: var(--space-md);
+    border-radius: var(--border-radius);
+  }
+
+  h3 {
+    margin-bottom: var(--space-sm);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .chart-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .chart-bar {
+    display: grid;
+    grid-template-columns: 80px 1fr 40px;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .bar-label {
+    font-size: 12px;
+    color: var(--color-text-light);
+    text-align: right;
+  }
+
+  .bar-container {
+    background: #e0e0e0;
+    height: 16px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    background: var(--color-primary);
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
+  .bar-value {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text);
+    text-align: center;
+  }
+</style>
