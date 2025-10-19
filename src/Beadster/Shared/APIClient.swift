@@ -24,7 +24,7 @@ public class APIClient {
             throw APIError.notAuthenticated
         }
 
-        let url = URL(string: "\(baseURL)/api/sources")!
+        let url = URL(string: "\(baseURL)/v1/sources")!
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
@@ -40,7 +40,7 @@ public class APIClient {
             throw APIError.notAuthenticated
         }
 
-        let urlString = "\(baseURL)/api/sync/pull?source_id=\(sourceId)&since=\(since)"
+        let urlString = "\(baseURL)/v1/sync/pull?source_id=\(sourceId)&since=\(since)"
         guard let url = URL(string: urlString) else {
             throw APIError.syncFailed
         }
@@ -63,7 +63,7 @@ public class APIClient {
             throw APIError.notAuthenticated
         }
 
-        let url = URL(string: "\(baseURL)/api/sync/push")!
+        let url = URL(string: "\(baseURL)/v1/sync/push")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -132,7 +132,7 @@ public class APIClient {
     // MARK: - Device Registration
 
     public func registerDevice(deviceId: String, hardwareUUID: String, deviceName: String, deviceType: String, platform: String, platformVersion: String) async throws {
-        let url = URL(string: "\(baseURL)/api/devices/register")!
+        let url = URL(string: "\(baseURL)/v1/devices/register")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
@@ -160,7 +160,7 @@ public class APIClient {
     // MARK: - Device Tracking
 
     public func recordDeviceTracking(issueId: String, deviceId: String, client: String) async throws {
-        let url = URL(string: "\(baseURL)/api/device-tracking/record")!
+        let url = URL(string: "\(baseURL)/v1/device-tracking/record")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
@@ -183,7 +183,7 @@ public class APIClient {
     }
 
     public func getDeviceTracking(issueId: String) async throws -> [DeviceTracking] {
-        let url = URL(string: "\(baseURL)/api/device-tracking/\(issueId)")!
+        let url = URL(string: "\(baseURL)/v1/device-tracking/\(issueId)")!
         var request = URLRequest(url: url)
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
 

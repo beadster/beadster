@@ -153,7 +153,7 @@ class AuthManager: NSObject, ObservableObject {
         isLoading = true
 
         do {
-            var request = URLRequest(url: URL(string: "\(baseURL)/api/auth/native/exchange")!)
+            var request = URLRequest(url: URL(string: "\(baseURL)/v1/auth/native/exchange")!)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 

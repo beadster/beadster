@@ -40,7 +40,7 @@ class CloudAPI {
             }
         ]
 
-        let url = URL(string: "\(apiUrl)/api/sync/push")!
+        let url = URL(string: "\(apiUrl)/v1/sync/push")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -57,7 +57,7 @@ class CloudAPI {
 
     func pullChanges(source: Source, since: Int) async throws -> [Issue] {
         let sourceId = generateSourceId(path: source.path)
-        let urlString = "\(apiUrl)/api/sync/pull?source_id=\(sourceId)&since=\(since)"
+        let urlString = "\(apiUrl)/v1/sync/pull?source_id=\(sourceId)&since=\(since)"
         guard let url = URL(string: urlString) else {
             throw APIError.invalidResponse
         }

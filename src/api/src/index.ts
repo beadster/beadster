@@ -37,13 +37,13 @@ app.use('/*', async (c, next) => {
 });
 
 // Better Auth routes
-app.use('/api/auth/*', async (c) => {
+app.use('/v1/auth/*', async (c) => {
   const auth = c.get('auth');
   return await auth.handler(c.req.raw);
 });
 
 // Get current user info
-app.get('/api/auth/me', async (c) => {
+app.get('/v1/auth/me', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -63,7 +63,7 @@ app.get('/', (c) => {
 });
 
 // Auth: Register/Get API key (for PoC)
-app.post('/api/auth/register', async (c) => {
+app.post('/v1/auth/register', async (c) => {
   const { email } = await c.req.json();
 
   if (!email) {
@@ -104,7 +104,7 @@ app.post('/api/auth/register', async (c) => {
 });
 
 // Sync: Push issues from daemon
-app.post('/api/sync/push', async (c) => {
+app.post('/v1/sync/push', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -313,7 +313,7 @@ app.post('/api/sync/push', async (c) => {
 });
 
 // Sync: Pull changes from cloud
-app.get('/api/sync/pull', async (c) => {
+app.get('/v1/sync/pull', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -409,7 +409,7 @@ app.get('/api/sync/pull', async (c) => {
 });
 
 // Web: List all issues
-app.get('/api/issues', async (c) => {
+app.get('/v1/issues', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -466,7 +466,7 @@ app.get('/api/issues', async (c) => {
 });
 
 // Web: List sources/projects
-app.get('/api/sources', async (c) => {
+app.get('/v1/sources', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -484,7 +484,7 @@ app.get('/api/sources', async (c) => {
 });
 
 // Web: Get single issue
-app.get('/api/issues/:id', async (c) => {
+app.get('/v1/issues/:id', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -516,7 +516,7 @@ app.get('/api/issues/:id', async (c) => {
 });
 
 // Web: Get sessions
-app.get('/api/sessions', async (c) => {
+app.get('/v1/sessions', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -538,7 +538,7 @@ app.get('/api/sessions', async (c) => {
 });
 
 // Web: Get issues for session
-app.get('/api/sessions/:id/issues', async (c) => {
+app.get('/v1/sessions/:id/issues', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -567,7 +567,7 @@ app.get('/api/sessions/:id/issues', async (c) => {
 });
 
 // Device: Register device
-app.post('/api/devices/register', async (c) => {
+app.post('/v1/devices/register', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -616,7 +616,7 @@ app.post('/api/devices/register', async (c) => {
 });
 
 // Device Issue Tracking: Record that device saw issue
-app.post('/api/device-tracking/record', async (c) => {
+app.post('/v1/device-tracking/record', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -638,7 +638,7 @@ app.post('/api/device-tracking/record', async (c) => {
 });
 
 // Device Issue Tracking: Get tracking for issue
-app.get('/api/device-tracking/:issue_id', async (c) => {
+app.get('/v1/device-tracking/:issue_id', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -664,7 +664,7 @@ app.get('/api/device-tracking/:issue_id', async (c) => {
 });
 
 // Source Sequences: Get next beads_id for source
-app.post('/api/sources/:source_id/next-id', async (c) => {
+app.post('/v1/sources/:source_id/next-id', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -708,7 +708,7 @@ app.post('/api/sources/:source_id/next-id', async (c) => {
 });
 
 // Source Sequences: Update sequence (when desktop syncs higher IDs)
-app.post('/api/sources/:source_id/update-sequence', async (c) => {
+app.post('/v1/sources/:source_id/update-sequence', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -739,7 +739,7 @@ app.post('/api/sources/:source_id/update-sequence', async (c) => {
 });
 
 // Sync Logs: Get sync history with filters
-app.get('/api/sync-logs', async (c) => {
+app.get('/v1/sync-logs', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -793,7 +793,7 @@ app.get('/api/sync-logs', async (c) => {
 });
 
 // Sync Logs: Get single sync log by ID
-app.get('/api/sync-logs/:id', async (c) => {
+app.get('/v1/sync-logs/:id', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -821,7 +821,7 @@ app.get('/api/sync-logs/:id', async (c) => {
 });
 
 // Sync Stats: Get sync statistics
-app.get('/api/sync-stats', async (c) => {
+app.get('/v1/sync-stats', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
@@ -916,7 +916,7 @@ app.get('/api/sync-stats', async (c) => {
 });
 
 // Get all repositories with issue counts
-app.get('/api/repositories', async (c) => {
+app.get('/v1/repositories', async (c) => {
   const user = await authenticate(c);
 
   if (!user) {
