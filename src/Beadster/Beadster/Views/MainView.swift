@@ -659,19 +659,19 @@ struct MainView: View {
         // Build lookup maps
         let issueMap = Dictionary(uniqueKeysWithValues: issues.map { ($0.id, $0) })
 
-        // Build children map: for each issue, find what it blocks
+        // Build children map: issueId depends_on dependsOnId means:
+        // issueId is BLOCKED BY dependsOnId
+        // So dependsOnId is the parent, issueId is the child
         var childrenMap: [String: [String]] = [:]
         for dep in dependencies {
-            if dep.type == "blocks" {
-                // dep.issueId blocks dep.dependsOnId
-                // So dep.dependsOnId should have dep.issueId as a child
-                childrenMap[dep.dependsOnId, default: []].append(dep.issueId)
-            }
+            // dep.issueId depends on dep.dependsOnId
+            // So dep.dependsOnId has dep.issueId as a child (blocked issue)
+            childrenMap[dep.dependsOnId, default: []].append(dep.issueId)
         }
 
-        // Find root issues (issues that are not blocked by anything)
-        let blockedIssueIds = Set(dependencies.filter { $0.type == "blocks" }.map { $0.issueId })
-        let rootIssues = issues.filter { !blockedIssueIds.contains($0.id) }
+        // Find root issues (issues that don't depend on anything in the filtered set)
+        let dependentIssueIds = Set(dependencies.map { $0.issueId })
+        let rootIssues = issues.filter { !dependentIssueIds.contains($0.id) }
 
         // Build tree recursively
         func buildNode(issueId: String, depth: Int) -> IssueTreeNode? {
@@ -955,7 +955,7 @@ struct IssueRowCompact: View {
             if depth > 0 {
                 Rectangle()
                     .fill(Color.clear)
-                    .frame(width: CGFloat(depth) * 20)
+                    .frame(width: CGFloat(depth) * 12)
             }
 
             // Checkbox
