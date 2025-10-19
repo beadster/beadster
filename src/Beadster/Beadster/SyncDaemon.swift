@@ -10,17 +10,20 @@ import Dispatch
 import UserNotifications
 
 @MainActor
-class SyncDaemon: ObservableObject {
+class SyncDaemon: ObservableObject, FileSyncDelegate {
     static let shared = SyncDaemon()
 
     @Published var isSyncing = false
     @Published var lastSyncDate: Date?
     @Published var syncError: String?
     @Published var currentSyncingIssueId: String?
-    @Published var watchedProjectsCount: Int = 0
     @Published var lastLocalChangeDate: Date?
 
-    private var watchers: [String: DispatchSourceFileSystemObject] = [:]
+    var watchedProjectsCount: Int {
+        fileWatcher.watchedProjectsCount
+    }
+
+    private var fileWatcher: FileWatcher!
     private var syncTimer: Timer?
     private let syncInterval: TimeInterval = 60 // 1 minute
     private var lastSync: [String: Date] = [:] // project id -> last sync time
@@ -39,6 +42,9 @@ class SyncDaemon: ObservableObject {
         // get hardware-based device ID
         deviceId = DeviceID.shared.getDeviceId()
         print("SyncDaemon initialized with device ID: \(deviceId)")
+
+        // initialize file watcher with self as delegate
+        fileWatcher = FileWatcher(syncDelegate: self)
     }
 
     // MARK: - Start/Stop
@@ -79,89 +85,26 @@ class SyncDaemon: ObservableObject {
         stopAllWatchers()
     }
 
-    // MARK: - File Watching
+    // MARK: - File Watching (delegated to FileWatcher)
 
     nonisolated func startWatching(project: ProjectInfo) {
-        // resolve bookmark
-        var isStale = false
-        guard let projectURL = try? URL(
-            resolvingBookmarkData: project.bookmark,
-            options: .withSecurityScope,
-            relativeTo: nil,
-            bookmarkDataIsStale: &isStale
-        ) else {
-            print("Failed to resolve bookmark for \(project.name)")
-            return
-        }
-
-        // access security scoped resource
-        guard projectURL.startAccessingSecurityScopedResource() else {
-            print("Failed to access \(projectURL)")
-            return
-        }
-
-        // find actual database file (bd names it after project)
-        guard let dbFile = BeadsHelper.findDatabaseFile(in: projectURL) else {
-            projectURL.stopAccessingSecurityScopedResource()
-            print("No beads database found for \(project.name)")
-            return
-        }
-
-        guard FileManager.default.fileExists(atPath: dbFile.path) else {
-            projectURL.stopAccessingSecurityScopedResource()
-            print("Beads database file not accessible for \(project.name)")
-            return
-        }
-
-        // open file descriptor
-        let fd = open(dbFile.path, O_EVTONLY)
-        guard fd >= 0 else {
-            projectURL.stopAccessingSecurityScopedResource()
-            print("Failed to open \(dbFile.path)")
-            return
-        }
-
-        // create dispatch source
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: .write,
-            queue: DispatchQueue.global()
-        )
-
-        source.setEventHandler { [weak self] in
-            print("File changed: \(dbFile.path)")
-            Task { @MainActor in
-                self?.lastLocalChangeDate = Date()
-                await self?.syncProject(project)
-            }
-        }
-
-        source.setCancelHandler {
-            close(fd)
-            projectURL.stopAccessingSecurityScopedResource()
-        }
-
-        source.resume()
-
-        Task { @MainActor [weak self] in
-            self?.watchers[project.id] = source
-            self?.watchedProjectsCount = (self?.watchers.count ?? 0)
-            print("Started watching: \(dbFile.path)")
+        Task { @MainActor in
+            fileWatcher.startWatching(project: project)
         }
     }
 
     func stopWatching(projectId: String) {
-        watchers[projectId]?.cancel()
-        watchers.removeValue(forKey: projectId)
-        watchedProjectsCount = watchers.count
+        fileWatcher.stopWatching(projectId: projectId)
     }
 
     func stopAllWatchers() {
-        for (_, watcher) in watchers {
-            watcher.cancel()
-        }
-        watchers.removeAll()
-        watchedProjectsCount = 0
+        fileWatcher.stopAllWatchers()
+    }
+
+    // FileSyncDelegate implementation
+    func onFileChanged(project: ProjectInfo) async {
+        lastLocalChangeDate = Date()
+        await syncProject(project)
     }
 
     // MARK: - Sync
@@ -276,7 +219,7 @@ class SyncDaemon: ObservableObject {
             print("✅ Sync completed successfully")
 
             // send success notification
-            sendNotification(title: "Sync Complete", body: "Successfully synced \(latestProject.name)")
+            SyncNotifications.send(title: "Sync Complete", body: "Successfully synced \(latestProject.name)")
 
         } catch {
             print("❌ Sync failed: \(error)")
@@ -293,7 +236,7 @@ class SyncDaemon: ObservableObject {
                 print("🛑 Max retries reached or non-retriable error")
 
                 // send error notification
-                sendNotification(
+                SyncNotifications.send(
                     title: "Sync Failed",
                     body: "Failed to sync \(latestProject.name): \(friendlyErrorMessage(error))"
                 )
@@ -391,52 +334,12 @@ class SyncDaemon: ObservableObject {
         // Get timestamp of last sync for this project
         let since = Int(lastSync[project.id]?.timeIntervalSince1970 ?? 0)
 
-        print("🔽 Pulling changes since \(since)...")
-
-        // Get remote changes
-        let changes = try await APIClient.shared.pullChanges(sourceId: sourceId, since: since)
-
-        if changes.isEmpty {
-            print("  ✓ No changes from cloud")
-            return
-        }
-
-        print("⬇️  Applying \(changes.count) change(s)...")
-
-        // Read current JSONL (source of truth)
-        var localIssues = try JSONLManager.readIssues(from: projectURL)
-        var appliedCount = 0
-
-        // Apply each change
-        for cloudIssue in changes {
-            // Check if issue exists locally in JSONL
-            if let localIndex = localIssues.firstIndex(where: { $0.id == cloudIssue.id }) {
-                // Issue exists - merge changes
-                let localIssue = localIssues[localIndex]
-
-                // Use cloud version if it's newer
-                if cloudIssue.updatedAt > localIssue.updatedAt {
-                    print("  🔄 Updating: \(cloudIssue.title)")
-                    localIssues[localIndex] = cloudIssue
-                    appliedCount += 1
-                } else {
-                    print("  ⊘ Skipping older version: \(cloudIssue.title)")
-                }
-            } else {
-                // New issue from cloud - add to JSONL
-                print("  ➕ Adding new issue from cloud: \(cloudIssue.title)")
-                localIssues.append(cloudIssue)
-                appliedCount += 1
-            }
-        }
-
-        // Write updated issues back to JSONL (source of truth)
-        if appliedCount > 0 {
-            try JSONLManager.writeIssues(localIssues, to: projectURL)
-            print("  ✅ Applied \(appliedCount) change(s) to JSONL")
-        } else {
-            print("  ✓ No changes applied")
-        }
+        // Delegate to SyncPullHandler
+        _ = try await SyncPullHandler.pullAndApply(
+            projectURL: projectURL,
+            sourceId: sourceId,
+            since: since
+        )
     }
 
 
@@ -494,27 +397,6 @@ class SyncDaemon: ObservableObject {
 
         print("  ✓ Device tracking recorded")
     }
-
-    // MARK: - Notifications
-
-    private func sendNotification(title: String, body: String) {
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil // immediate
-        )
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Failed to send notification: \(error)")
-            }
-        }
-    }
 }
 
 // MARK: - Errors
@@ -536,3 +418,4 @@ enum SyncError: LocalizedError {
         }
     }
 }
+

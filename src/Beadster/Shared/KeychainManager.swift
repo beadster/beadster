@@ -2,8 +2,8 @@ import Foundation
 import Security
 
 /// Manages secure storage of API key in macOS Keychain
-class KeychainManager {
-    static let shared = KeychainManager()
+public class KeychainManager {
+    public static let shared = KeychainManager()
 
     private let service = "com.systemoperator.beadster"
     private let apiKeyAccount = "api_key"
@@ -13,7 +13,7 @@ class KeychainManager {
     // MARK: - API Key
 
     /// Save API key to Keychain
-    func saveAPIKey(_ apiKey: String) throws {
+    public func saveAPIKey(_ apiKey: String) throws {
         let data = apiKey.data(using: .utf8)!
 
         // Delete existing key first
@@ -34,7 +34,7 @@ class KeychainManager {
     }
 
     /// Get API key from Keychain
-    func getAPIKey() -> String? {
+    public func getAPIKey() -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -55,7 +55,7 @@ class KeychainManager {
     }
 
     /// Delete API key from Keychain
-    func deleteAPIKey() throws {
+    public func deleteAPIKey() throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -70,18 +70,18 @@ class KeychainManager {
     }
 
     /// Check if API key exists
-    func hasAPIKey() -> Bool {
+    public func hasAPIKey() -> Bool {
         return getAPIKey() != nil
     }
 }
 
 // MARK: - Errors
 
-enum KeychainError: LocalizedError {
+public enum KeychainError: LocalizedError {
     case saveFailed(OSStatus)
     case deleteFailed(OSStatus)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .saveFailed(let status):
             return "Failed to save to Keychain: \(status)"
