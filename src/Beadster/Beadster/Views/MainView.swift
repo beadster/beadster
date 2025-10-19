@@ -53,12 +53,11 @@ struct MainView: View {
             // App Header (titlebar)
             appHeader
 
-            // Content Header
-            contentHeader
-
+            // Content Header (only show for non-settings)
             if case .settings = contentMode {
-                // No divider for settings
+                // No header for settings
             } else {
+                contentHeader
                 Divider()
             }
 

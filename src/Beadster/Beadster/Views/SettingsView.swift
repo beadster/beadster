@@ -31,14 +31,12 @@ struct SettingsView: View {
             Divider()
 
             ScrollView {
-                VStack(spacing: 0) {
+                VStack(spacing: 24) {
                     ProjectsSettings(projectStore: projectStore)
-
-                    Divider()
-                        .padding(.vertical, 12)
 
                     SyncSettings(syncDaemon: syncDaemon)
                 }
+                .padding(.top, 12)
             }
             .background(Color.white)
         }
@@ -49,93 +47,80 @@ struct ProjectsSettings: View {
     @ObservedObject var projectStore: ProjectStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Projects")
                 .font(.title3)
                 .fontWeight(.semibold)
                 .padding(.horizontal)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Registered Projects")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+            if projectStore.projects.isEmpty {
+                Text("No projects registered")
+                    .foregroundColor(.secondary)
                     .padding(.horizontal)
-                if projectStore.projects.isEmpty {
-                    Text("No projects registered")
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal)
-                } else {
-                    ForEach(projectStore.projects) { project in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(project.name)
-                                    .font(.body)
-                                Spacer()
-                                if let sourceId = project.sourceId {
-                                    Text(sourceId)
-                                        .font(.caption.monospaced())
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-
-                            Text(project.path)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-
-                            if let lastSync = project.lastSync {
-                                Text("Last sync: \(lastSync.formatted(.relative(presentation: .named)))")
-                                    .font(.caption2)
+            } else {
+                ForEach(projectStore.projects) { project in
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text(project.name)
+                                .font(.body)
+                            Spacer()
+                            if let sourceId = project.sourceId {
+                                Text(sourceId)
+                                    .font(.caption.monospaced())
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                        )
-                        .contextMenu {
-                            Button("Remove", role: .destructive) {
-                                projectStore.removeProject(project)
-                            }
+
+                        Text(project.path)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        if let lastSync = project.lastSync {
+                            Text("Last sync: \(lastSync.formatted(.relative(presentation: .named)))")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
                     }
                     .padding(.horizontal)
+                    .contextMenu {
+                        Button("Remove", role: .destructive) {
+                            projectStore.removeProject(project)
+                        }
+                    }
                 }
-
-                Button(action: {
-                    projectStore.selectFolderToScan()
-                }) {
-                    Text("Add Projects...")
-                        .font(.body)
-                }
-                .buttonStyle(.bordered)
-                .padding(.horizontal)
             }
+
+            Button(action: {
+                projectStore.selectFolderToScan()
+            }) {
+                Text("Add Projects...")
+                    .font(.body)
+            }
+            .buttonStyle(.bordered)
+            .padding(.horizontal)
         }
     }
-
+}
 
 struct SyncSettings: View {
     @ObservedObject var syncDaemon: SyncDaemon
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Sync")
                 .font(.title3)
                 .fontWeight(.semibold)
                 .padding(.horizontal)
 
-            Form {
-            Section("Status") {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("Sync Status:")
+                    Text("Sync Status")
                     Spacer()
                     if syncDaemon.isSyncing {
-                        HStack {
+                        HStack(spacing: 4) {
                             ProgressView()
-                                .scaleEffect(0.7)
+                                .scaleEffect(0.4)
+                                .frame(width: 8, height: 8)
                             Text("Syncing...")
                         }
                         .foregroundColor(.blue)
@@ -147,7 +132,7 @@ struct SyncSettings: View {
 
                 if let lastSync = syncDaemon.lastSyncDate {
                     HStack {
-                        Text("Last Sync:")
+                        Text("Last Sync")
                         Spacer()
                         Text(lastSync.formatted(.relative(presentation: .named)))
                             .foregroundColor(.secondary)
@@ -156,45 +141,38 @@ struct SyncSettings: View {
 
                 if let error = syncDaemon.syncError {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Error:")
-                            .foregroundColor(.red)
+                        HStack {
+                            Text("Error")
+                            Spacer()
+                        }
                         Text(error)
                             .font(.caption)
                             .foregroundColor(.red)
                     }
                 }
-            }
 
-            Section("Configuration") {
                 HStack {
-                    Text("Auto Sync:")
+                    Text("Auto Sync")
                     Spacer()
                     Text("Every 1 minute")
                         .foregroundColor(.secondary)
                 }
 
                 HStack {
-                    Text("File Watching:")
+                    Text("File Watching")
                     Spacer()
                     Text("Enabled")
                         .foregroundColor(.green)
                 }
 
                 HStack {
-                    Text("Watching Projects:")
+                    Text("Watching Projects")
                     Spacer()
                     Text("\(syncDaemon.watchedProjectsCount)")
                         .foregroundColor(.secondary)
                 }
             }
-
-            Section {
-                Text("Sync automatically triggers on file changes and every 1 minute")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            }
-            .formStyle(.grouped)
+            .padding(.horizontal)
         }
     }
 }
