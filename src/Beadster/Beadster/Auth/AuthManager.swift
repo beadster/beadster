@@ -16,6 +16,15 @@ class AuthManager: NSObject, ObservableObject {
 
     private var authSession: ASWebAuthenticationSession?
 
+    // URLSession with cookie storage for OAuth
+    private lazy var urlSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.httpCookieStorage = HTTPCookieStorage.shared
+        config.httpCookieAcceptPolicy = .always
+        config.httpShouldSetCookies = true
+        return URLSession(configuration: config)
+    }()
+
     override private init() {
         super.init()
         checkAuthentication()
@@ -41,25 +50,65 @@ class AuthManager: NSObject, ObservableObject {
         isLoading = true
         error = nil
 
-        // Build OAuth URL
-        let authURL = URL(string: "\(baseURL)/api/auth/sign-in/social")!
+        // Initiate OAuth by POSTing to the sign-in endpoint
+        Task {
+            do {
+                var request = URLRequest(url: URL(string: "\(baseURL)/api/auth/sign-in/social")!)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        // Create web authentication session
-        authSession = ASWebAuthenticationSession(
-            url: authURL,
-            callbackURLScheme: "beadster"
-        ) { [weak self] callbackURL, error in
-            Task { @MainActor in
-                await self?.handleOAuthCallback(callbackURL: callbackURL, error: error)
+                let body = ["provider": "github", "callbackURL": "beadster://callback"]
+                request.httpBody = try JSONEncoder().encode(body)
+
+                let (data, response) = try await urlSession.data(for: request)
+
+                guard let httpResponse = response as? HTTPURLResponse,
+                      httpResponse.statusCode == 200 else {
+                    throw AuthError.invalidResponse
+                }
+
+                let result = try JSONDecoder().decode(OAuthURLResponse.self, from: data)
+
+                // Now open the OAuth URL in a web authentication session
+                await startAuthSession(url: result.url)
+
+            } catch {
+                await MainActor.run {
+                    self.isLoading = false
+                    self.error = "Failed to start OAuth: \(error.localizedDescription)"
+                }
             }
         }
+    }
 
-        authSession?.presentationContextProvider = self
-        authSession?.prefersEphemeralWebBrowserSession = false
+    /// Start the web authentication session with the OAuth URL
+    private func startAuthSession(url: String) async {
+        guard let authURL = URL(string: url) else {
+            await MainActor.run {
+                self.isLoading = false
+                self.error = "Invalid OAuth URL"
+            }
+            return
+        }
 
-        if !authSession!.start() {
-            self.isLoading = false
-            self.error = "Failed to start authentication"
+        await MainActor.run {
+            // Create web authentication session
+            authSession = ASWebAuthenticationSession(
+                url: authURL,
+                callbackURLScheme: "beadster"
+            ) { [weak self] callbackURL, error in
+                Task { @MainActor in
+                    await self?.handleOAuthCallback(callbackURL: callbackURL, error: error)
+                }
+            }
+
+            authSession?.presentationContextProvider = self
+            authSession?.prefersEphemeralWebBrowserSession = false
+
+            if !authSession!.start() {
+                self.isLoading = false
+                self.error = "Failed to start authentication"
+            }
         }
     }
 
@@ -96,7 +145,7 @@ class AuthManager: NSObject, ObservableObject {
             request.httpMethod = "GET"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await urlSession.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
@@ -175,6 +224,11 @@ struct APIKeyResponse: Codable {
         case apiKey = "api_key"
         case user
     }
+}
+
+struct OAuthURLResponse: Codable {
+    let url: String
+    let state: String?
 }
 
 // MARK: - Errors
