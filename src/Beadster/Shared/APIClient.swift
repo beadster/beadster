@@ -14,11 +14,10 @@ public class APIClient {
 
     private init() {}
 
-    // Get current API key from AuthManager (if authenticated)
+    // Get current API key from Keychain directly (bypasses MainActor requirement)
     private var apiToken: String? {
-        // Try to get API key from Keychain via AuthManager
         #if os(macOS)
-        return AuthManager.shared.getAPIKey()
+        return KeychainManager.shared.getAPIKey()
         #else
         return nil
         #endif
