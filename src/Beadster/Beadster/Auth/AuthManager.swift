@@ -1,5 +1,6 @@
 import Foundation
 import AuthenticationServices
+import Shared
 
 /// Manages GitHub OAuth authentication for beadster
 @MainActor
