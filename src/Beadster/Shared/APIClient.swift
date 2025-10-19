@@ -12,16 +12,10 @@ public class APIClient {
 
     private let baseURL = "https://api.beadster.ai"
 
-    private init() {}
+    // API token - set externally by the app (from Keychain on macOS, from config on CLI)
+    public var apiToken: String?
 
-    // Get current API key from Keychain directly (bypasses MainActor requirement)
-    private var apiToken: String? {
-        #if os(macOS)
-        return KeychainManager.shared.getAPIKey()
-        #else
-        return nil
-        #endif
-    }
+    private init() {}
 
     // MARK: - Sources
 

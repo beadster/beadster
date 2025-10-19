@@ -1,6 +1,5 @@
 import Foundation
 import AuthenticationServices
-import Shared
 
 /// Manages GitHub OAuth authentication for beadster
 @MainActor
@@ -40,10 +39,13 @@ class AuthManager: NSObject, ObservableObject {
     func checkAuthentication() {
         if let apiKey = keychainManager.getAPIKey() {
             isAuthenticated = true
+            // Set API token for APIClient
+            APIClient.shared.apiToken = apiKey
             // TODO: Load user info from local DB or API
         } else {
             isAuthenticated = false
             currentUser = nil
+            APIClient.shared.apiToken = nil
         }
     }
 
@@ -171,6 +173,9 @@ class AuthManager: NSObject, ObservableObject {
             isAuthenticated = true
             currentUser = result.user
 
+            // Set API token for APIClient
+            APIClient.shared.apiToken = result.apiKey
+
             print("[auth] Successfully authenticated as \(result.user.githubLogin ?? "unknown")")
 
         } catch {
@@ -188,6 +193,7 @@ class AuthManager: NSObject, ObservableObject {
             try keychainManager.deleteAPIKey()
             isAuthenticated = false
             currentUser = nil
+            APIClient.shared.apiToken = nil
             print("[auth] Signed out successfully")
         } catch {
             self.error = "Failed to sign out: \(error.localizedDescription)"
