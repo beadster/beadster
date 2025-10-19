@@ -25,10 +25,18 @@ enum AppTab: String, CaseIterable {
     case closedIssues = "Closed"
 }
 
-enum ViewMode: String, CaseIterable {
-    case simple = "Simple"
-    case extended = "Extended"
-    case tree = "Tree"
+enum ViewMode: String, CaseIterable, RawRepresentable {
+    case simple = "simple"
+    case extended = "extended"
+    case tree = "tree"
+
+    var displayName: String {
+        switch self {
+        case .simple: return "Simple"
+        case .extended: return "Extended"
+        case .tree: return "Tree"
+        }
+    }
 }
 
 enum ContentMode: Equatable {
@@ -242,7 +250,7 @@ struct MainView: View {
 
             Spacer()
 
-            // Tabs
+            // Filter Tabs (Projects, Open, All, Closed)
             ForEach(AppTab.allCases, id: \.self) { tab in
                 Button(action: {
                     selectedTab = tab
@@ -270,6 +278,28 @@ struct MainView: View {
                         .padding(.vertical, 4)
                         .background(selectedTab == tab ? Color.blue.opacity(0.2) : Color.clear)
                         .foregroundColor(selectedTab == tab ? .blue : .black.opacity(0.6))
+                        .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Divider
+            Rectangle()
+                .fill(Color.gray.opacity(0.3))
+                .frame(width: 1, height: 20)
+                .padding(.horizontal, 4)
+
+            // View Mode Tabs (Simple, Extended, Tree)
+            ForEach(ViewMode.allCases, id: \.self) { mode in
+                Button(action: {
+                    viewMode = mode
+                }) {
+                    Text(mode.displayName)
+                        .font(.system(size: 11))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(viewMode == mode ? Color.blue.opacity(0.2) : Color.clear)
+                        .foregroundColor(viewMode == mode ? .blue : .black.opacity(0.6))
                         .cornerRadius(4)
                 }
                 .buttonStyle(.plain)
@@ -564,7 +594,7 @@ struct MainView: View {
                     .padding()
                 } else {
                     ForEach(issueStore.filteredIssues()) { issue in
-                        IssueRowCompact(issue: issue, issueStore: issueStore)
+                        IssueRowCompact(issue: issue, issueStore: issueStore, viewMode: viewMode)
                             .environmentObject(projectStore)
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -837,6 +867,7 @@ struct MainView: View {
 struct IssueRowCompact: View {
     let issue: Issue
     @ObservedObject var issueStore: IssueStore
+    let viewMode: ViewMode
     @EnvironmentObject var projectStore: ProjectStore
 
     var body: some View {
@@ -867,29 +898,87 @@ struct IssueRowCompact: View {
             }
             .buttonStyle(.plain)
 
-            // Content
-            VStack(alignment: .leading, spacing: 2) {
-                // Row 1: Title and Priority
-                HStack(spacing: 8) {
-                    Text(issue.title)
-                        .font(.system(size: 13))
-                        .strikethrough(issue.status == "closed")
-                        .lineLimit(1)
+            // Content based on view mode
+            switch viewMode {
+            case .simple:
+                simpleView
+            case .extended:
+                extendedView
+            case .tree:
+                // Tree mode will be handled at the list level, for now show simple
+                simpleView
+            }
 
-                    Spacer()
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, viewMode == .extended ? 8 : 6)
+    }
 
-                    PriorityBadge(priority: issue.priority)
+    var simpleView: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            // Row 1: Title and Priority
+            HStack(spacing: 8) {
+                Text(issue.title)
+                    .font(.system(size: 13))
+                    .strikethrough(issue.status == "closed")
+                    .lineLimit(1)
+
+                Spacer()
+
+                PriorityBadge(priority: issue.priority)
+            }
+
+            // Row 2: Description (optional)
+            if let description = issue.body, !description.isEmpty {
+                Text(description)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+
+            // Row 3: Labels
+            if !issue.labels.isEmpty {
+                HStack(spacing: 4) {
+                    ForEach(issue.labels.prefix(3), id: \.self) { label in
+                        LabelBadge(label: label)
+                    }
+
+                    if issue.labels.count > 3 {
+                        Text("+\(issue.labels.count - 3)")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
+                    }
                 }
+            }
+        }
+    }
 
-                // Row 2: Description (optional)
-                if let description = issue.body, !description.isEmpty {
-                    Text(description)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
+    var extendedView: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            // Row 1: Title and Priority
+            HStack(spacing: 8) {
+                Text(issue.title)
+                    .font(.system(size: 13))
+                    .strikethrough(issue.status == "closed")
+                    .lineLimit(1)
 
-                // Row 3: Labels
+                Spacer()
+
+                PriorityBadge(priority: issue.priority)
+            }
+
+            // Row 2: Description (optional)
+            if let description = issue.body, !description.isEmpty {
+                Text(description)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+
+            // Row 3: Metadata
+            HStack(spacing: 8) {
+                // Labels
                 if !issue.labels.isEmpty {
                     HStack(spacing: 4) {
                         ForEach(issue.labels.prefix(3), id: \.self) { label in
@@ -903,12 +992,30 @@ struct IssueRowCompact: View {
                         }
                     }
                 }
+
+                Spacer()
+
+                // Dates
+                HStack(spacing: 6) {
+                    Text("created \(Date(timeIntervalSince1970: TimeInterval(issue.createdAt)).formatted(.relative(presentation: .named)))")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+
+                    Text("•")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+
+                    Text("updated \(Date(timeIntervalSince1970: TimeInterval(issue.updatedAt)).formatted(.relative(presentation: .named)))")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+                }
             }
 
-            Spacer(minLength: 0)
+            // Row 4: Issue ID
+            Text(issue.id)
+                .font(.system(size: 9).monospaced())
+                .foregroundColor(.secondary.opacity(0.7))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
     }
 }
 
