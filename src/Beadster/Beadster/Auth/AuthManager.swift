@@ -44,14 +44,22 @@ class AuthManager: NSObject, ObservableObject {
             // Set API token for APIClient
             APIClient.shared.apiToken = apiKey
             print("[auth] Set APIClient.apiToken")
-            // TODO: Load user info from local DB or API
+
+            // Load user info from UserDefaults if available
+            if let userData = UserDefaults.standard.data(forKey: "beadster_current_user"),
+               let user = try? JSONDecoder().decode(User.self, from: userData) {
+                currentUser = user
+                print("[auth] Loaded user from UserDefaults: \(user.githubLogin ?? "unknown")")
+            } else {
+                print("[auth] No user data in UserDefaults")
+            }
         } else {
             print("[auth] No API key found in keychain")
             isAuthenticated = false
             currentUser = nil
             APIClient.shared.apiToken = nil
         }
-        print("[auth] isAuthenticated = \(isAuthenticated)")
+        print("[auth] isAuthenticated = \(isAuthenticated), currentUser = \(currentUser?.githubLogin ?? "nil")")
     }
 
     // MARK: - Sign In
@@ -174,6 +182,11 @@ class AuthManager: NSObject, ObservableObject {
             // Save API key to Keychain
             try keychainManager.saveAPIKey(result.apiKey)
 
+            // Save user to UserDefaults
+            if let userData = try? JSONEncoder().encode(result.user) {
+                UserDefaults.standard.set(userData, forKey: "beadster_current_user")
+            }
+
             // Update state
             isAuthenticated = true
             currentUser = result.user
@@ -196,6 +209,7 @@ class AuthManager: NSObject, ObservableObject {
     func signOut() {
         do {
             try keychainManager.deleteAPIKey()
+            UserDefaults.standard.removeObject(forKey: "beadster_current_user")
             isAuthenticated = false
             currentUser = nil
             APIClient.shared.apiToken = nil
