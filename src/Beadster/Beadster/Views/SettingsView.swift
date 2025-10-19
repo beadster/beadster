@@ -137,6 +137,7 @@ struct AccountSettings: View {
     @ObservedObject var authManager: AuthManager
 
     var body: some View {
+        let _ = print("[UI] AccountSettings rendering, isAuthenticated: \(authManager.isAuthenticated)")
         VStack(alignment: .leading, spacing: 16) {
             Text("Account")
                 .font(.title3)
