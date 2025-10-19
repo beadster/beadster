@@ -403,67 +403,42 @@ class SyncDaemon: ObservableObject {
 
         print("⬇️  Applying \(changes.count) change(s)...")
 
-        // Open database to check which issues exist locally
-        let db = BeadsDatabase(beadsDir: projectURL)
-        try db.open()
-        defer { db.close() }
+        // Read current JSONL (source of truth)
+        var localIssues = try JSONLManager.readIssues(from: projectURL)
+        var appliedCount = 0
 
-        // Apply each change via bd CLI
-        for issue in changes {
-            // Check if issue exists locally
-            let existsLocally = try db.issueExists(beadsId: issue.id)
+        // Apply each change
+        for cloudIssue in changes {
+            // Check if issue exists locally in JSONL
+            if let localIndex = localIssues.firstIndex(where: { $0.id == cloudIssue.id }) {
+                // Issue exists - merge changes
+                let localIssue = localIssues[localIndex]
 
-            // Only update existing issues
-            // Skip creating new issues from cloud (would create ID mismatch)
-            guard existsLocally else {
-                print("  ⊘ Skipping new issue from cloud: \(issue.title) (id=\(issue.id))")
-                continue
+                // Use cloud version if it's newer
+                if cloudIssue.updatedAt > localIssue.updatedAt {
+                    print("  🔄 Updating: \(cloudIssue.title)")
+                    localIssues[localIndex] = cloudIssue
+                    appliedCount += 1
+                } else {
+                    print("  ⊘ Skipping older version: \(cloudIssue.title)")
+                }
+            } else {
+                // New issue from cloud - add to JSONL
+                print("  ➕ Adding new issue from cloud: \(cloudIssue.title)")
+                localIssues.append(cloudIssue)
+                appliedCount += 1
             }
-
-            // Apply change via bd update command
-            try await applyChange(issue: issue, projectPath: projectURL.path)
         }
 
-        print("  ✅ Applied \(changes.count) change(s)")
-    }
-
-    private func applyChange(issue: Issue, projectPath: String) async throws {
-        // Escape title for shell command
-        let escapedTitle = issue.title.replacingOccurrences(of: "\"", with: "\\\"")
-
-        // Build bd update command
-        let command = """
-        cd "\(projectPath)" && bd update \(issue.id) \
-        --title="\(escapedTitle)" \
-        --status=\(issue.status) \
-        --priority=\(issue.priority)
-        """
-
-        print("  🔄 Updating: \(issue.title)")
-
-        // Execute command
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["-c", command]
-
-        // Capture output
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        try process.run()
-        process.waitUntilExit()
-
-        if process.terminationStatus != 0 {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorOutput = String(data: errorData, encoding: .utf8) ?? "Unknown error"
-            print("  ❌ Failed to update \(issue.id): \(errorOutput)")
-            throw SyncError.bdCommandFailed(errorOutput)
+        // Write updated issues back to JSONL (source of truth)
+        if appliedCount > 0 {
+            try JSONLManager.writeIssues(localIssues, to: projectURL)
+            print("  ✅ Applied \(appliedCount) change(s) to JSONL")
+        } else {
+            print("  ✓ No changes applied")
         }
-
-        print("  ✓ Updated: \(issue.title)")
     }
+
 
     // MARK: - Merge Logic
 
