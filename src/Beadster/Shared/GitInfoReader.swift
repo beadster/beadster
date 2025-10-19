@@ -1,6 +1,6 @@
 import Foundation
 
-/// Helper to read git information from a repository using git CLI
+/// Helper to read git information by parsing .git files directly (sandbox-safe)
 public class GitInfoReader {
 
     /// Git information for a repository
@@ -22,22 +22,23 @@ public class GitInfoReader {
     /// - Parameter path: Path to the directory (can be anywhere in the git repo)
     /// - Returns: GitInfo if the directory is in a git repository, nil otherwise
     public static func readGitInfo(at path: String) -> GitInfo? {
-        // Check if this is a git repository
-        guard isGitRepository(at: path) else {
+        // Find .git directory
+        guard let gitDir = findGitDirectory(from: path) else {
             return nil
         }
 
-        // Get remote URL (origin)
-        let repoUrl = getRemoteUrl(at: path)
-
         // Get current branch name
-        let currentBranch = getCurrentBranch(at: path)
+        let currentBranch = readCurrentBranch(gitDir: gitDir)
 
-        // Get current commit hash
-        let commitHash = getCommitHash(at: path)
+        // Get commit hash for current branch
+        let commitHash = readCommitHash(gitDir: gitDir, branch: currentBranch)
 
-        // Check if working directory is dirty (has uncommitted changes)
-        let isDirty = isWorkingDirectoryDirty(at: path)
+        // Get remote URL
+        let repoUrl = readRemoteUrl(gitDir: gitDir)
+
+        // For now, we can't easily determine dirty status without shell commands
+        // This would require comparing index, working tree, and HEAD
+        let isDirty = false
 
         return GitInfo(
             repoUrl: repoUrl,
@@ -49,53 +50,108 @@ public class GitInfoReader {
 
     // MARK: - Private Helpers
 
-    private static func isGitRepository(at path: String) -> Bool {
-        return runGitCommand(["rev-parse", "--git-dir"], in: path) != nil
-    }
+    private static func findGitDirectory(from path: String) -> URL? {
+        var currentPath = URL(fileURLWithPath: path)
 
-    private static func getRemoteUrl(at path: String) -> String? {
-        return runGitCommand(["config", "--get", "remote.origin.url"], in: path)
-    }
-
-    private static func getCurrentBranch(at path: String) -> String? {
-        return runGitCommand(["rev-parse", "--abbrev-ref", "HEAD"], in: path)
-    }
-
-    private static func getCommitHash(at path: String) -> String? {
-        return runGitCommand(["rev-parse", "HEAD"], in: path)
-    }
-
-    private static func isWorkingDirectoryDirty(at path: String) -> Bool {
-        // Check if there are any uncommitted changes
-        let status = runGitCommand(["status", "--porcelain"], in: path)
-        return status != nil && !status!.isEmpty
-    }
-
-    private static func runGitCommand(_ arguments: [String], in directory: String) -> String? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = arguments
-        process.currentDirectoryURL = URL(fileURLWithPath: directory)
-
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            guard process.terminationStatus == 0 else {
-                return nil
+        // Walk up directory tree looking for .git
+        while currentPath.path != "/" {
+            let gitPath = currentPath.appendingPathComponent(".git")
+            if FileManager.default.fileExists(atPath: gitPath.path) {
+                return gitPath
             }
+            currentPath = currentPath.deletingLastPathComponent()
+        }
 
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+        return nil
+    }
 
-            return output?.isEmpty == true ? nil : output
-        } catch {
+    private static func readCurrentBranch(gitDir: URL) -> String? {
+        let headPath = gitDir.appendingPathComponent("HEAD")
+
+        guard let headContent = try? String(contentsOf: headPath, encoding: .utf8) else {
             return nil
         }
+
+        // HEAD format: "ref: refs/heads/main\n"
+        let trimmed = headContent.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmed.hasPrefix("ref: refs/heads/") {
+            return String(trimmed.dropFirst("ref: refs/heads/".count))
+        }
+
+        // Detached HEAD - return nil
+        return nil
+    }
+
+    private static func readCommitHash(gitDir: URL, branch: String?) -> String? {
+        guard let branch = branch else {
+            return nil
+        }
+
+        let refPath = gitDir.appendingPathComponent("refs/heads/\(branch)")
+
+        guard let commitHash = try? String(contentsOf: refPath, encoding: .utf8) else {
+            // Try packed-refs if file doesn't exist
+            return readPackedRef(gitDir: gitDir, refName: "refs/heads/\(branch)")
+        }
+
+        return commitHash.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func readPackedRef(gitDir: URL, refName: String) -> String? {
+        let packedRefsPath = gitDir.appendingPathComponent("packed-refs")
+
+        guard let content = try? String(contentsOf: packedRefsPath, encoding: .utf8) else {
+            return nil
+        }
+
+        // Format: "hash refs/heads/branch"
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.hasPrefix("#") {
+                continue
+            }
+
+            let parts = trimmed.components(separatedBy: .whitespaces)
+            if parts.count >= 2 && parts[1] == refName {
+                return parts[0]
+            }
+        }
+
+        return nil
+    }
+
+    private static func readRemoteUrl(gitDir: URL) -> String? {
+        let configPath = gitDir.appendingPathComponent("config")
+
+        guard let content = try? String(contentsOf: configPath, encoding: .utf8) else {
+            return nil
+        }
+
+        // Parse INI-style config
+        var inRemoteOrigin = false
+
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            // Check for [remote "origin"] section
+            if trimmed == "[remote \"origin\"]" {
+                inRemoteOrigin = true
+                continue
+            }
+
+            // Exit section if we hit another [section]
+            if trimmed.hasPrefix("[") {
+                inRemoteOrigin = false
+                continue
+            }
+
+            // Look for url = ... in remote origin section
+            if inRemoteOrigin && trimmed.hasPrefix("url = ") {
+                return String(trimmed.dropFirst("url = ".count))
+            }
+        }
+
+        return nil
     }
 }
