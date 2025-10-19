@@ -25,6 +25,12 @@ enum AppTab: String, CaseIterable {
     case closedIssues = "Closed"
 }
 
+enum ViewMode: String, CaseIterable {
+    case simple = "Simple"
+    case extended = "Extended"
+    case tree = "Tree"
+}
+
 enum ContentMode: Equatable {
     case onboarding
     case projectsList
@@ -47,6 +53,7 @@ struct MainView: View {
     @State private var contentMode: ContentMode = .onboarding
     @State private var showSearch = false
     @AppStorage("isPinned") private var isPinned = false
+    @AppStorage("viewMode") private var viewMode: ViewMode = .simple
     @FocusState private var isSearchFocused: Bool
     @State private var copiedProjectId: String?
 
