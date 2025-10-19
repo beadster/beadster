@@ -12,7 +12,7 @@ const { repoUrl, branch, commit, isDirty } = Astro.props;
 <div class="git-context">
   {branch && <span class="git-branch">{branch}</span>}
   {commit && <span class="git-commit">{commit.substring(0, 7)}</span>}
-  {isDirty && <span class="dirty">*</span>}
+  {!!isDirty && <span class="dirty">*</span>}
 </div>
 
 <style>
