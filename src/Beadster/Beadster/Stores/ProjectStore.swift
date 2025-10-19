@@ -56,7 +56,9 @@ class ProjectStore: ObservableObject {
                 path: project.path,
                 bookmark: project.bookmark,
                 lastSync: project.lastSync,
-                sourceId: sourceId
+                sourceId: sourceId,
+                gitRepoUrl: project.gitRepoUrl,
+                gitCurrentBranch: project.gitCurrentBranch
             )
 
             print("ProjectStore: Generated source ID: \(sourceId)")
@@ -208,13 +210,21 @@ class ProjectStore: ObservableObject {
         // generate deterministic source ID from path (matches CLI approach)
         let sourceId = SourceIDGenerator.generate(from: projectURL.path)
 
+        // capture git info
+        let gitInfo = GitInfoReader.readGitInfo(at: projectURL.path)
+        if let gitInfo = gitInfo {
+            print("ProjectStore: Captured git info - repo: \(gitInfo.repoUrl ?? "none"), branch: \(gitInfo.currentBranch ?? "none")")
+        }
+
         var project = ProjectInfo(
             id: UUID().uuidString,
             name: projectURL.lastPathComponent,
             path: projectURL.path,
             bookmark: bookmark,
             lastSync: nil,
-            sourceId: sourceId
+            sourceId: sourceId,
+            gitRepoUrl: gitInfo?.repoUrl,
+            gitCurrentBranch: gitInfo?.currentBranch
         )
 
         // source will be created automatically on first sync
@@ -243,6 +253,12 @@ class ProjectStore: ObservableObject {
             ]
             if let sourceId = project.sourceId {
                 dict["sourceId"] = sourceId
+            }
+            if let gitRepoUrl = project.gitRepoUrl {
+                dict["gitRepoUrl"] = gitRepoUrl
+            }
+            if let gitCurrentBranch = project.gitCurrentBranch {
+                dict["gitCurrentBranch"] = gitCurrentBranch
             }
             return dict
         }
@@ -281,7 +297,9 @@ class ProjectStore: ObservableObject {
                 path: path,
                 bookmark: bookmark,
                 lastSync: nil,
-                sourceId: dict["sourceId"] as? String
+                sourceId: dict["sourceId"] as? String,
+                gitRepoUrl: dict["gitRepoUrl"] as? String,
+                gitCurrentBranch: dict["gitCurrentBranch"] as? String
             )
 
             // start watching loaded projects
@@ -313,4 +331,8 @@ struct ProjectInfo: Identifiable, Hashable {
     let bookmark: Data
     var lastSync: Date?
     var sourceId: String? // beadster cloud source ID
+
+    // Git repository info
+    var gitRepoUrl: String?
+    var gitCurrentBranch: String?
 }
