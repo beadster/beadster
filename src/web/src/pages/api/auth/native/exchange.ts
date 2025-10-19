@@ -24,6 +24,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Exchange code for access token with GitHub
+    const clientSecret = locals.runtime?.env?.GITHUB_DESKTOP_CLIENT_SECRET;
+    console.log('[native-exchange] client_id:', client_id);
+    console.log('[native-exchange] has client_secret:', !!clientSecret);
+
     const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
@@ -32,13 +36,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       },
       body: JSON.stringify({
         client_id,
-        client_secret: locals.runtime?.env?.GITHUB_DESKTOP_CLIENT_SECRET,
+        client_secret: clientSecret,
         code
       })
     });
 
     if (!tokenResponse.ok) {
-      return new Response(JSON.stringify({ error: 'Failed to exchange code' }), {
+      const errorBody = await tokenResponse.text();
+      console.error('[native-exchange] GitHub token exchange failed:', tokenResponse.status, errorBody);
+      return new Response(JSON.stringify({ error: 'Failed to exchange code', details: errorBody }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -47,15 +53,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { access_token } = await tokenResponse.json();
 
     // Get user info from GitHub
+    console.log('[native-exchange] Fetching user info with access_token');
     const userResponse = await fetch('https://api.github.com/user', {
       headers: {
         'Authorization': `Bearer ${access_token}`,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'User-Agent': 'Beadster'
       }
     });
 
     if (!userResponse.ok) {
-      return new Response(JSON.stringify({ error: 'Failed to get user info' }), {
+      const errorBody = await userResponse.text();
+      console.error('[native-exchange] Failed to get user info:', userResponse.status, errorBody);
+      return new Response(JSON.stringify({ error: 'Failed to get user info', details: errorBody }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });

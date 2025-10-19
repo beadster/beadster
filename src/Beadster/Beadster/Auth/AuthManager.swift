@@ -146,8 +146,18 @@ class AuthManager: NSObject, ObservableObject {
 
             let (data, response) = try await urlSession.data(for: request)
 
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("[auth] Invalid response type")
+                throw AuthError.invalidResponse
+            }
+
+            print("[auth] Exchange response status: \(httpResponse.statusCode)")
+            if let responseBody = String(data: data, encoding: .utf8) {
+                print("[auth] Exchange response body: \(responseBody)")
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                print("[auth] Non-200 status code: \(httpResponse.statusCode)")
                 throw AuthError.invalidResponse
             }
 
