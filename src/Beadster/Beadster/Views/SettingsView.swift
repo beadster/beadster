@@ -145,38 +145,36 @@ struct AccountSettings: View {
                 .padding(.horizontal)
 
             VStack(alignment: .leading, spacing: 12) {
-                if authManager.isAuthenticated {
-                    // Signed in state
-                    if let user = authManager.currentUser {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Signed in as")
-                                Spacer()
-                            }
-                            HStack {
-                                Image(systemName: "person.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.blue)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(user.githubName ?? user.githubLogin ?? "Unknown")
-                                        .font(.body)
-                                    if let email = user.githubEmail {
-                                        Text(email)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
+                if authManager.isAuthenticated, let user = authManager.currentUser {
+                    // Signed in state with user info
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Signed in as")
+                            Spacer()
+                        }
+                        HStack {
+                            Image(systemName: "person.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(user.githubName ?? user.githubLogin ?? "Unknown")
+                                    .font(.body)
+                                if let email = user.githubEmail {
+                                    Text(email)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
                             }
                         }
-
-                        Button(action: {
-                            authManager.signOut()
-                        }) {
-                            Text("Sign Out")
-                                .font(.body)
-                        }
-                        .buttonStyle(.bordered)
                     }
+
+                    Button(action: {
+                        authManager.signOut()
+                    }) {
+                        Text("Sign Out")
+                            .font(.body)
+                    }
+                    .buttonStyle(.bordered)
                 } else {
                     // Signed out state
                     VStack(alignment: .leading, spacing: 8) {

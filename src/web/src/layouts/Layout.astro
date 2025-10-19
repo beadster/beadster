@@ -783,6 +783,80 @@ const user = Astro.locals.user;
         display: flex;
         gap: var(--space-sm);
       }
+
+      /* stat card component */
+      .stat-card {
+        background: var(--color-bg-light);
+        padding: var(--space-md);
+        border-radius: var(--border-radius);
+        text-align: center;
+      }
+
+      .stat-card .stat-value {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--color-primary);
+        margin-bottom: var(--space-xs);
+      }
+
+      .stat-card .stat-label {
+        font-size: 12px;
+        color: var(--color-text-light);
+        text-transform: lowercase;
+      }
+
+      /* chart section component */
+      .chart-section {
+        background: var(--color-bg-light);
+        padding: var(--space-md);
+        border-radius: var(--border-radius);
+      }
+
+      .chart-section h3 {
+        margin-bottom: var(--space-sm);
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .chart-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .chart-bar {
+        display: grid;
+        grid-template-columns: 80px 1fr 40px;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+
+      .bar-label {
+        font-size: 12px;
+        color: var(--color-text-light);
+        text-align: right;
+      }
+
+      .bar-container {
+        background: var(--bar-bg);
+        height: 16px;
+        border-radius: var(--border-radius-sm);
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        background: var(--color-primary);
+        height: 100%;
+        border-radius: var(--border-radius-sm);
+        transition: width 0.3s ease;
+      }
+
+      .bar-value {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--color-text);
+        text-align: center;
+      }
     </style>
   </head>
   <body>
