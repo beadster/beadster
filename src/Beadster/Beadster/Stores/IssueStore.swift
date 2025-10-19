@@ -141,6 +141,8 @@ class IssueStore: ObservableObject {
     }
 
     func toggleIssueStatus(_ issue: Issue) {
+        // This is a local-only preview update for immediate UI feedback
+        // The real update happens through updateIssue() which writes to JSONL
         guard let index = issues.firstIndex(where: { $0.id == issue.id }) else { return }
 
         var updated = issue
@@ -153,6 +155,9 @@ class IssueStore: ObservableObject {
         }
 
         issues[index] = updated
+
+        // NOTE: This only updates local state for immediate UI feedback
+        // To persist changes, caller should use updateIssue() to write to JSONL
     }
 
     // MARK: - Issue Editing (direct JSONL write)
@@ -202,17 +207,28 @@ class IssueStore: ObservableObject {
     }
 
     func updateIssue(projectPath: String, issueId: String, title: String?, description: String?, status: String?, priority: Int?) async throws {
+        print("IssueStore: updateIssue called for \(issueId)")
+        print("IssueStore: projectPath=\(projectPath)")
+        print("IssueStore: status=\(status ?? "nil")")
+
         let projectURL = URL(fileURLWithPath: projectPath)
 
         // read existing issues
+        print("IssueStore: Reading issues from JSONL at \(projectURL.path)")
         var allIssues = try JSONLManager.readIssues(from: projectURL)
+        print("IssueStore: Read \(allIssues.count) issues from JSONL")
 
         // find and update the issue
         guard let index = allIssues.firstIndex(where: { $0.id == issueId }) else {
+            print("IssueStore: ERROR - Issue \(issueId) not found in JSONL")
             throw IssueEditError.issueNotFound(issueId)
         }
 
+        print("IssueStore: Found issue at index \(index)")
+
         var updated = allIssues[index]
+        let oldStatus = updated.status
+
         if let title = title {
             updated.title = title
         }
@@ -232,15 +248,22 @@ class IssueStore: ObservableObject {
 
         allIssues[index] = updated
 
+        print("IssueStore: Updated issue status from '\(oldStatus)' to '\(updated.status)'")
+
         // write back
+        print("IssueStore: Writing \(allIssues.count) issues back to JSONL")
         try JSONLManager.writeIssues(allIssues, to: projectURL)
+        print("IssueStore: Successfully wrote to JSONL")
 
         // update local state
         await MainActor.run {
             if let localIndex = self.issues.firstIndex(where: { $0.id == issueId }) {
                 self.issues[localIndex] = updated
+                print("IssueStore: Updated local state at index \(localIndex)")
             }
         }
+
+        print("IssueStore: updateIssue completed for \(issueId)")
     }
 
     func deleteIssue(projectPath: String, issueId: String) async throws {

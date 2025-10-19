@@ -134,10 +134,10 @@ public struct Issue: Identifiable, Codable, Hashable {
         acceptanceCriteria = try container.decodeIfPresent(String.self, forKey: .acceptanceCriteria)
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
 
-        // Handle timestamps (from cloud they're Int, need to ensure)
-        createdAt = try container.decodeIfPresent(Int.self, forKey: .createdAt) ?? Int(Date().timeIntervalSince1970)
-        updatedAt = try container.decodeIfPresent(Int.self, forKey: .updatedAt) ?? Int(Date().timeIntervalSince1970)
-        closedAt = try container.decodeIfPresent(Int.self, forKey: .closedAt)
+        // Handle timestamps - can be Int (unix timestamp) or String (ISO 8601)
+        createdAt = Self.decodeTimestamp(from: container, forKey: .createdAt) ?? Int(Date().timeIntervalSince1970)
+        updatedAt = Self.decodeTimestamp(from: container, forKey: .updatedAt) ?? Int(Date().timeIntervalSince1970)
+        closedAt = Self.decodeTimestamp(from: container, forKey: .closedAt)
 
         // Session metadata
         sessionId = try container.decodeIfPresent(String.self, forKey: .sessionId)
@@ -158,6 +158,27 @@ public struct Issue: Identifiable, Codable, Hashable {
         } else {
             labels = []
         }
+    }
+
+    // Helper to decode timestamp from either Int or ISO 8601 String
+    private static func decodeTimestamp(from container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) -> Int? {
+        // Try Int first (unix timestamp)
+        if let timestamp = try? container.decode(Int.self, forKey: key) {
+            return timestamp
+        }
+
+        // Try String (ISO 8601)
+        if let dateString = try? container.decode(String.self, forKey: key) {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatter.date(from: dateString) {
+                return Int(date.timeIntervalSince1970)
+            } else {
+                print("Issue: Failed to parse ISO8601 date string: \(dateString)")
+            }
+        }
+
+        return nil
     }
 }
 

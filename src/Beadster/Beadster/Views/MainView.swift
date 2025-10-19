@@ -275,10 +275,38 @@ struct MainView: View {
 
             // Mark as done/open button
             Button(action: {
-                issueStore.toggleIssueStatus(issue)
-                // Update the contentMode to reflect the change
-                if let updatedIssue = issueStore.issues.first(where: { $0.id == issue.id }) {
-                    contentMode = .issueDetail(updatedIssue)
+                print("MainView: Done/Reopen button tapped for issue \(issue.id)")
+                if let project = projectStore.selectedProject {
+                    let newStatus = issue.status == "closed" ? "open" : "closed"
+                    print("MainView: Changing status from '\(issue.status)' to '\(newStatus)'")
+                    print("MainView: Project path: \(project.path)")
+                    Task {
+                        do {
+                            // Write to JSONL to persist the change
+                            print("MainView: Calling updateIssue...")
+                            try await issueStore.updateIssue(
+                                projectPath: project.path,
+                                issueId: issue.id,
+                                title: nil,
+                                description: nil,
+                                status: newStatus,
+                                priority: nil
+                            )
+                            print("MainView: updateIssue completed, reloading issues...")
+                            // Reload issues from the updated JSONL
+                            await issueStore.loadIssues(for: project)
+                            print("MainView: Issues reloaded")
+                            // Update view with the refreshed issue
+                            if let updatedIssue = issueStore.issues.first(where: { $0.id == issue.id }) {
+                                print("MainView: Updating contentMode with refreshed issue")
+                                contentMode = .issueDetail(updatedIssue)
+                            }
+                        } catch {
+                            print("MainView: ERROR - Failed to update issue status: \(error)")
+                        }
+                    }
+                } else {
+                    print("MainView: ERROR - No project selected!")
                 }
             }) {
                 HStack(spacing: 4) {
