@@ -15,6 +15,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const authHeader = context.request.headers.get('authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const apiKey = authHeader.substring(7);
+    console.log('[auth] Received API key:', apiKey.substring(0, 8) + '...');
 
     try {
       const result = await db.prepare(
@@ -22,6 +23,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       ).bind(apiKey).first();
 
       if (result) {
+        console.log('[auth] API key authenticated as:', result.github_login);
         locals.user = {
           id: result.id,
           email: result.email,
@@ -29,6 +31,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
           github_login: result.github_login,
         };
         return next();
+      } else {
+        console.log('[auth] API key not found in database');
       }
     } catch (err) {
       console.error('[auth] API key validation error:', err);
