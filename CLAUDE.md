@@ -21,6 +21,19 @@ guidance for claude code when working with beadster project
 - when planning tasks or projects skip time estimates
 - if you feel not sure about some tradeoff or decision or something doesn't make sense - ask for help
 
+## beads source of truth (CRITICAL)
+
+- .beads/issues.jsonl is the ONLY source of truth for issue data
+- .beads/<project>.db is a CACHE rebuilt from JSONL by bd CLI
+- macOS app is SANDBOXED and CANNOT execute bd CLI or shell commands
+- macOS app MUST write directly to .beads/issues.jsonl when creating/updating/deleting issues
+- macOS app reads from .beads/<project>.db for fast queries (cache)
+- NEVER try to execute bd CLI from macOS app code - it will fail due to sandbox restrictions
+- NEVER add backwards compatibility fallbacks - fail fast if database not found
+- database file is named after project (beadster.db, not beads.db)
+- use BeadsHelper.findDatabaseFile() to locate database dynamically
+- see docs/SOURCE_OF_TRUTH.md for architecture details
+
 ## code conventions
 
 - for tests by default use jest

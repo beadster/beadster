@@ -17,6 +17,9 @@ class SyncDaemon: ObservableObject {
     @Published var isSyncing = false
     @Published var lastSyncDate: Date?
     @Published var syncError: String?
+    @Published var currentSyncingIssueId: String?
+    @Published var watchedProjectsCount: Int = 0
+    @Published var lastLocalChangeDate: Date?
 
     private var watchers: [String: DispatchSourceFileSystemObject] = [:]
     private var syncTimer: Timer?
@@ -124,6 +127,7 @@ class SyncDaemon: ObservableObject {
         source.setEventHandler { [weak self] in
             print("File changed: \(dbFile.path)")
             Task { @MainActor in
+                self?.lastLocalChangeDate = Date()
                 await self?.syncProject(project)
             }
         }
@@ -137,6 +141,7 @@ class SyncDaemon: ObservableObject {
 
         Task { @MainActor [weak self] in
             self?.watchers[project.id] = source
+            self?.watchedProjectsCount = (self?.watchers.count ?? 0)
             print("Started watching: \(dbFile.path)")
         }
     }
@@ -144,6 +149,7 @@ class SyncDaemon: ObservableObject {
     func stopWatching(projectId: String) {
         watchers[projectId]?.cancel()
         watchers.removeValue(forKey: projectId)
+        watchedProjectsCount = watchers.count
     }
 
     func stopAllWatchers() {
@@ -151,6 +157,7 @@ class SyncDaemon: ObservableObject {
             watcher.cancel()
         }
         watchers.removeAll()
+        watchedProjectsCount = 0
     }
 
     // MARK: - Sync

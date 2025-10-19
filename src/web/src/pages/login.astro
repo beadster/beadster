@@ -1,11 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
-// Check if already logged in
-const user = Astro.locals.user;
-if (user) {
-  return Astro.redirect('/');
+// Redirect if already logged in
+if (Astro.locals.user) {
+  const returnUrl = Astro.url.searchParams.get('return') || '/';
+  return Astro.redirect(returnUrl);
 }
+
+const returnUrl = Astro.url.searchParams.get('return') || '/';
 ---
 
 <Layout title="Sign In">
@@ -13,11 +15,33 @@ if (user) {
     <h1 style="font-size: 32px; margin-bottom: 20px;">beadster</h1>
     <p style="color: #666; margin-bottom: 40px;">issue tracker for AI agents and developers</p>
 
-    <a
-      href="/api/auth/sign-in/social?provider=github"
-      style="display: inline-block; padding: 12px 24px; background: #24292e; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;"
+    <button
+      id="github-signin-btn"
+      style="display: inline-block; padding: 12px 24px; background: #24292e; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 16px;"
     >
       sign in with github
-    </a>
+    </button>
   </div>
+
+  <script define:vars={{ returnUrl }}>
+    document.getElementById('github-signin-btn').addEventListener('click', async () => {
+      const response = await fetch('/api/auth/sign-in/social', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          provider: 'github',
+          callbackURL: returnUrl
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      }
+    });
+  </script>
 </Layout>
