@@ -1,0 +1,39 @@
+---
+interface Props {
+  repoUrl?: string;
+  branch?: string;
+  commit?: string;
+  isDirty?: boolean;
+}
+
+const { repoUrl, branch, commit, isDirty } = Astro.props;
+---
+
+<div class="git-context">
+  {branch && <span class="git-branch">{branch}</span>}
+  {commit && <span class="git-commit">{commit.substring(0, 7)}</span>}
+  {isDirty && <span class="dirty">*</span>}
+</div>
+
+<style>
+  .git-context {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .git-branch,
+  .git-commit {
+    font-family: monospace;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #666;
+  }
+
+  .dirty {
+    color: #f59e0b;
+    font-weight: bold;
+  }
+</style>
