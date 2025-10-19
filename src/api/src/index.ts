@@ -125,9 +125,11 @@ app.post('/api/sync/push', async (c) => {
   try {
     // Upsert source
     await c.env.DB.prepare(`
-      INSERT INTO sources (id, user_id, name, type, path, last_sync, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO sources (id, user_id, name, type, path, git_repo_url, git_current_branch, last_sync, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
+        git_repo_url = excluded.git_repo_url,
+        git_current_branch = excluded.git_current_branch,
         last_sync = excluded.last_sync,
         updated_at = excluded.updated_at
     `).bind(
@@ -136,6 +138,8 @@ app.post('/api/sync/push', async (c) => {
       source.name,
       source.type || 'local',
       source.path,
+      source.git_repo_url || null,
+      source.git_current_branch || null,
       now,
       now,
       now
@@ -187,9 +191,10 @@ app.post('/api/sync/push', async (c) => {
             id, user_id, source_id, beads_id, title, body,
             status, priority, labels,
             session_id, client, project_name,
+            git_repo_url, git_branch, git_commit_hash, git_is_dirty,
             synced_at, created_at, updated_at
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
           issue.id,
           user.id,
@@ -203,6 +208,10 @@ app.post('/api/sync/push', async (c) => {
           issue.session_id || null,
           issue.client || null,
           issue.project_name || null,
+          issue.git_repo_url || null,
+          issue.git_branch || null,
+          issue.git_commit_hash || null,
+          issue.git_is_dirty ? 1 : 0,
           now,
           issue.created_at,
           issue.updated_at
@@ -407,15 +416,39 @@ app.get('/api/issues', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
+  // Query parameters for filtering
+  const repoUrl = c.req.query('repo');
+  const status = c.req.query('status');
+  const sourceId = c.req.query('source_id');
+
+  // Build dynamic query
+  let whereClause = 'WHERE i.user_id = ?';
+  const params: any[] = [user.id];
+
+  if (repoUrl) {
+    whereClause += ' AND i.git_repo_url = ?';
+    params.push(repoUrl);
+  }
+
+  if (status) {
+    whereClause += ' AND i.status = ?';
+    params.push(status);
+  }
+
+  if (sourceId) {
+    whereClause += ' AND i.source_id = ?';
+    params.push(sourceId);
+  }
+
   const issues = await c.env.DB.prepare(`
     SELECT
       i.*,
       s.name as source_name
     FROM issues i
     JOIN sources s ON s.id = i.source_id
-    WHERE i.user_id = ?
+    ${whereClause}
     ORDER BY i.created_at DESC
-  `).bind(user.id).all();
+  `).bind(...params).all();
 
   // Parse labels JSON
   const parsedIssues = issues.results.map((issue: any) => ({
@@ -873,6 +906,40 @@ app.get('/api/sync-stats', async (c) => {
       success_rate_percent: parseFloat(successRate as string)
     },
     error_breakdown: errorBreakdown.results
+  });
+});
+
+// Get all repositories with issue counts
+app.get('/api/repositories', async (c) => {
+  const user = await authenticate(c);
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  interface RepositoryStats {
+    git_repo_url: string;
+    total_issues: number;
+    open_issues: number;
+    closed_issues: number;
+    latest_activity: number | null;
+  }
+
+  const repos = await c.env.DB.prepare(`
+    SELECT
+      git_repo_url,
+      COUNT(*) as total_issues,
+      SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_issues,
+      SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_issues,
+      MAX(updated_at) as latest_activity
+    FROM issues
+    WHERE user_id = ? AND git_repo_url IS NOT NULL
+    GROUP BY git_repo_url
+    ORDER BY latest_activity DESC
+  `).bind(user.id).all<RepositoryStats>();
+
+  return c.json({
+    repositories: repos.results || []
   });
 });
 
