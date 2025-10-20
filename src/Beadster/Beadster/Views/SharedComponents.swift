@@ -55,7 +55,6 @@ struct FlowLayout: Layout {
 // MARK: - App State Enums
 
 enum AppTab: String, CaseIterable {
-    case projects = "Projects"
     case openIssues = "Open"
     case allIssues = "All"
     case closedIssues = "Closed"
@@ -85,7 +84,6 @@ enum ViewMode: String, CaseIterable, RawRepresentable {
 
 enum ContentMode: Equatable {
     case onboarding
-    case projectsList
     case issuesList
     case issueDetail(Issue)
     case settings

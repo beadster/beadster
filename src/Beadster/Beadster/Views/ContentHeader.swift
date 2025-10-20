@@ -57,13 +57,10 @@ struct ContentHeader: View {
 
                 Spacer()
 
-                // Filter Tabs (Projects, Open, All, Closed)
+                // Status Filter Tabs (Open, All, Closed)
                 ForEach(AppTab.allCases, id: \.self) { tab in
-                Button(action: {
-                    selectedTab = tab
-                    if tab == .projects {
-                        contentMode = .projectsList
-                    } else {
+                    Button(action: {
+                        selectedTab = tab
                         // Update filter based on tab
                         switch tab {
                         case .openIssues:
@@ -72,46 +69,70 @@ struct ContentHeader: View {
                             issueStore.filter = .all
                         case .closedIssues:
                             issueStore.filter = .closed
-                        case .projects:
-                            break
                         }
                         // Always switch to issues list when changing filter tabs
                         contentMode = .issuesList
+                    }) {
+                        Text(tab.rawValue)
+                            .font(.system(size: 11))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 4)
+                            .background(selectedTab == tab ? Color.blue.opacity(0.2) : Color.clear)
+                            .foregroundColor(selectedTab == tab ? .blue : .black.opacity(0.6))
+                            .cornerRadius(4)
                     }
-                }) {
-                    Text(tab.rawValue)
+                    .buttonStyle(.plain)
+                }
+
+                // Divider
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 1, height: 20)
+                    .padding(.horizontal, 4)
+
+                // Project Filter Dropdown
+                Menu {
+                    Button("All") {
+                        issueStore.selectedProjectId = nil
+                    }
+                    Divider()
+                    ForEach(projectStore.projects, id: \.id) { project in
+                        Button(project.name) {
+                            issueStore.selectedProjectId = project.name
+                        }
+                    }
+                } label: {
+                    Text(issueStore.selectedProjectId ?? "All")
                         .font(.system(size: 11))
                         .padding(.horizontal, 4)
                         .padding(.vertical, 4)
-                        .background(selectedTab == tab ? Color.blue.opacity(0.2) : Color.clear)
-                        .foregroundColor(selectedTab == tab ? .blue : .black.opacity(0.6))
-                        .cornerRadius(4)
+                        .foregroundColor(.black.opacity(0.6))
                 }
-                .buttonStyle(.plain)
-            }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
 
-            // Divider
-            Rectangle()
-                .fill(Color.gray.opacity(0.3))
-                .frame(width: 1, height: 20)
-                .padding(.horizontal, 4)
+                // Divider
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 1, height: 20)
+                    .padding(.horizontal, 4)
 
-            // View Mode Tabs (Simple, Extended, Tree)
-            ForEach(ViewMode.allCases, id: \.self) { mode in
-                Button(action: {
-                    viewMode = mode
-                }) {
-                    Image(systemName: mode.symbolName)
-                        .font(.system(size: 13))
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 3)
-                        .background(viewMode == mode ? Color.blue.opacity(0.2) : Color.clear)
-                        .foregroundColor(viewMode == mode ? .blue : .black.opacity(0.6))
-                        .cornerRadius(4)
+                // View Mode Tabs (Simple, Extended, Tree)
+                ForEach(ViewMode.allCases, id: \.self) { mode in
+                    Button(action: {
+                        viewMode = mode
+                    }) {
+                        Image(systemName: mode.symbolName)
+                            .font(.system(size: 13))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 3)
+                            .background(viewMode == mode ? Color.blue.opacity(0.2) : Color.clear)
+                            .foregroundColor(viewMode == mode ? .blue : .black.opacity(0.6))
+                            .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
+                    .help(mode.displayName)
                 }
-                .buttonStyle(.plain)
-                .help(mode.displayName)
-            }
             }
             .padding(.horizontal, 10)
             .frame(height: LayoutConstants.contentHeaderHeight)

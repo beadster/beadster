@@ -21,41 +21,32 @@ struct MainView: View {
     @State private var showSearch = false
     @AppStorage("isPinned") private var isPinned = false
     @AppStorage("viewMode") private var viewMode: ViewMode = .simple
+    @AppStorage("selectedProjectId") private var selectedProjectId: String = ""
     @FocusState private var isSearchFocused: Bool
-    @State private var copiedProjectId: String?
     @State private var selectedIssueIndex: Int = 0
-    @State private var selectedProjectIndex: Int = 0
 
     var body: some View {
         VStack(spacing: 0) {
             // App Header (titlebar)
             AppHeader(contentMode: $contentMode, isPinned: $isPinned)
 
-            // Content Header (only show for non-settings)
-            if case .settings = contentMode {
-                // No header for settings
-            } else {
-                ContentHeader(
-                    contentMode: $contentMode,
-                    selectedTab: $selectedTab,
-                    viewMode: $viewMode,
-                    showSearch: $showSearch,
-                    issueStore: issueStore,
-                    projectStore: projectStore,
-                    isSearchFocused: $isSearchFocused
-                )
-                Divider()
-            }
+            // Content Header
+            ContentHeader(
+                contentMode: $contentMode,
+                selectedTab: $selectedTab,
+                viewMode: $viewMode,
+                showSearch: $showSearch,
+                issueStore: issueStore,
+                projectStore: projectStore,
+                isSearchFocused: $isSearchFocused
+            )
+            Divider()
 
             // Content Area (takes remaining space)
             contentArea
                 .frame(maxHeight: .infinity)
 
-            if case .settings = contentMode {
-                // No divider for settings
-            } else {
-                Divider()
-            }
+            Divider()
 
             // Footer
             AppFooter(syncDaemon: syncDaemon)
@@ -66,6 +57,9 @@ struct MainView: View {
         .background(WindowAccessor(isHovering: $isHoveringWindow, alwaysShow: true, isPinned: $isPinned))
         .edgesIgnoringSafeArea(.top)
         .onAppear {
+            // Restore project filter from AppStorage
+            issueStore.selectedProjectId = selectedProjectId.isEmpty ? nil : selectedProjectId
+
             // Check if we have projects
             if !projectStore.projects.isEmpty {
                 // Load issues from ALL projects
@@ -77,6 +71,10 @@ struct MainView: View {
                 // Show onboarding
                 contentMode = .onboarding
             }
+        }
+        .onChange(of: issueStore.selectedProjectId) { oldValue, newValue in
+            // Persist project filter to AppStorage (empty string = "All")
+            selectedProjectId = newValue ?? ""
         }
         .onChange(of: projectStore.projects.count) { oldCount, newCount in
             // When projects change, reload all issues
@@ -100,15 +98,6 @@ struct MainView: View {
             switch contentMode {
             case .onboarding:
                 OnboardingView(projectStore: projectStore)
-            case .projectsList:
-                ProjectsListView(
-                    projectStore: projectStore,
-                    selectedProjectIndex: $selectedProjectIndex,
-                    copiedProjectId: $copiedProjectId,
-                    selectedTab: $selectedTab,
-                    contentMode: $contentMode,
-                    issueStore: issueStore
-                )
             case .issuesList:
                 IssuesListView(
                     issueStore: issueStore,

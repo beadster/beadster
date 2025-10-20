@@ -17,6 +17,7 @@ class IssueStore: ObservableObject {
     @Published var searchText: String = ""
     @Published var selectedPriority: Int? = nil
     @Published var selectedLabels: Set<String> = []
+    @Published var selectedProjectId: String? = nil  // nil means "All"
 
     func loadIssues(for project: ProjectInfo) async {
         print("IssueStore: Loading issues for \(project.name)")
@@ -209,6 +210,11 @@ class IssueStore: ObservableObject {
 
     func filteredIssues() -> [Issue] {
         var filtered = issues
+
+        // filter by project
+        if let projectId = selectedProjectId {
+            filtered = filtered.filter { $0.projectName == projectId }
+        }
 
         // filter by status
         switch filter {

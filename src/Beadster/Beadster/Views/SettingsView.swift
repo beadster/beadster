@@ -27,6 +27,7 @@ struct SettingsView: View {
                         SyncSettings(syncDaemon: syncDaemon, authManager: authManager)
                     }
                 }
+                .padding(.horizontal, 10)
                 .padding(.top, 12)
             }
             .background(Color.white)
@@ -43,7 +44,6 @@ struct ProjectsSettings: View {
             Text("Projects")
                 .font(.title3)
                 .fontWeight(.semibold)
-                .padding(.horizontal)
 
             if projectStore.projects.isEmpty {
                 Text("No projects registered")
@@ -73,7 +73,6 @@ struct ProjectsSettings: View {
                     .font(.body)
             }
             .buttonStyle(.bordered)
-            .padding(.horizontal)
         }
     }
 }
@@ -87,7 +86,6 @@ struct AccountSettings: View {
             Text("Account")
                 .font(.title3)
                 .fontWeight(.semibold)
-                .padding(.horizontal)
 
             VStack(alignment: .leading, spacing: 12) {
                 if authManager.isAuthenticated, let user = authManager.currentUser {
@@ -165,7 +163,6 @@ struct SyncSettings: View {
             Text("Sync")
                 .font(.title3)
                 .fontWeight(.semibold)
-                .padding(.horizontal)
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
