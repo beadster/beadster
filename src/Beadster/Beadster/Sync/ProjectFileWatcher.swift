@@ -86,6 +86,7 @@ class ProjectFileWatcher: ObservableObject {
             self?.watchers[project.id] = source
             self?.watchedProjectsCount = (self?.watchers.count ?? 0)
             print("Started watching: \(dbFile.path)")
+            print("📊 Watched projects count: \(self?.watchedProjectsCount ?? 0)")
         }
     }
 

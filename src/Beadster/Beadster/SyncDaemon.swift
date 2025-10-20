@@ -18,10 +18,7 @@ class SyncDaemon: ObservableObject, FileSyncDelegate {
     @Published var syncError: String?
     @Published var currentSyncingIssueId: String?
     @Published var lastLocalChangeDate: Date?
-
-    var watchedProjectsCount: Int {
-        fileWatcher.watchedProjectsCount
-    }
+    @Published var watchedProjectsCount: Int = 0
 
     private var fileWatcher: ProjectFileWatcher!
     private var syncTimer: Timer?
@@ -45,6 +42,14 @@ class SyncDaemon: ObservableObject, FileSyncDelegate {
 
         // initialize file watcher with self as delegate
         fileWatcher = ProjectFileWatcher(syncDelegate: self)
+
+        // observe file watcher's count changes
+        Task { @MainActor in
+            for await count in fileWatcher.$watchedProjectsCount.values {
+                self.watchedProjectsCount = count
+                print("📊 SyncDaemon: watched projects count updated to \(count)")
+            }
+        }
     }
 
     // MARK: - Start/Stop

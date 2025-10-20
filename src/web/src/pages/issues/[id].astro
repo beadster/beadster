@@ -119,7 +119,11 @@ try {
 
             <div class="form-group">
               <label for="priority">priority</label>
-              <input type="text" id="priority" name="priority" value={issue.priority || ''} placeholder="P0, P1, P2..." />
+              <select id="priority" name="priority">
+                <option value="0" selected={issue.priority === 0}>P0 - critical</option>
+                <option value="1" selected={issue.priority === 1}>P1 - high</option>
+                <option value="2" selected={issue.priority === 2}>P2 - normal</option>
+              </select>
             </div>
           </div>
 
@@ -154,7 +158,7 @@ try {
           title: formData.get('title'),
           body: formData.get('body'),
           status: formData.get('status'),
-          priority: formData.get('priority'),
+          priority: parseInt(formData.get('priority') as string),
         }),
       });
 
