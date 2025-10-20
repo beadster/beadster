@@ -109,7 +109,7 @@ struct ContentHeader: View {
                 }) {
                     Text(tab.rawValue)
                         .font(.system(size: 11))
-                        .padding(.horizontal, 8)
+                        .padding(.horizontal, 4)
                         .padding(.vertical, 4)
                         .background(selectedTab == tab ? Color.blue.opacity(0.2) : Color.clear)
                         .foregroundColor(selectedTab == tab ? .blue : .black.opacity(0.6))
@@ -141,7 +141,7 @@ struct ContentHeader: View {
                 .help(mode.displayName)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 10)
         .frame(height: LayoutConstants.contentHeaderHeight)
         .background(Color.green.opacity(0.3)) // DEBUG
         .border(Color.green, width: 2) // DEBUG

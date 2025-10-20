@@ -149,9 +149,26 @@ struct WindowAccessor: NSViewRepresentable {
             if let window = view.window {
                 window.titlebarAppearsTransparent = true
                 let alpha: CGFloat = alwaysShow ? 1.0 : (isHovering ? 1 : 0)
-                window.standardWindowButton(.closeButton)?.alphaValue = alpha
-                window.standardWindowButton(.miniaturizeButton)?.alphaValue = alpha
-                window.standardWindowButton(.zoomButton)?.alphaValue = alpha
+
+                // Move window buttons 2 pixels to the right
+                if let closeButton = window.standardWindowButton(.closeButton) {
+                    closeButton.alphaValue = alpha
+                    var frame = closeButton.frame
+                    frame.origin.x += 2
+                    closeButton.setFrameOrigin(frame.origin)
+                }
+                if let miniButton = window.standardWindowButton(.miniaturizeButton) {
+                    miniButton.alphaValue = alpha
+                    var frame = miniButton.frame
+                    frame.origin.x += 2
+                    miniButton.setFrameOrigin(frame.origin)
+                }
+                if let zoomButton = window.standardWindowButton(.zoomButton) {
+                    zoomButton.alphaValue = alpha
+                    var frame = zoomButton.frame
+                    frame.origin.x += 2
+                    zoomButton.setFrameOrigin(frame.origin)
+                }
 
                 // Set window level based on pin state
                 window.level = isPinned ? .floating : .normal
@@ -163,11 +180,29 @@ struct WindowAccessor: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {
         if let window = nsView.window {
             let alpha: CGFloat = alwaysShow ? 1.0 : (isHovering ? 1 : 0)
+
+            // Move window buttons 2 pixels to the right and update alpha
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
-                window.standardWindowButton(.closeButton)?.animator().alphaValue = alpha
-                window.standardWindowButton(.miniaturizeButton)?.animator().alphaValue = alpha
-                window.standardWindowButton(.zoomButton)?.animator().alphaValue = alpha
+
+                if let closeButton = window.standardWindowButton(.closeButton) {
+                    closeButton.animator().alphaValue = alpha
+                    var frame = closeButton.frame
+                    frame.origin.x = 10  // 8 (default) + 2
+                    closeButton.setFrameOrigin(frame.origin)
+                }
+                if let miniButton = window.standardWindowButton(.miniaturizeButton) {
+                    miniButton.animator().alphaValue = alpha
+                    var frame = miniButton.frame
+                    frame.origin.x = 30  // 28 (default) + 2
+                    miniButton.setFrameOrigin(frame.origin)
+                }
+                if let zoomButton = window.standardWindowButton(.zoomButton) {
+                    zoomButton.animator().alphaValue = alpha
+                    var frame = zoomButton.frame
+                    frame.origin.x = 50  // 48 (default) + 2
+                    zoomButton.setFrameOrigin(frame.origin)
+                }
             }
 
             // Update window level when pin state changes
