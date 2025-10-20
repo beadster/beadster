@@ -62,11 +62,8 @@ struct IssueRowCompact: View {
                 // Tree mode will be handled at the list level, for now show simple
                 simpleView
             }
-
-            Spacer(minLength: 0)
-                .border(Color.orange, width: 1) // DEBUG
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 7)
         .padding(.vertical, viewMode == .extended ? 8 : 6)
         .border(Color.yellow, width: 2) // DEBUG
     }

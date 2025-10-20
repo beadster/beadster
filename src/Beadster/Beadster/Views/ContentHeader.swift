@@ -131,7 +131,7 @@ struct ContentHeader: View {
                 }) {
                     Image(systemName: mode.symbolName)
                         .font(.system(size: 13))
-                        .padding(.horizontal, 6)
+                        .padding(.horizontal, 4)
                         .padding(.vertical, 3)
                         .background(viewMode == mode ? Color.blue.opacity(0.2) : Color.clear)
                         .foregroundColor(viewMode == mode ? .blue : .black.opacity(0.6))
