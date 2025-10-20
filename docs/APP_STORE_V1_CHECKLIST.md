@@ -9,18 +9,18 @@ for v1 submission we need to ensure local mode works perfectly standalone
 
 ## must have for v1 submission
 
-### core functionality
-- [ ] add projects (scan folders for .beads)
-- [ ] view all issues from all projects
-- [ ] search and filter issues
-- [ ] view issue details
-- [ ] create new issues
-- [ ] edit issue title, description, status, priority, labels
-- [ ] close/open issues
-- [ ] delete issues
-- [ ] keyboard navigation (up/down, enter)
-- [ ] file watcher (auto-refresh when .beads changes)
-- [ ] tree view with dependencies
+### core functionality (all implemented ✅)
+- [x] add projects (scan folders for .beads)
+- [x] view all issues from all projects
+- [x] search and filter issues
+- [x] view issue details
+- [x] create new issues
+- [x] edit issue title, description, status, priority, labels
+- [x] close/open issues
+- [x] delete issues
+- [x] keyboard navigation (up/down, enter)
+- [x] file watcher (auto-refresh when .beads changes)
+- [x] tree view with dependencies
 
 ### local-only requirements
 - [ ] disable or hide cloud sync UI in v1 (sign in button, sync status)
@@ -102,22 +102,66 @@ for v1 submission we need to ensure local mode works perfectly standalone
 - team sharing
 - api access
 
+## immediate action items (priority order)
+
+1. **hide cloud UI** (1-2 hours) - CRITICAL
+   - hide Account settings section (github sign in)
+   - hide sync status footer
+   - add build flag or environment variable for LOCAL_ONLY mode
+
+2. **disable sync daemon** (30 min) - CRITICAL
+   - skip sync daemon startup in local-only mode
+   - ensure no network requests
+
+3. **add onboarding messaging** (30 min)
+   - update onboarding to mention "local-only version"
+   - add note that cloud sync coming in v2
+
+4. **create app icon** (2-3 hours) - REQUIRED
+   - design 1024x1024 icon
+   - export all required sizes
+
+5. **create screenshots** (1-2 hours) - REQUIRED
+   - take 5-10 screenshots of key features
+   - add captions
+
+6. **write app store copy** (1 hour) - REQUIRED
+   - description
+   - keywords
+   - privacy policy
+
+7. **test core flows** (2-3 hours)
+   - full user journey from onboarding to creating/editing issues
+   - test with 2-3 projects
+   - test edge cases
+
+8. **xcode configuration** (1-2 hours) - REQUIRED
+   - bundle id, version, signing
+   - entitlements
+   - build for distribution
+
+9. **final testing on clean mac** (2-3 hours)
+   - install on non-dev machine
+   - verify no crashes, good performance
+
+10. **submit** (1-2 hours) - FINAL STEP
+    - upload to App Store Connect
+    - fill metadata
+    - submit for review
+
+## estimated total effort
+
+- critical fixes (hide cloud UI, disable sync): 2-3 hours
+- required assets (icon, screenshots, copy): 4-6 hours
+- testing & polish: 4-6 hours
+- xcode setup & submission: 2-3 hours
+
+**total: 12-18 hours** of focused work
+
 ## blocking issues (must fix before submission)
 
-need to audit current code for:
-1. any hardcoded cloud sync behavior that runs in local mode
-2. network requests that shouldn't happen
-3. error handling for missing auth (should gracefully skip)
-4. UI elements that reference cloud features
-
-## estimated effort
-
-assuming local mode already works:
-- hide cloud UI: 1 hour
-- polish & bug fixes: 4-8 hours
-- testing: 4 hours
-- app store assets (icon, screenshots, text): 4 hours
-- xcode configuration: 1 hour
-- submission & review response: 2-4 hours
-
-total: 16-24 hours of focused work
+1. cloud UI must be hidden (Account section, sync footer)
+2. sync daemon must not run in local-only mode
+3. app icon required (all sizes)
+4. privacy policy required
+5. Apple Developer account & signing required
