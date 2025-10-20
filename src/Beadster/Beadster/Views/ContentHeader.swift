@@ -38,55 +38,28 @@ struct ContentHeader: View {
     }
 
     var issuesListHeader: some View {
-        HStack(spacing: 8) {
-            // Search button or search input
-            if showSearch {
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-
-                    TextField("Search...", text: $issueStore.searchText)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12))
-                        .focused($isSearchFocused)
-
+        ZStack {
+            // Main header content
+            HStack(spacing: 8) {
+                // Search button (when not active)
+                if !showSearch {
                     Button(action: {
-                        showSearch = false
-                        issueStore.searchText = ""
+                        showSearch = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            isSearchFocused = true
+                        }
                     }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 13))
+                            .foregroundColor(.black.opacity(0.6))
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(6)
-                .frame(width: 140)
-                .onAppear {
-                    isSearchFocused = true
-                }
-            } else {
-                Button(action: {
-                    showSearch = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        isSearchFocused = true
-                    }
-                }) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 13))
-                        .foregroundColor(.black.opacity(0.6))
-                }
-                .buttonStyle(.plain)
-            }
 
-            Spacer()
+                Spacer()
 
-            // Filter Tabs (Projects, Open, All, Closed)
-            ForEach(AppTab.allCases, id: \.self) { tab in
+                // Filter Tabs (Projects, Open, All, Closed)
+                ForEach(AppTab.allCases, id: \.self) { tab in
                 Button(action: {
                     selectedTab = tab
                     if tab == .projects {
@@ -140,10 +113,44 @@ struct ContentHeader: View {
                 .buttonStyle(.plain)
                 .help(mode.displayName)
             }
+            }
+            .padding(.horizontal, 10)
+            .frame(height: LayoutConstants.contentHeaderHeight)
+            .background(Color.green.opacity(0.3)) // DEBUG
+            .border(Color.green, width: 2) // DEBUG
+
+            // Search overlay (full width)
+            if showSearch {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+
+                    TextField("Search...", text: $issueStore.searchText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                        .focused($isSearchFocused)
+
+                    Button(action: {
+                        showSearch = false
+                        issueStore.searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.white)
+                .cornerRadius(6)
+                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                .padding(.horizontal, 10)
+                .onAppear {
+                    isSearchFocused = true
+                }
+            }
         }
-        .padding(.horizontal, 10)
-        .frame(height: LayoutConstants.contentHeaderHeight)
-        .background(Color.green.opacity(0.3)) // DEBUG
-        .border(Color.green, width: 2) // DEBUG
     }
 }
