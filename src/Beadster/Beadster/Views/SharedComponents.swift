@@ -111,6 +111,6 @@ struct IssueTreeNode: Identifiable {
 
 enum LayoutConstants {
     static let appHeaderHeight: CGFloat = 28
-    static let contentHeaderHeight: CGFloat = 48
+    static let contentHeaderHeight: CGFloat = 44
     static let footerHeight: CGFloat = 24
 }

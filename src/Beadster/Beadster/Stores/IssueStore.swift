@@ -118,6 +118,95 @@ class IssueStore: ObservableObject {
         }
     }
 
+    func loadIssuesFromAllProjects(projects: [ProjectInfo]) async {
+        print("IssueStore: Loading issues from ALL \(projects.count) projects")
+
+        await MainActor.run {
+            isLoading = true
+        }
+
+        defer {
+            Task { @MainActor in
+                isLoading = false
+            }
+        }
+
+        var allIssues: [Issue] = []
+        var allDependencies: [IssueDependency] = []
+
+        for project in projects {
+            print("IssueStore: Loading from project: \(project.name)")
+
+            // resolve bookmark
+            var isStale = false
+            guard let projectURL = try? URL(
+                resolvingBookmarkData: project.bookmark,
+                options: .withSecurityScope,
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ) else {
+                print("IssueStore: ERROR - Failed to resolve bookmark for \(project.name)")
+                continue
+            }
+
+            // access security scoped resource
+            guard projectURL.startAccessingSecurityScopedResource() else {
+                print("IssueStore: ERROR - Failed to access \(projectURL)")
+                continue
+            }
+            defer { projectURL.stopAccessingSecurityScopedResource() }
+
+            // HYBRID READ: SQLite baseline + JSONL delta
+            do {
+                let db = BeadsDatabase(beadsDir: projectURL)
+                try db.open()
+                defer { db.close() }
+
+                var baselineIssues = try db.getAllIssues()
+                let projectDependencies = try db.getAllDependencies()
+
+                // Set projectName on all issues from this project
+                baselineIssues = baselineIssues.map { issue in
+                    var updated = issue
+                    updated.projectName = project.name
+                    return updated
+                }
+
+                let maxTimestamp = baselineIssues.map(\.updatedAt).max() ?? 0
+
+                // Read JSONL for newer changes
+                let jsonlIssues = try JSONLManager.readIssues(from: projectURL)
+                let newerIssues = jsonlIssues.filter { $0.updatedAt > maxTimestamp }
+
+                // Merge newer issues
+                for newer in newerIssues {
+                    var updatedNewer = newer
+                    updatedNewer.projectName = project.name
+
+                    if let index = baselineIssues.firstIndex(where: { $0.id == newer.id }) {
+                        baselineIssues[index] = updatedNewer
+                    } else {
+                        baselineIssues.append(updatedNewer)
+                    }
+                }
+
+                print("IssueStore: Loaded \(baselineIssues.count) issues from \(project.name)")
+                allIssues.append(contentsOf: baselineIssues)
+                allDependencies.append(contentsOf: projectDependencies)
+            } catch DatabaseError.cantOpen {
+                print("IssueStore: No beads database found for \(project.name)")
+            } catch {
+                print("IssueStore: ERROR loading issues from \(project.name): \(error)")
+            }
+        }
+
+        print("IssueStore: Total loaded: \(allIssues.count) issues from all projects")
+        await MainActor.run {
+            self.issues = allIssues
+            self.dependencies = allDependencies
+        }
+    }
+
     func filteredIssues() -> [Issue] {
         var filtered = issues
 

@@ -65,34 +65,30 @@ struct MainView: View {
         .background(Color.white)
         .background(WindowAccessor(isHovering: $isHoveringWindow, alwaysShow: true, isPinned: $isPinned))
         .edgesIgnoringSafeArea(.top)
-        .onChange(of: projectStore.selectedProject) { oldValue, newValue in
-            if let project = newValue {
-                Task { @MainActor in
-                    await issueStore.loadIssues(for: project)
-                    if !issueStore.filteredIssues().isEmpty {
-                        contentMode = .issuesList
-                    }
-                }
-            }
-        }
         .onAppear {
             // Check if we have projects
             if !projectStore.projects.isEmpty {
-                // Select first project
-                projectStore.selectedProject = projectStore.projects.first
-                contentMode = .issuesList
+                // Load issues from ALL projects
+                Task { @MainActor in
+                    await issueStore.loadIssuesFromAllProjects(projects: projectStore.projects)
+                    contentMode = .issuesList
+                }
             } else {
                 // Show onboarding
                 contentMode = .onboarding
             }
         }
         .onChange(of: projectStore.projects.count) { oldCount, newCount in
-            // When first project is added, select it and switch to issues list
-            if newCount > 0 && contentMode == .onboarding {
+            // When projects change, reload all issues
+            if newCount > 0 {
                 Task { @MainActor in
-                    projectStore.selectedProject = projectStore.projects.first
-                    contentMode = .issuesList
+                    await issueStore.loadIssuesFromAllProjects(projects: projectStore.projects)
+                    if contentMode == .onboarding {
+                        contentMode = .issuesList
+                    }
                 }
+            } else {
+                contentMode = .onboarding
             }
         }
     }
