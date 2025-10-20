@@ -63,7 +63,7 @@ struct IssueRowCompact: View {
                 simpleView
             }
         }
-        .padding(.horizontal, 7)
+        .padding(.horizontal, 8)
         .padding(.vertical, viewMode == .extended ? 8 : 6)
         .border(Color.yellow, width: 2) // DEBUG
     }
