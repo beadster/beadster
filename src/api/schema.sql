@@ -107,7 +107,8 @@ CREATE TABLE issues (
   title TEXT NOT NULL,
   body TEXT,
   status TEXT NOT NULL,
-  priority INTEGER,  -- 0 (P0), 1 (P1), 2 (P2)
+  priority INTEGER,  -- 0-4 (P0-P4, 0=highest)
+  issue_type TEXT,  -- bug, feature, task, epic, chore
   labels TEXT,  -- JSON array
 
   -- Session tracking (extracted from labels)

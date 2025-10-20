@@ -113,6 +113,8 @@ try {
               <label for="status">status</label>
               <select id="status" name="status">
                 <option value="open" selected={issue.status === 'open'}>open</option>
+                <option value="in_progress" selected={issue.status === 'in_progress'}>in progress</option>
+                <option value="blocked" selected={issue.status === 'blocked'}>blocked</option>
                 <option value="closed" selected={issue.status === 'closed'}>closed</option>
               </select>
             </div>
@@ -123,8 +125,21 @@ try {
                 <option value="0" selected={issue.priority === 0}>P0 - critical</option>
                 <option value="1" selected={issue.priority === 1}>P1 - high</option>
                 <option value="2" selected={issue.priority === 2}>P2 - normal</option>
+                <option value="3" selected={issue.priority === 3}>P3 - low</option>
+                <option value="4" selected={issue.priority === 4}>P4 - lowest</option>
               </select>
             </div>
+          </div>
+
+          <div class="form-group">
+            <label for="issue_type">type</label>
+            <select id="issue_type" name="issue_type">
+              <option value="task" selected={issue.issue_type === 'task'}>task</option>
+              <option value="bug" selected={issue.issue_type === 'bug'}>bug</option>
+              <option value="feature" selected={issue.issue_type === 'feature'}>feature</option>
+              <option value="epic" selected={issue.issue_type === 'epic'}>epic</option>
+              <option value="chore" selected={issue.issue_type === 'chore'}>chore</option>
+            </select>
           </div>
 
           <div class="form-actions">
@@ -159,6 +174,7 @@ try {
           body: formData.get('body'),
           status: formData.get('status'),
           priority: parseInt(formData.get('priority') as string),
+          issue_type: formData.get('issue_type'),
         }),
       });
 

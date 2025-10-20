@@ -67,6 +67,8 @@ try {
           <option value="0">P0 - critical</option>
           <option value="1" selected>P1 - high</option>
           <option value="2">P2 - normal</option>
+          <option value="3">P3 - low</option>
+          <option value="4">P4 - lowest</option>
         </select>
       </div>
 
@@ -74,9 +76,22 @@ try {
         <label for="status">status</label>
         <select id="status" name="status">
           <option value="open" selected>open</option>
+          <option value="in_progress">in progress</option>
+          <option value="blocked">blocked</option>
           <option value="closed">closed</option>
         </select>
       </div>
+    </div>
+
+    <div class="form-group">
+      <label for="issue_type">type</label>
+      <select id="issue_type" name="issue_type">
+        <option value="task" selected>task</option>
+        <option value="bug">bug</option>
+        <option value="feature">feature</option>
+        <option value="epic">epic</option>
+        <option value="chore">chore</option>
+      </select>
     </div>
 
     <div class="form-actions">
@@ -103,7 +118,8 @@ try {
       title: formData.get('title'),
       body: formData.get('body') || null,
       priority: parseInt(formData.get('priority') as string),
-      status: formData.get('status')
+      status: formData.get('status'),
+      issue_type: formData.get('issue_type')
     };
 
     try {

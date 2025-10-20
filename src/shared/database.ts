@@ -5,6 +5,30 @@
 
 import type { D1Database } from '@cloudflare/workers-types';
 
+// Enums for issue fields
+export enum IssueStatus {
+  OPEN = 'open',
+  IN_PROGRESS = 'in_progress',
+  BLOCKED = 'blocked',
+  CLOSED = 'closed',
+}
+
+export enum IssuePriority {
+  P0 = 0,
+  P1 = 1,
+  P2 = 2,
+  P3 = 3,
+  P4 = 4,
+}
+
+export enum IssueType {
+  BUG = 'bug',
+  FEATURE = 'feature',
+  TASK = 'task',
+  EPIC = 'epic',
+  CHORE = 'chore',
+}
+
 export interface Issue {
   id: string;
   user_id: string;
@@ -14,6 +38,7 @@ export interface Issue {
   body: string | null;
   status: string;
   priority: number | null;
+  issue_type: string | null;
   labels: string | null;
   session_id: string | null;
   client: string | null;

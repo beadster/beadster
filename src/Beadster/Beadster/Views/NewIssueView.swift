@@ -89,6 +89,15 @@ struct NewIssueView: View {
                 createIssue()
             }
         }
+        .onAppear {
+            NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                if event.keyCode == 53 { // ESC key
+                    contentMode = .issuesList
+                    return nil // Consume the event
+                }
+                return event
+            }
+        }
     }
 
     private func createIssue() {
