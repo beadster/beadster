@@ -225,6 +225,41 @@ public struct Issue: Identifiable, Codable, Hashable {
 
         return nil
     }
+
+    // Custom encoding - ALWAYS write timestamps as ISO 8601 strings for JSONL compatibility
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encodeIfPresent(body, forKey: .body)
+        try container.encode(status, forKey: .status)
+        try container.encode(priority, forKey: .priority)
+        try container.encodeIfPresent(issueType, forKey: .issueType)
+        try container.encode(labels, forKey: .labels)
+        try container.encodeIfPresent(assignee, forKey: .assignee)
+        try container.encodeIfPresent(design, forKey: .design)
+        try container.encodeIfPresent(acceptanceCriteria, forKey: .acceptanceCriteria)
+        try container.encodeIfPresent(notes, forKey: .notes)
+
+        // Encode timestamps as ISO 8601 strings
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+
+        try container.encode(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(createdAt))), forKey: .createdAt)
+        try container.encode(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(updatedAt))), forKey: .updatedAt)
+        if let closedAt = closedAt {
+            try container.encode(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(closedAt))), forKey: .closedAt)
+        }
+
+        try container.encodeIfPresent(sessionId, forKey: .sessionId)
+        try container.encodeIfPresent(client, forKey: .client)
+        try container.encodeIfPresent(projectName, forKey: .projectName)
+        try container.encodeIfPresent(gitRepoUrl, forKey: .gitRepoUrl)
+        try container.encodeIfPresent(gitBranch, forKey: .gitBranch)
+        try container.encodeIfPresent(gitCommitHash, forKey: .gitCommitHash)
+        try container.encodeIfPresent(gitIsDirty, forKey: .gitIsDirty)
+    }
 }
 
 // MARK: - Dependency
