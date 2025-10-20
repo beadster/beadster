@@ -51,23 +51,29 @@ class SyncDaemon: ObservableObject, FileSyncDelegate {
 
     func start() {
         print("Starting sync daemon...")
+        print("Cloud sync enabled: \(AppConfig.cloudSyncEnabled)")
 
-        // trigger initial sync
-        Task { @MainActor in
-            await syncAll()
-        }
+        // File watching is always enabled (for local mode)
+        // Cloud sync only happens if cloudSyncEnabled = true
 
-        // start periodic sync
-        syncTimer = Timer.scheduledTimer(withTimeInterval: syncInterval, repeats: true) { [weak self] _ in
+        if AppConfig.cloudSyncEnabled {
+            // trigger initial cloud sync
             Task { @MainActor in
-                await self?.syncAll()
+                await syncAll()
             }
-        }
 
-        // start retry timer (check every 10 seconds)
-        retryTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                await self?.processRetryQueue()
+            // start periodic cloud sync
+            syncTimer = Timer.scheduledTimer(withTimeInterval: syncInterval, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    await self?.syncAll()
+                }
+            }
+
+            // start retry timer (check every 10 seconds)
+            retryTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    await self?.processRetryQueue()
+                }
             }
         }
     }
@@ -104,7 +110,13 @@ class SyncDaemon: ObservableObject, FileSyncDelegate {
     // FileSyncDelegate implementation
     func onFileChanged(project: ProjectInfo) async {
         lastLocalChangeDate = Date()
-        await syncProject(project)
+
+        // Only sync to cloud if cloud mode is enabled
+        if AppConfig.cloudSyncEnabled {
+            await syncProject(project)
+        } else {
+            print("File changed in \(project.name) - cloud sync disabled (local-only mode)")
+        }
     }
 
     // MARK: - Sync

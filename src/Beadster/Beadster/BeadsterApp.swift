@@ -27,10 +27,13 @@ struct BeadsterApp: App {
     }
 
     init() {
-        // initialize auth manager first to set API token
-        _ = AuthManager.shared
+        // initialize auth manager first to set API token (only in cloud mode)
+        if AppConfig.cloudSyncEnabled {
+            _ = AuthManager.shared
+        }
 
         // start sync daemon on app launch
+        // Note: daemon handles file watching in local mode + cloud sync in cloud mode
         Task { @MainActor in
             SyncDaemon.shared.start()
         }

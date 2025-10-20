@@ -12,7 +12,8 @@ struct AppFooter: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Left side: Cloud sync status
+            if AppConfig.showSyncStatus {
+                // Left side: Cloud sync status
             HStack(spacing: 6) {
                 if syncDaemon.isSyncing {
                     // Syncing badge
@@ -90,7 +91,8 @@ struct AppFooter: View {
                 }
             }
 
-            Spacer()
+                Spacer()
+            }
 
             // Right side: Local sync status
             HStack(spacing: 6) {

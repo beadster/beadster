@@ -33,11 +33,15 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(spacing: 24) {
-                    AccountSettings(authManager: authManager)
+                    if AppConfig.showAccountUI {
+                        AccountSettings(authManager: authManager)
+                    }
 
                     ProjectsSettings(projectStore: projectStore)
 
-                    SyncSettings(syncDaemon: syncDaemon, authManager: authManager)
+                    if AppConfig.showSyncStatus {
+                        SyncSettings(syncDaemon: syncDaemon, authManager: authManager)
+                    }
                 }
                 .padding(.top, 12)
             }
