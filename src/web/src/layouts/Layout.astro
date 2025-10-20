@@ -327,6 +327,22 @@ const user = Astro.locals.user;
                 font-size: 13px;
             }
 
+            .button, .btn-primary {
+                display: inline-block;
+                padding: 12px 24px;
+                background: var(--color-primary);
+                color: white;
+                border-radius: var(--border-radius);
+                text-decoration: none;
+                font-weight: 500;
+                font-size: var(--font-base);
+            }
+
+            .button:hover, .btn-primary:hover {
+                background: var(--color-primary-hover);
+                opacity: 1;
+            }
+
             .issue-list {
                 list-style: none;
                 padding: 0;

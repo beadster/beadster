@@ -75,7 +75,6 @@ teams can use github actions to sync .beads/ to cloud:
 
 1. add secrets to repo:
    - BEADSTER_API_KEY
-   - BEADSTER_API_URL (optional)
 
 2. create workflow that:
    - installs bd cli

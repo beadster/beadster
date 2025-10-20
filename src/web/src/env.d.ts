@@ -3,8 +3,6 @@
 interface Env {
   DB: D1Database;
   API: any;
-  BEADSTER_API_URL: string;
-  BEADSTER_API_KEY: string;
 }
 
 type Runtime = import("@astrojs/cloudflare").Runtime<Env>;

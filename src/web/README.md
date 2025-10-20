@@ -16,12 +16,6 @@ astro-based web interface for viewing synced beads issues
 npm install
 ```
 
-copy `.env.example` to `.env` and configure:
-
-```bash
-BEADSTER_API_URL=https://beadster-dev-api.your-subdomain.workers.dev
-```
-
 ## development
 
 ```bash

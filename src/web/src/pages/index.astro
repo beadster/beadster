@@ -2,6 +2,8 @@
 import Layout from '../layouts/Layout.astro';
 import { getIssues } from '../../../shared/database';
 
+const user = Astro.locals.user;
+
 let issues: any[] = [];
 let error: string | null = null;
 
@@ -9,23 +11,22 @@ let error: string | null = null;
 const repoUrl = Astro.url.searchParams.get('repo');
 
 // Get open issues using shared database module
-try {
-  const db = Astro.locals.runtime?.env?.DB;
-  const user = Astro.locals.user;
+if (user) {
+  try {
+    const db = Astro.locals.runtime?.env?.DB;
 
-  if (db && user) {
-    const filters: any = { status: 'open' };
-    if (repoUrl) {
-      filters.git_repo_url = repoUrl;
+    if (db) {
+      const filters: any = { status: 'open' };
+      if (repoUrl) {
+        filters.git_repo_url = repoUrl;
+      }
+      issues = await getIssues(db, user.id, filters);
+    } else {
+      error = 'Database binding not available';
     }
-    issues = await getIssues(db, user.id, filters);
-  } else if (!user) {
-    error = 'Not logged in - sign in to see your issues';
-  } else {
-    error = 'Database binding not available';
+  } catch (e) {
+    error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
   }
-} catch (e) {
-  error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
 }
 
 function formatDate(timestamp: number): string {
@@ -50,45 +51,66 @@ function getRepoName(url: string): string {
 }
 ---
 
-<Layout title="issues">
-  <nav class="tabs">
-    <a href="/" class={!repoUrl ? "active" : ""}>open</a>
-    <a href="/all">all</a>
-    <a href="/closed">closed</a>
-    <a href="/labels">labels</a>
-    <a href="/tree">tree</a>
-    <a href="/repositories">repositories</a>
-    <a href="/stats">stats</a>
-  </nav>
+<Layout title={user ? "issues" : "beadster - local-first issue tracker"}>
+  {!user ? (
+    <>
+      <h1>beadster</h1>
+      <p>local-first issue tracker for developers</p>
 
-  <div class="header-row">
-    <h2>
-      {repoUrl ? `${getRepoName(repoUrl)} - open issues` : 'open issues'}
-    </h2>
-    <div style="display: flex; gap: 10px; align-items: center;">
-      {repoUrl && (
-        <a href="/" class="btn-clear-filter">× clear filter</a>
-      )}
-      <a href="/new" class="btn-new">+ new issue</a>
-    </div>
-  </div>
+      <h2>features</h2>
+      <ul>
+        <li>local .beads folders in your projects</li>
+        <li>optional cloud sync across devices</li>
+        <li>github oauth authentication</li>
+        <li>works with bd CLI tool</li>
+        <li>macOS native app</li>
+      </ul>
 
-  {error && (
-    <div class="error">
-      <p>{error}</p>
-      <p style="font-size: 14px; color: #666; margin-top: 10px;">
-        configure BEADSTER_API_URL environment variable or update src/pages/index.astro
+      <p style="margin-top:1rem;">
+        <a href="/login" class="btn-primary">sign in with github</a>
       </p>
-    </div>
-  )}
 
-  {!error && issues.length === 0 && (
-    <div class="empty">
-      <p>no issues yet</p>
-    </div>
-  )}
+      <p style="margin-top:2rem; color: #666;">
+        download: <a href="https://github.com/steveyegge/beads">macOS app</a>
+      </p>
+    </>
+  ) : (
+    <>
+      <nav class="tabs">
+        <a href="/" class={!repoUrl ? "active" : ""}>open</a>
+        <a href="/all">all</a>
+        <a href="/closed">closed</a>
+        <a href="/labels">labels</a>
+        <a href="/tree">tree</a>
+        <a href="/repositories">repositories</a>
+        <a href="/stats">stats</a>
+      </nav>
 
-  {!error && issues.length > 0 && (
+      <div class="header-row">
+        <h2>
+          {repoUrl ? `${getRepoName(repoUrl)} - open issues` : 'open issues'}
+        </h2>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          {repoUrl && (
+            <a href="/" class="btn-clear-filter">× clear filter</a>
+          )}
+          <a href="/new" class="btn-new">+ new issue</a>
+        </div>
+      </div>
+
+      {error && (
+        <div class="error">
+          <p>{error}</p>
+        </div>
+      )}
+
+      {!error && issues.length === 0 && (
+        <div class="empty">
+          <p>no issues yet</p>
+        </div>
+      )}
+
+      {!error && issues.length > 0 && (
     <ul class="issue-list">
       {issues.map(issue => (
         <li class="issue-item">
@@ -129,10 +151,12 @@ function getRepoName(url: string): string {
         </li>
       ))}
     </ul>
+      )}
+    </>
   )}
 </Layout>
 
-
+{user && (
 <script>
   document.addEventListener('click', async (e) => {
     const target = e.target as HTMLElement;
@@ -159,3 +183,4 @@ function getRepoName(url: string): string {
     }
   });
 </script>
+)}
