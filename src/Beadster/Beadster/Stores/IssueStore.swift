@@ -71,30 +71,14 @@ class IssueStore: ObservableObject {
             try db.open()
             defer { db.close() }
 
-            var baselineIssues = try db.getAllIssues()
             let localDependencies = try db.getAllDependencies()
-            print("IssueStore: Loaded \(baselineIssues.count) issues from SQLite")
-
-            // Create a map of SQLite issues by ID for quick lookup
-            var issuesById = Dictionary(uniqueKeysWithValues: baselineIssues.map { ($0.id, $0) })
-            print("IssueStore: Created issues map with \(issuesById.count) entries")
 
             // Read ALL issues from JSONL (source of truth)
             let jsonlIssues = try JSONLManager.readIssues(from: projectURL)
-            print("IssueStore: Found \(jsonlIssues.count) issues in JSONL")
+            print("IssueStore: JSONL is source of truth - loaded \(jsonlIssues.count) issues")
 
-            // Merge: JSONL always wins for any issue present in JSONL
-            for jsonlIssue in jsonlIssues {
-                if let existing = issuesById[jsonlIssue.id] {
-                    print("IssueStore: Replacing \(jsonlIssue.id) from JSONL (JSONL updated_at: \(jsonlIssue.updatedAt) vs SQLite: \(existing.updatedAt))")
-                } else {
-                    print("IssueStore: Adding new issue \(jsonlIssue.id) from JSONL")
-                }
-                issuesById[jsonlIssue.id] = jsonlIssue
-            }
-
-            // Convert back to array
-            baselineIssues = Array(issuesById.values)
+            // JSONL is the ONLY source of truth - use it directly
+            let baselineIssues = jsonlIssues
 
             print("IssueStore: Final merged count: \(baselineIssues.count) issues")
             await MainActor.run {
@@ -163,25 +147,14 @@ class IssueStore: ObservableObject {
                 var baselineIssues = try db.getAllIssues()
                 let projectDependencies = try db.getAllDependencies()
 
-                // Create a map of SQLite issues by ID for quick lookup
-                var issuesById = Dictionary(uniqueKeysWithValues: baselineIssues.map { ($0.id, $0) })
-
                 // Read ALL issues from JSONL (source of truth)
                 let jsonlIssues = try JSONLManager.readIssues(from: projectURL)
 
-                // Merge: JSONL always wins for any issue present in JSONL
-                for jsonlIssue in jsonlIssues {
-                    var updated = jsonlIssue
-                    updated.projectName = project.name
-                    issuesById[jsonlIssue.id] = updated
-                }
-
-                // Convert back to array and set projectName for any SQLite-only issues
-                baselineIssues = issuesById.values.map { issue in
+                // JSONL is the ONLY source of truth - ignore SQLite entirely for issue list
+                // Set projectName on all JSONL issues
+                baselineIssues = jsonlIssues.map { issue in
                     var updated = issue
-                    if updated.projectName == nil {
-                        updated.projectName = project.name
-                    }
+                    updated.projectName = project.name
                     return updated
                 }
 
