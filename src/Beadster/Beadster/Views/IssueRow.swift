@@ -64,6 +64,7 @@ struct IssueRowCompact: View {
                     .foregroundColor(issue.status == "closed" ? .green : .gray)
             }
             .buttonStyle(.plain)
+            .padding(.top, 2)
             .border(AppConfig.showDebugColors ? Color.cyan : Color.clear, width: 1)
 
             // Content based on view mode

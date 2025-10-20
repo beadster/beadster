@@ -13,6 +13,7 @@ struct IssuesListView: View {
     @Binding var selectedIssueIndex: Int
     @Binding var contentMode: ContentMode
     let viewMode: ViewMode
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         ScrollView {
@@ -26,6 +27,11 @@ struct IssuesListView: View {
                     issuesList
                 }
             }
+        }
+        .focusable()
+        .focused($isFocused)
+        .onAppear {
+            isFocused = true
         }
         .onKeyPress(.upArrow) {
             if selectedIssueIndex > 0 {
@@ -47,7 +53,6 @@ struct IssuesListView: View {
             }
             return .handled
         }
-        .focusable()
     }
 
     var emptyIssuesView: some View {

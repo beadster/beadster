@@ -261,7 +261,7 @@ class IssueStore: ObservableObject {
 
     // MARK: - Issue Editing (direct JSONL write)
 
-    func createIssue(projectPath: String, title: String, description: String?, priority: Int, labels: [String]) async throws {
+    func createIssue(projectPath: String, title: String, description: String?, priority: Int, status: String = "open", issueType: String = "task", labels: [String]) async throws {
         let projectURL = URL(fileURLWithPath: projectPath)
 
         // read existing issues
@@ -278,9 +278,9 @@ class IssueStore: ObservableObject {
             id: newId,
             title: title,
             body: description,
-            status: "open",
+            status: status,
             priority: priority,
-            issueType: "task",
+            issueType: issueType,
             labels: labels,
             assignee: nil,
             design: nil,

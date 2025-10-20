@@ -15,6 +15,8 @@ struct NewIssueView: View {
     @State private var title: String = ""
     @State private var description: String = ""
     @State private var priority: Int = 1 // P1 by default
+    @State private var status: IssueStatus = .open
+    @State private var issueType: IssueType = .task
     @State private var selectedProjectId: String?
     @State private var isCreating = false
 
@@ -76,6 +78,34 @@ struct NewIssueView: View {
                         }
                         .labelsHidden()
                     }
+
+                    // Status
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Status")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Picker("Status", selection: $status) {
+                            ForEach(IssueStatus.allCases, id: \.self) { status in
+                                Text(status.displayName).tag(status)
+                            }
+                        }
+                        .labelsHidden()
+                    }
+
+                    // Type
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Type")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Picker("Type", selection: $issueType) {
+                            ForEach(IssueType.allCases, id: \.self) { type in
+                                Text(type.displayName).tag(type)
+                            }
+                        }
+                        .labelsHidden()
+                    }
                 }
                 .padding(.horizontal, 10)
                 .padding(.top, 12)
@@ -114,6 +144,8 @@ struct NewIssueView: View {
                     title: title,
                     description: description.isEmpty ? nil : description,
                     priority: priority,
+                    status: status.rawValue,
+                    issueType: issueType.rawValue,
                     labels: []
                 )
 

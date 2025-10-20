@@ -59,6 +59,58 @@ public struct SourcePayload: Codable {
     }
 }
 
+// MARK: - Issue Enums
+
+public enum IssueStatus: String, Codable, CaseIterable {
+    case open = "open"
+    case inProgress = "in_progress"
+    case blocked = "blocked"
+    case closed = "closed"
+
+    public var displayName: String {
+        switch self {
+        case .open: return "Open"
+        case .inProgress: return "In Progress"
+        case .blocked: return "Blocked"
+        case .closed: return "Closed"
+        }
+    }
+}
+
+public enum IssuePriority: Int, Codable, CaseIterable {
+    case p0 = 0
+    case p1 = 1
+    case p2 = 2
+    case p3 = 3
+    case p4 = 4
+
+    public var displayName: String {
+        return "P\(rawValue)"
+    }
+
+    public var description: String {
+        switch self {
+        case .p0: return "P0 - Critical"
+        case .p1: return "P1 - High"
+        case .p2: return "P2 - Normal"
+        case .p3: return "P3 - Low"
+        case .p4: return "P4 - Lowest"
+        }
+    }
+}
+
+public enum IssueType: String, Codable, CaseIterable {
+    case bug = "bug"
+    case feature = "feature"
+    case task = "task"
+    case epic = "epic"
+    case chore = "chore"
+
+    public var displayName: String {
+        return rawValue.capitalized
+    }
+}
+
 // MARK: - Issue
 
 public struct Issue: Identifiable, Codable, Hashable {
