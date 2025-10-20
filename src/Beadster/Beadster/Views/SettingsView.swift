@@ -52,6 +52,7 @@ struct SettingsView: View {
 
 struct ProjectsSettings: View {
     @ObservedObject var projectStore: ProjectStore
+    @State private var copiedProjectId: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -65,48 +66,18 @@ struct ProjectsSettings: View {
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
             } else {
-                ForEach(projectStore.projects) { project in
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text(project.name)
-                                .font(.body)
-                            Spacer()
-                            if let sourceId = project.sourceId {
-                                Text(sourceId)
-                                    .font(.caption.monospaced())
-                                    .foregroundColor(.secondary)
+                VStack(spacing: 0) {
+                    ForEach(projectStore.projects) { project in
+                        ProjectRow(
+                            project: project,
+                            showActions: true,
+                            isSelected: false,
+                            copiedProjectId: $copiedProjectId,
+                            onRemove: {
+                                projectStore.removeProject(project)
                             }
-                        }
-
-                        Text(project.path)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        if let gitRepoUrl = project.gitRepoUrl {
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.triangle.branch")
-                                    .font(.caption2)
-                                Text(extractRepoName(from: gitRepoUrl))
-                                    .font(.caption.monospaced())
-                                if let branch = project.gitCurrentBranch {
-                                    Text("(\(branch))")
-                                        .font(.caption2)
-                                }
-                            }
-                            .foregroundColor(.blue)
-                        }
-
-                        if let lastSync = project.lastSync {
-                            Text("Last sync: \(lastSync.formatted(.relative(presentation: .named)))")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .contextMenu {
-                        Button("Remove", role: .destructive) {
-                            projectStore.removeProject(project)
-                        }
+                        )
+                        Divider()
                     }
                 }
             }
@@ -120,20 +91,6 @@ struct ProjectsSettings: View {
             .buttonStyle(.bordered)
             .padding(.horizontal)
         }
-    }
-
-    private func extractRepoName(from url: String) -> String {
-        // Extract repo name from git URL
-        // https://github.com/user/repo.git -> user/repo
-        // git@github.com:user/repo.git -> user/repo
-        if let match = url.range(of: #"([^/:]+/[^/:]+?)(\.git)?$"#, options: .regularExpression) {
-            var name = String(url[match])
-            if name.hasSuffix(".git") {
-                name = String(name.dropLast(4))
-            }
-            return name
-        }
-        return url
     }
 }
 

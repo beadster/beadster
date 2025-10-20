@@ -61,19 +61,46 @@ class IssueStore: ObservableObject {
             projectURL.stopAccessingSecurityScopedResource()
         }
 
-        // read from .beads database
-        print("IssueStore: Reading from beads database")
+        // HYBRID READ: SQLite baseline + JSONL delta
+        // This ensures we see latest changes even if bd database is stale
+        print("IssueStore: Reading from beads database (baseline)")
 
         do {
             let db = BeadsDatabase(beadsDir: projectURL)
             try db.open()
             defer { db.close() }
 
-            let localIssues = try db.getAllIssues()
+            var baselineIssues = try db.getAllIssues()
             let localDependencies = try db.getAllDependencies()
-            print("IssueStore: Loaded \(localIssues.count) issues and \(localDependencies.count) dependencies")
+            print("IssueStore: Loaded \(baselineIssues.count) issues from SQLite")
+
+            // Find max updated_at timestamp from SQLite
+            let maxTimestamp = baselineIssues.map(\.updatedAt).max() ?? 0
+            print("IssueStore: Max updated_at from SQLite: \(maxTimestamp)")
+
+            // Read JSONL for newer changes (line-by-line to avoid parsing everything)
+            // NOTE: For v1, we parse all JSONL on every loadIssues() call.
+            // TODO: Optimize later for large projects (1000+ issues) by:
+            //   - Only reading when JSONL mtime > last read time
+            //   - Or indexing JSONL for faster lookups
+            let jsonlIssues = try JSONLManager.readIssues(from: projectURL)
+            let newerIssues = jsonlIssues.filter { $0.updatedAt > maxTimestamp }
+            print("IssueStore: Found \(newerIssues.count) newer issues in JSONL")
+
+            // Merge: replace older versions with newer ones
+            for newer in newerIssues {
+                if let index = baselineIssues.firstIndex(where: { $0.id == newer.id }) {
+                    print("IssueStore: Updating \(newer.id) from JSONL (newer: \(newer.updatedAt) vs \(baselineIssues[index].updatedAt))")
+                    baselineIssues[index] = newer
+                } else {
+                    print("IssueStore: Adding new issue \(newer.id) from JSONL")
+                    baselineIssues.append(newer)
+                }
+            }
+
+            print("IssueStore: Final merged count: \(baselineIssues.count) issues")
             await MainActor.run {
-                self.issues = localIssues
+                self.issues = baselineIssues
                 self.dependencies = localDependencies
             }
         } catch DatabaseError.cantOpen {
@@ -279,16 +306,16 @@ class IssueStore: ObservableObject {
         try JSONLManager.writeIssues(allIssues, to: projectURL)
         print("IssueStore: Successfully wrote to JSONL")
 
-        // rebuild SQLite cache from JSONL (keep in sync)
-        print("IssueStore: Rebuilding SQLite cache from JSONL...")
-        try await rebuildSQLiteFromJSONL(projectURL: projectURL, issues: allIssues)
-        print("IssueStore: SQLite cache rebuilt")
+        // NOTE: We do NOT update bd's SQLite database here because:
+        // - macOS app is sandboxed (cannot execute bd CLI)
+        // - bd CLI will auto-import JSONL on next `bd list` run
+        // - Our hybrid read (loadIssues) merges SQLite + JSONL on next load
 
-        // update local state
+        // update in-memory state for immediate UI feedback
         await MainActor.run {
             if let localIndex = self.issues.firstIndex(where: { $0.id == issueId }) {
                 self.issues[localIndex] = updated
-                print("IssueStore: Updated local state at index \(localIndex)")
+                print("IssueStore: Updated in-memory state at index \(localIndex)")
             }
         }
 
