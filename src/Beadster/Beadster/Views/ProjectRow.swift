@@ -86,7 +86,7 @@ struct ProjectRow: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 0)
         .padding(.vertical, 8)
         .background(isSelected ? Color.blue.opacity(0.1) : Color.clear)
         .contentShape(Rectangle())

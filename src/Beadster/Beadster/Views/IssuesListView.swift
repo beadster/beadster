@@ -56,22 +56,14 @@ struct IssuesListView: View {
     }
 
     var emptyIssuesView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "checklist")
-                .font(.system(size: 32))
+        HStack {
+            Text("No issues")
+                .font(.body)
                 .foregroundColor(.secondary)
-            Text("No Issues")
-                .font(.headline)
-
-            if let project = projectStore.selectedProject {
-                Button(action: {
-                    // TODO: Create new issue
-                }) {
-                    Label("Create Issue", systemImage: "plus")
-                }
-            }
+            Spacer()
         }
-        .padding()
+        .padding(.horizontal, 10)
+        .padding(.vertical, 12)
     }
 
     @ViewBuilder
