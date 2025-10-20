@@ -67,32 +67,32 @@ class IssueStore: ObservableObject {
         print("IssueStore: Reading from beads database (baseline)")
 
         do {
-            let db = BeadsDatabase(beadsDir: projectURL)
-            try db.open()
-            defer { db.close() }
-
-            let localDependencies = try db.getAllDependencies()
-
             // Read ALL issues from JSONL (source of truth)
             let jsonlIssues = try JSONLManager.readIssues(from: projectURL)
             print("IssueStore: JSONL is source of truth - loaded \(jsonlIssues.count) issues")
 
-            // JSONL is the ONLY source of truth - use it directly
-            let baselineIssues = jsonlIssues
+            // Try to load dependencies from database if it exists
+            var localDependencies: [IssueDependency] = []
+            if let dbURL = BeadsHelper.findDatabaseFile(in: projectURL) {
+                do {
+                    let db = BeadsDatabase(beadsDir: projectURL)
+                    try db.open()
+                    defer { db.close() }
+                    localDependencies = try db.getAllDependencies()
+                    print("IssueStore: Loaded \(localDependencies.count) dependencies from database")
+                } catch {
+                    print("IssueStore: Could not load dependencies from database: \(error)")
+                }
+            } else {
+                print("IssueStore: No database found, skipping dependencies")
+            }
 
-            print("IssueStore: Final merged count: \(baselineIssues.count) issues")
             await MainActor.run {
-                self.issues = baselineIssues
+                self.issues = jsonlIssues
                 self.dependencies = localDependencies
             }
-        } catch DatabaseError.cantOpen {
-            print("IssueStore: ERROR - No beads database found")
-            await MainActor.run {
-                self.issues = []
-                self.dependencies = []
-            }
         } catch {
-            print("IssueStore: ERROR loading issues: \(error)")
+            print("IssueStore: ERROR loading issues from JSONL: \(error)")
             await MainActor.run {
                 self.issues = []
                 self.dependencies = []
@@ -138,31 +138,37 @@ class IssueStore: ObservableObject {
             }
             defer { projectURL.stopAccessingSecurityScopedResource() }
 
-            // HYBRID READ: SQLite baseline + JSONL delta
+            // Read issues from JSONL (source of truth)
             do {
-                let db = BeadsDatabase(beadsDir: projectURL)
-                try db.open()
-                defer { db.close() }
-
-                var baselineIssues = try db.getAllIssues()
-                let projectDependencies = try db.getAllDependencies()
-
                 // Read ALL issues from JSONL (source of truth)
                 let jsonlIssues = try JSONLManager.readIssues(from: projectURL)
 
-                // JSONL is the ONLY source of truth - ignore SQLite entirely for issue list
                 // Set projectName on all JSONL issues
-                baselineIssues = jsonlIssues.map { issue in
+                let issuesWithProject = jsonlIssues.map { issue in
                     var updated = issue
                     updated.projectName = project.name
                     return updated
                 }
 
-                print("IssueStore: Loaded \(baselineIssues.count) issues from \(project.name)")
-                allIssues.append(contentsOf: baselineIssues)
+                // Try to load dependencies from database if it exists
+                var projectDependencies: [IssueDependency] = []
+                if let dbURL = BeadsHelper.findDatabaseFile(in: projectURL) {
+                    do {
+                        let db = BeadsDatabase(beadsDir: projectURL)
+                        try db.open()
+                        defer { db.close() }
+                        projectDependencies = try db.getAllDependencies()
+                        print("IssueStore: Loaded \(projectDependencies.count) dependencies from \(project.name)")
+                    } catch {
+                        print("IssueStore: Could not load dependencies from \(project.name): \(error)")
+                    }
+                } else {
+                    print("IssueStore: No database found for \(project.name), skipping dependencies")
+                }
+
+                print("IssueStore: Loaded \(issuesWithProject.count) issues from \(project.name)")
+                allIssues.append(contentsOf: issuesWithProject)
                 allDependencies.append(contentsOf: projectDependencies)
-            } catch DatabaseError.cantOpen {
-                print("IssueStore: No beads database found for \(project.name)")
             } catch {
                 print("IssueStore: ERROR loading issues from \(project.name): \(error)")
             }
