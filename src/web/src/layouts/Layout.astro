@@ -266,6 +266,67 @@ const user = Astro.locals.user;
                 background: var(--color-bg-light);
             }
 
+            /* typography */
+            h1 {
+                font-size: 1.3rem;
+                font-weight: 500;
+                margin: 0 0 1.5rem 0;
+                line-height: 1.2;
+            }
+
+            h2 {
+                font-size: 1.1rem;
+                font-weight: 500;
+                margin: 1.5rem 0 0.5rem 0;
+            }
+
+            h3 {
+                font-size: 1rem;
+                font-weight: 500;
+                margin-top: var(--space-lg);
+                margin-bottom: var(--space-sm);
+            }
+
+            p {
+                margin-bottom: 1em;
+            }
+
+            a {
+                color: var(--color-text);
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+            a:hover {
+                opacity: 0.7;
+            }
+
+            ul {
+                list-style: none;
+                margin-bottom: 0.75rem;
+            }
+
+            ul li {
+                margin-bottom: 0.35rem;
+                padding-left: 1rem;
+                position: relative;
+                font-size: 1rem;
+            }
+
+            ul li::before {
+                content: "•";
+                position: absolute;
+                left: 0;
+            }
+
+            code {
+                background: var(--color-bg-light);
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-family: var(--font-mono);
+                font-size: 13px;
+            }
+
             .issue-list {
                 list-style: none;
                 padding: 0;
@@ -389,11 +450,6 @@ const user = Astro.locals.user;
                 text-align: center;
                 padding: 40px var(--space-xl);
                 color: var(--color-text-lighter);
-            }
-
-            h2 {
-                margin-bottom: var(--space-md);
-                font-size: var(--font-lg);
             }
 
             .error {

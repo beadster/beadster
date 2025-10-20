@@ -7,6 +7,11 @@
   "observability": {
     "enabled": true,
   },
+  // Static assets
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+  },
   "d1_databases": [
     {
       "binding": "DB",
@@ -22,7 +27,7 @@
   ],
   "vars": {
     "BASE_URL": "https://beadster.ai",
-    "GITHUB_CLIENT_ID": "Ov23liBzvwLWw3pPzWZ0"
+    "GITHUB_CLIENT_ID": "Ov23liBzvwLWw3pPzWZ0",
   },
   "routes": [
     {

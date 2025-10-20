@@ -75,29 +75,26 @@ class IssueStore: ObservableObject {
             let localDependencies = try db.getAllDependencies()
             print("IssueStore: Loaded \(baselineIssues.count) issues from SQLite")
 
-            // Find max updated_at timestamp from SQLite
-            let maxTimestamp = baselineIssues.map(\.updatedAt).max() ?? 0
-            print("IssueStore: Max updated_at from SQLite: \(maxTimestamp)")
+            // Create a map of SQLite issues by ID for quick lookup
+            var issuesById = Dictionary(uniqueKeysWithValues: baselineIssues.map { ($0.id, $0) })
+            print("IssueStore: Created issues map with \(issuesById.count) entries")
 
-            // Read JSONL for newer changes (line-by-line to avoid parsing everything)
-            // NOTE: For v1, we parse all JSONL on every loadIssues() call.
-            // TODO: Optimize later for large projects (1000+ issues) by:
-            //   - Only reading when JSONL mtime > last read time
-            //   - Or indexing JSONL for faster lookups
+            // Read ALL issues from JSONL (source of truth)
             let jsonlIssues = try JSONLManager.readIssues(from: projectURL)
-            let newerIssues = jsonlIssues.filter { $0.updatedAt > maxTimestamp }
-            print("IssueStore: Found \(newerIssues.count) newer issues in JSONL")
+            print("IssueStore: Found \(jsonlIssues.count) issues in JSONL")
 
-            // Merge: replace older versions with newer ones
-            for newer in newerIssues {
-                if let index = baselineIssues.firstIndex(where: { $0.id == newer.id }) {
-                    print("IssueStore: Updating \(newer.id) from JSONL (newer: \(newer.updatedAt) vs \(baselineIssues[index].updatedAt))")
-                    baselineIssues[index] = newer
+            // Merge: JSONL always wins for any issue present in JSONL
+            for jsonlIssue in jsonlIssues {
+                if let existing = issuesById[jsonlIssue.id] {
+                    print("IssueStore: Replacing \(jsonlIssue.id) from JSONL (JSONL updated_at: \(jsonlIssue.updatedAt) vs SQLite: \(existing.updatedAt))")
                 } else {
-                    print("IssueStore: Adding new issue \(newer.id) from JSONL")
-                    baselineIssues.append(newer)
+                    print("IssueStore: Adding new issue \(jsonlIssue.id) from JSONL")
                 }
+                issuesById[jsonlIssue.id] = jsonlIssue
             }
+
+            // Convert back to array
+            baselineIssues = Array(issuesById.values)
 
             print("IssueStore: Final merged count: \(baselineIssues.count) issues")
             await MainActor.run {
@@ -166,29 +163,26 @@ class IssueStore: ObservableObject {
                 var baselineIssues = try db.getAllIssues()
                 let projectDependencies = try db.getAllDependencies()
 
-                // Set projectName on all issues from this project
-                baselineIssues = baselineIssues.map { issue in
-                    var updated = issue
+                // Create a map of SQLite issues by ID for quick lookup
+                var issuesById = Dictionary(uniqueKeysWithValues: baselineIssues.map { ($0.id, $0) })
+
+                // Read ALL issues from JSONL (source of truth)
+                let jsonlIssues = try JSONLManager.readIssues(from: projectURL)
+
+                // Merge: JSONL always wins for any issue present in JSONL
+                for jsonlIssue in jsonlIssues {
+                    var updated = jsonlIssue
                     updated.projectName = project.name
-                    return updated
+                    issuesById[jsonlIssue.id] = updated
                 }
 
-                let maxTimestamp = baselineIssues.map(\.updatedAt).max() ?? 0
-
-                // Read JSONL for newer changes
-                let jsonlIssues = try JSONLManager.readIssues(from: projectURL)
-                let newerIssues = jsonlIssues.filter { $0.updatedAt > maxTimestamp }
-
-                // Merge newer issues
-                for newer in newerIssues {
-                    var updatedNewer = newer
-                    updatedNewer.projectName = project.name
-
-                    if let index = baselineIssues.firstIndex(where: { $0.id == newer.id }) {
-                        baselineIssues[index] = updatedNewer
-                    } else {
-                        baselineIssues.append(updatedNewer)
+                // Convert back to array and set projectName for any SQLite-only issues
+                baselineIssues = issuesById.values.map { issue in
+                    var updated = issue
+                    if updated.projectName == nil {
+                        updated.projectName = project.name
                     }
+                    return updated
                 }
 
                 print("IssueStore: Loaded \(baselineIssues.count) issues from \(project.name)")
