@@ -18,6 +18,10 @@ enum AppConfig {
     /// Set to false for App Store v1 release
     static let githubIntegrationEnabled = false
 
+    /// Show debug colors on UI components (borders and backgrounds)
+    /// Set to true during development to visualize component boundaries
+    static let showDebugColors = false
+
     // MARK: - Computed Properties
 
     /// Show authentication/account UI

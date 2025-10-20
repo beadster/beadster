@@ -26,8 +26,8 @@ struct AppHeader: View {
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
-            .background(Color.purple.opacity(0.5)) // DEBUG
-            .border(Color.purple, width: 2) // DEBUG
+            .background(AppConfig.showDebugColors ? Color.purple.opacity(0.5) : Color.clear)
+            .border(AppConfig.showDebugColors ? Color.purple : Color.clear, width: 2)
 
             Button(action: {
                 isPinned.toggle()
@@ -39,21 +39,23 @@ struct AppHeader: View {
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
-            .background(Color.orange.opacity(0.5)) // DEBUG
-            .border(Color.orange, width: 2) // DEBUG
+            .background(AppConfig.showDebugColors ? Color.orange.opacity(0.5) : Color.clear)
+            .border(AppConfig.showDebugColors ? Color.orange : Color.clear, width: 2)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 0)
         .frame(height: LayoutConstants.appHeaderHeight)
-        .background(Color.red.opacity(0.3)) // DEBUG
-        .border(Color.red, width: 2) // DEBUG
+        .background(AppConfig.showDebugColors ? Color.red.opacity(0.3) : Color.clear)
+        .border(AppConfig.showDebugColors ? Color.red : Color.clear, width: 2)
         .overlay(
-            Text("H:\(LayoutConstants.appHeaderHeight)")
-                .font(.system(size: 8))
-                .foregroundColor(.black)
-                .position(x: 200, y: 14)
+            AppConfig.showDebugColors ? AnyView(
+                Text("H:\(LayoutConstants.appHeaderHeight)")
+                    .font(.system(size: 8))
+                    .foregroundColor(.black)
+                    .position(x: 200, y: 14)
+            ) : AnyView(EmptyView())
         )
-        .allowsHitTesting(true) // DEBUG: ensure hit testing is enabled
-        .zIndex(100) // DEBUG: bring to front
+        .allowsHitTesting(true)
+        .zIndex(100)
     }
 }

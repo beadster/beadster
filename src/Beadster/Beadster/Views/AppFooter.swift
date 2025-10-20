@@ -135,7 +135,7 @@ struct AppFooter: View {
         }
         .padding(.horizontal, 12)
         .frame(height: LayoutConstants.footerHeight)
-        .background(Color.yellow.opacity(0.3)) // DEBUG
-        .border(Color.yellow, width: 2) // DEBUG
+        .background(AppConfig.showDebugColors ? Color.yellow.opacity(0.3) : Color.clear)
+        .border(AppConfig.showDebugColors ? Color.yellow : Color.clear, width: 2)
     }
 }

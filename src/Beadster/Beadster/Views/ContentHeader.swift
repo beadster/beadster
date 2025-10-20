@@ -136,8 +136,8 @@ struct ContentHeader: View {
             }
             .padding(.horizontal, 10)
             .frame(height: LayoutConstants.contentHeaderHeight)
-            .background(Color.green.opacity(0.3)) // DEBUG
-            .border(Color.green, width: 2) // DEBUG
+            .background(AppConfig.showDebugColors ? Color.green.opacity(0.3) : Color.clear)
+            .border(AppConfig.showDebugColors ? Color.green : Color.clear, width: 2)
 
             // Search overlay (full width)
             if showSearch {

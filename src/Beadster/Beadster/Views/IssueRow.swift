@@ -50,7 +50,7 @@ struct IssueRowCompact: View {
                     .foregroundColor(issue.status == "closed" ? .green : .gray)
             }
             .buttonStyle(.plain)
-            .border(Color.cyan, width: 1) // DEBUG
+            .border(AppConfig.showDebugColors ? Color.cyan : Color.clear, width: 1)
 
             // Content based on view mode
             switch viewMode {
@@ -65,7 +65,7 @@ struct IssueRowCompact: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, viewMode == .extended ? 8 : 6)
-        .border(Color.yellow, width: 2) // DEBUG
+        .border(AppConfig.showDebugColors ? Color.yellow : Color.clear, width: 2)
     }
 
     var simpleView: some View {
@@ -76,15 +76,15 @@ struct IssueRowCompact: View {
                     .font(.system(size: 13))
                     .strikethrough(issue.status == "closed")
                     .lineLimit(1)
-                    .border(Color.red, width: 1) // DEBUG
+                    .border(AppConfig.showDebugColors ? Color.red : Color.clear, width: 1)
 
                 Spacer()
-                    .border(Color.blue, width: 1) // DEBUG
+                    .border(AppConfig.showDebugColors ? Color.blue : Color.clear, width: 1)
 
                 PriorityBadge(priority: issue.priority)
-                    .border(Color.green, width: 1) // DEBUG
+                    .border(AppConfig.showDebugColors ? Color.green : Color.clear, width: 1)
             }
-            .border(Color.purple, width: 1) // DEBUG
+            .border(AppConfig.showDebugColors ? Color.purple : Color.clear, width: 1)
 
             // Row 2: Description (optional)
             if let description = issue.body, !description.isEmpty {
@@ -125,15 +125,15 @@ struct IssueRowCompact: View {
                     .font(.system(size: 13))
                     .strikethrough(issue.status == "closed")
                     .lineLimit(1)
-                    .border(Color.red, width: 1) // DEBUG
+                    .border(AppConfig.showDebugColors ? Color.red : Color.clear, width: 1)
 
                 Spacer()
-                    .border(Color.blue, width: 1) // DEBUG
+                    .border(AppConfig.showDebugColors ? Color.blue : Color.clear, width: 1)
 
                 PriorityBadge(priority: issue.priority)
-                    .border(Color.green, width: 1) // DEBUG
+                    .border(AppConfig.showDebugColors ? Color.green : Color.clear, width: 1)
             }
-            .border(Color.purple, width: 1) // DEBUG
+            .border(AppConfig.showDebugColors ? Color.purple : Color.clear, width: 1)
 
             // Row 2: Description (optional)
             if let description = issue.body, !description.isEmpty {
