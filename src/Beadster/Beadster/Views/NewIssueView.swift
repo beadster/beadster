@@ -123,7 +123,8 @@ struct NewIssueView: View {
                     projectPath: project.path,
                     title: title,
                     description: description.isEmpty ? nil : description,
-                    priority: priority
+                    priority: priority,
+                    labels: []
                 )
 
                 // Reload issues
