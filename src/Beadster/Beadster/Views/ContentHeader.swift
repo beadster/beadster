@@ -19,9 +19,8 @@ struct ContentHeader: View {
     var body: some View {
         Group {
             if case .settings = contentMode {
-                // Settings has its own header, hide this one
-                EmptyView()
-                    .frame(height: 0)
+                // Settings header
+                settingsHeader
             } else if case .issueDetail(let issue) = contentMode {
                 // Issue detail header
                 IssueDetailHeader(
@@ -152,5 +151,23 @@ struct ContentHeader: View {
                 }
             }
         }
+    }
+
+    var settingsHeader: some View {
+        HStack {
+            Text("Settings")
+                .font(.headline)
+            Spacer()
+            Button(action: {
+                contentMode = .issuesList
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 10)
+        .frame(height: LayoutConstants.contentHeaderHeight)
     }
 }

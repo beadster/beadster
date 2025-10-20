@@ -94,9 +94,15 @@ struct IssueRowCompact: View {
                     .lineLimit(1)
             }
 
-            // Row 3: Labels
-            if !issue.labels.isEmpty {
-                HStack(spacing: 4) {
+            // Row 3: Project name + Labels
+            HStack(spacing: 4) {
+                // Project name (first badge)
+                if let projectName = issue.projectName {
+                    ProjectNameBadge(projectName: projectName)
+                }
+
+                // Labels
+                if !issue.labels.isEmpty {
                     ForEach(issue.labels.prefix(3), id: \.self) { label in
                         LabelBadge(label: label)
                     }
