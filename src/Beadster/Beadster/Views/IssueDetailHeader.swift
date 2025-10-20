@@ -34,37 +34,46 @@ struct IssueDetailHeader: View {
             // Mark as done/open button
             Button(action: {
                 print("IssueDetailHeader: Done/Reopen button tapped for issue \(issue.id)")
-                if let project = projectStore.selectedProject {
-                    let newStatus = issue.status == "closed" ? "open" : "closed"
-                    print("IssueDetailHeader: Changing status from '\(issue.status)' to '\(newStatus)'")
-                    print("IssueDetailHeader: Project path: \(project.path)")
-                    Task {
-                        do {
-                            // Write to JSONL to persist the change
-                            print("IssueDetailHeader: Calling updateIssue...")
-                            try await issueStore.updateIssue(
-                                projectPath: project.path,
-                                issueId: issue.id,
-                                title: nil,
-                                description: nil,
-                                status: newStatus,
-                                priority: nil
-                            )
-                            print("IssueDetailHeader: updateIssue completed, reloading issues...")
-                            // Reload issues from the updated JSONL
-                            await issueStore.loadIssues(for: project)
-                            print("IssueDetailHeader: Issues reloaded")
-                            // Update view with the refreshed issue
-                            if let updatedIssue = issueStore.issues.first(where: { $0.id == issue.id }) {
-                                print("IssueDetailHeader: Updating contentMode with refreshed issue")
-                                contentMode = .issueDetail(updatedIssue)
-                            }
-                        } catch {
-                            print("IssueDetailHeader: ERROR - Failed to update issue status: \(error)")
+
+                // Find project by issue's projectName
+                guard let projectName = issue.projectName else {
+                    print("IssueDetailHeader: ERROR - Issue has no projectName")
+                    return
+                }
+
+                guard let project = projectStore.projects.first(where: { $0.name == projectName }) else {
+                    print("IssueDetailHeader: ERROR - Project not found: \(projectName)")
+                    return
+                }
+
+                let newStatus = issue.status == "closed" ? "open" : "closed"
+                print("IssueDetailHeader: Changing status from '\(issue.status)' to '\(newStatus)'")
+                print("IssueDetailHeader: Project path: \(project.path)")
+
+                Task {
+                    do {
+                        // Write to JSONL to persist the change
+                        print("IssueDetailHeader: Calling updateIssue...")
+                        try await issueStore.updateIssue(
+                            projectPath: project.path,
+                            issueId: issue.id,
+                            title: nil,
+                            description: nil,
+                            status: newStatus,
+                            priority: nil
+                        )
+                        print("IssueDetailHeader: updateIssue completed, reloading issues...")
+                        // Reload issues from all projects
+                        await issueStore.loadIssuesFromAllProjects(projects: projectStore.projects)
+                        print("IssueDetailHeader: Issues reloaded")
+                        // Update view with the refreshed issue
+                        if let updatedIssue = issueStore.issues.first(where: { $0.id == issue.id }) {
+                            print("IssueDetailHeader: Updating contentMode with refreshed issue")
+                            contentMode = .issueDetail(updatedIssue)
                         }
+                    } catch {
+                        print("IssueDetailHeader: ERROR - Failed to update issue status: \(error)")
                     }
-                } else {
-                    print("IssueDetailHeader: ERROR - No project selected!")
                 }
             }) {
                 HStack(spacing: 4) {
@@ -79,15 +88,27 @@ struct IssueDetailHeader: View {
 
             // Delete button
             Button(action: {
-                if let project = projectStore.selectedProject {
-                    Task {
-                        do {
-                            try await issueStore.deleteIssue(projectPath: project.path, issueId: issue.id)
-                            await issueStore.loadIssues(for: project)
-                            contentMode = .issuesList
-                        } catch {
-                            print("Failed to delete issue: \(error)")
-                        }
+                print("IssueDetailHeader: Delete button tapped for issue \(issue.id)")
+
+                // Find project by issue's projectName
+                guard let projectName = issue.projectName else {
+                    print("IssueDetailHeader: ERROR - Issue has no projectName")
+                    return
+                }
+
+                guard let project = projectStore.projects.first(where: { $0.name == projectName }) else {
+                    print("IssueDetailHeader: ERROR - Project not found: \(projectName)")
+                    return
+                }
+
+                Task {
+                    do {
+                        try await issueStore.deleteIssue(projectPath: project.path, issueId: issue.id)
+                        await issueStore.loadIssuesFromAllProjects(projects: projectStore.projects)
+                        contentMode = .issuesList
+                        print("IssueDetailHeader: Successfully deleted issue")
+                    } catch {
+                        print("IssueDetailHeader: ERROR - Failed to delete issue: \(error)")
                     }
                 }
             }) {

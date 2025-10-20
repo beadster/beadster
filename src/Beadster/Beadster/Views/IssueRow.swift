@@ -27,21 +27,35 @@ struct IssueRowCompact: View {
 
             // Checkbox
             Button(action: {
-                if let project = projectStore.selectedProject {
-                    let newStatus = issue.status == "closed" ? "open" : "closed"
-                    Task {
-                        do {
-                            try await issueStore.updateIssue(
-                                projectPath: project.path,
-                                issueId: issue.id,
-                                title: nil,
-                                description: nil,
-                                status: newStatus,
-                                priority: nil
-                            )
-                        } catch {
-                            print("Failed to update issue: \(error)")
-                        }
+                print("IssueRow: Checkbox clicked for issue \(issue.id)")
+
+                // Find project by issue's projectName
+                guard let projectName = issue.projectName else {
+                    print("IssueRow: ERROR - Issue has no projectName")
+                    return
+                }
+
+                guard let project = projectStore.projects.first(where: { $0.name == projectName }) else {
+                    print("IssueRow: ERROR - Project not found: \(projectName)")
+                    return
+                }
+
+                let newStatus = issue.status == "closed" ? "open" : "closed"
+                print("IssueRow: Changing status from '\(issue.status)' to '\(newStatus)'")
+
+                Task {
+                    do {
+                        try await issueStore.updateIssue(
+                            projectPath: project.path,
+                            issueId: issue.id,
+                            title: nil,
+                            description: nil,
+                            status: newStatus,
+                            priority: nil
+                        )
+                        print("IssueRow: Successfully updated issue status")
+                    } catch {
+                        print("IssueRow: ERROR - Failed to update issue: \(error)")
                     }
                 }
             }) {
