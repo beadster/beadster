@@ -19,32 +19,7 @@ struct NewIssueView: View {
     @State private var isCreating = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Header
-            HStack {
-                Button("Cancel") {
-                    contentMode = .issuesList
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                Text("New Issue")
-                    .font(.headline)
-
-                Spacer()
-
-                Button("Create") {
-                    createIssue()
-                }
-                .buttonStyle(.plain)
-                .disabled(title.isEmpty || selectedProjectId == nil || isCreating)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider()
-
+        VStack(alignment: .leading, spacing: 0) {
             // Form
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -102,12 +77,18 @@ struct NewIssueView: View {
                         .labelsHidden()
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 10)
+                .padding(.top, 12)
             }
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CreateIssueAction"))) { _ in
+            if !title.isEmpty && selectedProjectId != nil && !isCreating {
+                createIssue()
+            }
+        }
     }
 
     private func createIssue() {

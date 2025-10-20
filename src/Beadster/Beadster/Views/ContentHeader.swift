@@ -21,6 +21,9 @@ struct ContentHeader: View {
             if case .settings = contentMode {
                 // Settings header
                 settingsHeader
+            } else if case .newIssue = contentMode {
+                // New issue header
+                newIssueHeader
             } else if case .issueDetail(let issue) = contentMode {
                 // Issue detail header
                 IssueDetailHeader(
@@ -185,6 +188,35 @@ struct ContentHeader: View {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 16))
                     .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 10)
+        .frame(height: LayoutConstants.contentHeaderHeight)
+    }
+
+    var newIssueHeader: some View {
+        HStack {
+            Button(action: {
+                contentMode = .issuesList
+            }) {
+                Text("Cancel")
+                    .font(.body)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Text("New Issue")
+                .font(.headline)
+
+            Spacer()
+
+            Button(action: {
+                NotificationCenter.default.post(name: NSNotification.Name("CreateIssueAction"), object: nil)
+            }) {
+                Text("Create")
+                    .font(.body)
             }
             .buttonStyle(.plain)
         }
