@@ -2,27 +2,33 @@
 
 ## local-only mode (v1)
 
-for App Store v1, build with LOCAL_ONLY flag to hide cloud sync features
+for App Store v1, cloud sync is disabled via runtime configuration
 
-### enable LOCAL_ONLY flag in Xcode
+### configuration
 
-1. open Beadster.xcodeproj
-2. select Beadster target
-3. go to Build Settings tab
-4. search for "Swift Compiler - Custom Flags"
-5. under "Other Swift Flags", add: `-D LOCAL_ONLY`
-6. build and run
+edit `Shared/AppConfig.swift`:
 
-this will:
-- hide Account section in Settings
-- hide Sync section in Settings
-- hide cloud sync status in footer (left side)
-- disable sync daemon (no network requests)
+```swift
+enum AppConfig {
+    /// Enable cloud sync features (authentication, sync daemon, API calls)
+    /// Set to false for local-only App Store v1 release
+    static let cloudSyncEnabled = false
 
-local file watching and project management remain enabled
+    /// Enable GitHub integration UI
+    /// Set to false for App Store v1 release
+    static let githubIntegrationEnabled = false
+}
+```
 
-### revert to full mode (v2+)
+when `cloudSyncEnabled = false`:
+- hides Account section in Settings
+- hides Sync section in Settings
+- hides cloud sync status in footer (left side)
+- disables cloud sync in sync daemon (no network requests)
+- keeps local file watching and project management enabled
 
-remove `-D LOCAL_ONLY` flag from Build Settings
+### enable full mode (v2+)
+
+set `cloudSyncEnabled = true` in AppConfig.swift
 
 all cloud sync features will be re-enabled
