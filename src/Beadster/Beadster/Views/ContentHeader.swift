@@ -129,8 +129,8 @@ struct ContentHeader: View {
                 Button(action: {
                     viewMode = mode
                 }) {
-                    Text(mode.displayName)
-                        .font(.system(size: 11))
+                    Image(systemName: mode.symbolName)
+                        .font(.system(size: 13))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(viewMode == mode ? Color.blue.opacity(0.2) : Color.clear)
@@ -138,6 +138,7 @@ struct ContentHeader: View {
                         .cornerRadius(4)
                 }
                 .buttonStyle(.plain)
+                .help(mode.displayName)
             }
         }
         .padding(.horizontal, 12)

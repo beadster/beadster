@@ -73,6 +73,14 @@ enum ViewMode: String, CaseIterable, RawRepresentable {
         case .tree: return "Tree"
         }
     }
+
+    var symbolName: String {
+        switch self {
+        case .simple: return "list.bullet"
+        case .tree: return "list.bullet.indent"
+        case .extended: return "list.bullet.below.rectangle"
+        }
+    }
 }
 
 enum ContentMode: Equatable {
