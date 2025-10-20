@@ -1,0 +1,23 @@
+---
+const user = Astro.locals.user;
+
+if (!user) {
+    return null;
+}
+---
+
+<div class="hamburger-menu">
+    <input type="checkbox" id="menu-toggle" class="menu-toggle" />
+    <label for="menu-toggle" class="menu-icon">
+        <span class="menu-icon-open">☰</span>
+        <span class="menu-icon-close">✕</span>
+    </label>
+
+    <nav class="menu-dropdown">
+        <a href="/">issues</a>
+        <a href="/sources">projects</a>
+        <a href="/sessions">sessions</a>
+        <a href="/stats">stats</a>
+        <a href="/api/auth/sign-out">sign out</a>
+    </nav>
+</div>

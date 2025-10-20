@@ -1,0 +1,25 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const user = Astro.locals.user;
+---
+
+<Layout title="contact">
+  <h1>contact</h1>
+  <p class="meta"><a href="/">← back</a></p>
+
+  <h2>get in touch</h2>
+  <p>questions, feedback, or issues? reach out to us:</p>
+
+  <p><a href="mailto:hi@beadster.com">hi@beadster.com</a></p>
+
+  <h2>support</h2>
+  <p>for technical support or bug reports:</p>
+  <ul>
+    <li>email: <a href="mailto:hi@beadster.com">hi@beadster.com</a></li>
+    <li>github: <a href="https://github.com/steveyegge/beads">github.com/steveyegge/beads</a></li>
+  </ul>
+
+  <h2>company</h2>
+  <p>operated by: System Operator LLC, Delaware, USA</p>
+</Layout>

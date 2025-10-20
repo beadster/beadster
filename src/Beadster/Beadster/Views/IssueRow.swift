@@ -17,7 +17,7 @@ struct IssueRowCompact: View {
     @EnvironmentObject var projectStore: ProjectStore
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(alignment: .top, spacing: 10) {
             // Indentation for tree view
             if depth > 0 {
                 Rectangle()

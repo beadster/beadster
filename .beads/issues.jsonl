@@ -1,1 +1,4 @@
-{"id":"beadster-107","title":"make contact page online for support and landing page","description":"","status":"open","priority":1,"issue_type":"task","created_at":"2025-10-20T16:43:28.98602+02:00","updated_at":"2025-10-20T16:43:28.98602+02:00"}
+{"priority":1,"issue_type":"task","title":"make contact page online for support and landing page","id":"beadster-107","status":"open","labels":[],"created_at":1760971408,"updated_at":1760971408}
+{"priority":1,"issue_type":"task","closed_at":1760971774,"title":"test task complete","id":"beadster-108","status":"closed","labels":[],"created_at":1760971758,"updated_at":1760971774}
+{"priority":1,"issue_type":"task","closed_at":1760971769,"title":"test delete","id":"beadster-109","status":"closed","labels":[],"created_at":1760971758,"updated_at":1760971769}
+{"git_commit_hash":"f7a9401b77a92250504eb8fc499311aa8266e740","git_is_dirty":false,"priority":2,"closed_at":1760971772,"title":"create app icon for App Store","created_at":1760952361,"status":"closed","id":"beadster-105","labels":[],"updated_at":1760971772,"git_branch":"main"}

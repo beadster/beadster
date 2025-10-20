@@ -1,4 +1,7 @@
 ---
+import HamburgerMenu from "../components/HamburgerMenu.astro";
+import Logo from "../components/Logo.astro";
+
 interface Props {
     title: string;
 }
@@ -85,12 +88,98 @@ const user = Astro.locals.user;
                 box-sizing: border-box;
             }
 
-            body {
+            html {
+                font-size: var(--font-base);
                 font-family: var(--font-sans);
-                line-height: 1.5;
+                line-height: 1.4;
                 color: var(--color-text);
                 background: var(--color-bg);
-                padding: var(--space-md);
+                height: 100%;
+            }
+
+            body {
+                font-family: var(--font-sans);
+                line-height: 1.4;
+                color: var(--color-text);
+                background: var(--color-bg);
+                min-height: 100%;
+                display: flex;
+                flex-direction: column;
+                overflow-x: hidden;
+                overflow-y: scroll;
+            }
+
+            main {
+                flex: 1;
+                width: 100%;
+            }
+
+            header {
+                width: 100%;
+            }
+
+            .header-wrapper {
+                max-width: var(--max-width);
+                margin: 0 auto;
+                padding: 0.5rem 1rem;
+                width: 100%;
+                position: relative;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .logo-link {
+                display: flex;
+                align-items: center;
+                text-decoration: none;
+                line-height: 0;
+            }
+
+            .logo-link:hover {
+                opacity: 0.8;
+            }
+
+            .content-wrapper {
+                max-width: var(--max-width);
+                margin: 0 auto;
+                padding: 1.5rem 1rem;
+                width: 100%;
+            }
+
+            footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: var(--space-lg);
+                color: var(--color-text-light);
+                border-top: 1px solid var(--color-border);
+                max-width: var(--max-width);
+                margin: 0 auto;
+                width: 100%;
+            }
+
+            footer p {
+                margin: 0;
+                font-size: var(--font-sm);
+            }
+
+            footer nav {
+                display: flex;
+                gap: var(--space-lg);
+                margin: 0;
+                padding: 0;
+                border: none;
+            }
+
+            footer nav a {
+                color: var(--color-text-light);
+                text-decoration: none;
+                font-size: var(--font-sm);
+            }
+
+            footer nav a:hover {
+                opacity: 0.7;
             }
 
             .container {
@@ -98,32 +187,83 @@ const user = Astro.locals.user;
                 margin: 0 auto;
             }
 
-            header {
-                margin-bottom: var(--space-sm);
+            .meta {
+                color: var(--color-text-light);
+                font-size: var(--font-base);
             }
 
-            header h1 {
-                font-size: var(--font-2xl);
-                margin-bottom: var(--space-xs);
+            /* hamburger menu styles */
+            .hamburger-menu {
+                position: relative;
+                z-index: 1000;
             }
 
-            nav {
-                display: flex;
-                gap: var(--space-lg);
+            .menu-toggle {
+                display: none;
             }
 
-            nav a {
-                color: var(--color-primary);
-                text-decoration: none;
+            .menu-icon {
+                font-size: 1.25rem;
+                line-height: 1;
+                user-select: none;
+                cursor: pointer;
+                display: block;
+                padding: 0.5rem;
             }
 
-            nav a:hover {
-                text-decoration: underline;
+            .menu-icon-open {
+                display: inline-block;
             }
 
-            nav a.active {
-                font-weight: bold;
+            .menu-icon-close {
+                display: none;
+            }
+
+            .menu-dropdown {
+                position: absolute;
+                top: 100%;
+                right: 0;
+                margin-top: 8px;
+                background: white;
+                border: 1px solid var(--color-border-dark);
+                border-radius: var(--border-radius);
+                min-width: 150px;
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(-10px);
+                transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            .menu-toggle:checked ~ .menu-dropdown {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+            }
+
+            .menu-toggle:checked ~ .menu-icon .menu-icon-open {
+                display: none;
+            }
+
+            .menu-toggle:checked ~ .menu-icon .menu-icon-close {
+                display: inline-block;
+            }
+
+            .menu-dropdown a {
+                display: block;
+                padding: 12px 16px;
                 color: var(--color-text);
+                text-decoration: none;
+                font-size: 0.9rem;
+                border-bottom: 1px solid var(--color-border);
+            }
+
+            .menu-dropdown a:last-child {
+                border-bottom: none;
+            }
+
+            .menu-dropdown a:hover {
+                background: var(--color-bg-light);
             }
 
             .issue-list {
@@ -875,30 +1015,24 @@ const user = Astro.locals.user;
         </style>
     </head>
     <body>
-        <div class="container">
-            <header>
-                <h1>beadster</h1>
-                <nav>
-                    <a href="/">issues</a>
-                    <a href="/sources">projects</a>
-                    <a href="/sessions">sessions</a>
-                    {
-                        user ? (
-                            <span style="margin-left: auto;">
-                                {user.name || user.github_login} |{" "}
-                                <a href="/api/auth/sign-out">sign out</a>
-                            </span>
-                        ) : (
-                            <a href="/login" style="margin-left: auto;">
-                                sign in
-                            </a>
-                        )
-                    }
-                </nav>
-            </header>
-            <main>
-                <slot />
-            </main>
-        </div>
+        <header>
+            <div class="header-wrapper">
+                <a href="/" class="logo-link">
+                    <Logo size={40} />
+                </a>
+                <HamburgerMenu />
+            </div>
+        </header>
+        <main class="content-wrapper">
+            <slot />
+        </main>
+        <footer>
+            <p>© 2025 beadster. all rights reserved.</p>
+            <nav>
+                <a href="/terms">terms</a>
+                <a href="/privacy">privacy</a>
+                <a href="/contact">contact</a>
+            </nav>
+        </footer>
     </body>
 </html>
