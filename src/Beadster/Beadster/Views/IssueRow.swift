@@ -50,6 +50,7 @@ struct IssueRowCompact: View {
                     .foregroundColor(issue.status == "closed" ? .green : .gray)
             }
             .buttonStyle(.plain)
+            .border(Color.cyan, width: 1) // DEBUG
 
             // Content based on view mode
             switch viewMode {
@@ -63,9 +64,11 @@ struct IssueRowCompact: View {
             }
 
             Spacer(minLength: 0)
+                .border(Color.orange, width: 1) // DEBUG
         }
         .padding(.horizontal, 12)
         .padding(.vertical, viewMode == .extended ? 8 : 6)
+        .border(Color.yellow, width: 2) // DEBUG
     }
 
     var simpleView: some View {
@@ -76,11 +79,15 @@ struct IssueRowCompact: View {
                     .font(.system(size: 13))
                     .strikethrough(issue.status == "closed")
                     .lineLimit(1)
+                    .border(Color.red, width: 1) // DEBUG
 
                 Spacer()
+                    .border(Color.blue, width: 1) // DEBUG
 
                 PriorityBadge(priority: issue.priority)
+                    .border(Color.green, width: 1) // DEBUG
             }
+            .border(Color.purple, width: 1) // DEBUG
 
             // Row 2: Description (optional)
             if let description = issue.body, !description.isEmpty {
@@ -115,11 +122,15 @@ struct IssueRowCompact: View {
                     .font(.system(size: 13))
                     .strikethrough(issue.status == "closed")
                     .lineLimit(1)
+                    .border(Color.red, width: 1) // DEBUG
 
                 Spacer()
+                    .border(Color.blue, width: 1) // DEBUG
 
                 PriorityBadge(priority: issue.priority)
+                    .border(Color.green, width: 1) // DEBUG
             }
+            .border(Color.purple, width: 1) // DEBUG
 
             // Row 2: Description (optional)
             if let description = issue.body, !description.isEmpty {
