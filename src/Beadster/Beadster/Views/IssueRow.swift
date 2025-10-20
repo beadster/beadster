@@ -139,6 +139,11 @@ struct IssueRowCompact: View {
 
             // Row 3: Metadata
             HStack(spacing: 8) {
+                // Project name (first label)
+                if let projectName = issue.projectName {
+                    ProjectNameBadge(projectName: projectName)
+                }
+
                 // Labels
                 if !issue.labels.isEmpty {
                     HStack(spacing: 4) {
@@ -203,6 +208,22 @@ struct PriorityBadge: View {
         case 3: return .blue
         default: return .gray
         }
+    }
+}
+
+// MARK: - Project Name Badge
+
+struct ProjectNameBadge: View {
+    let projectName: String
+
+    var body: some View {
+        Text(projectName)
+            .font(.system(size: 10, weight: .semibold))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .background(Color.purple.opacity(0.2))
+            .foregroundColor(.purple)
+            .cornerRadius(3)
     }
 }
 
