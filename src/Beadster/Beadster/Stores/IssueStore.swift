@@ -274,10 +274,15 @@ class IssueStore: ObservableObject {
 
         print("IssueStore: Updated issue status from '\(oldStatus)' to '\(updated.status)'")
 
-        // write back
+        // write back to JSONL (source of truth)
         print("IssueStore: Writing \(allIssues.count) issues back to JSONL")
         try JSONLManager.writeIssues(allIssues, to: projectURL)
         print("IssueStore: Successfully wrote to JSONL")
+
+        // rebuild SQLite cache from JSONL (keep in sync)
+        print("IssueStore: Rebuilding SQLite cache from JSONL...")
+        try await rebuildSQLiteFromJSONL(projectURL: projectURL, issues: allIssues)
+        print("IssueStore: SQLite cache rebuilt")
 
         // update local state
         await MainActor.run {

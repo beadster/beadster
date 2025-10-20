@@ -13,7 +13,7 @@ export interface Issue {
   title: string;
   body: string | null;
   status: string;
-  priority: string | null;
+  priority: number | null;
   labels: string | null;
   session_id: string | null;
   client: string | null;
@@ -269,7 +269,7 @@ export async function updateIssue(
   data: {
     title?: string;
     body?: string;
-    priority?: string;
+    priority?: number;
     status?: string;
   }
 ): Promise<void> {

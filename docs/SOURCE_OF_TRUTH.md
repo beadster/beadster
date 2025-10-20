@@ -47,22 +47,39 @@ this means both files stay in sync automatically.
 
 ## beadster macOS app approach
 
-current implementation matches bd architecture:
+macOS app is sandboxed and CANNOT execute bd CLI commands.
 
-### reading
-reads from `.beads/beads.db` for fast queries (IssueStore.swift:68-76)
+### reading (hybrid approach)
+
+1. reads baseline from `.beads/beadster.db` (bd CLI's SQLite cache)
+2. checks max `updated_at` timestamp from SQLite
+3. reads JSONL line-by-line for newer issues (updated_at > max)
+4. merges SQLite + JSONL changes into in-memory state
+
+this ensures app sees latest changes even if bd database is stale.
 
 ### writing
-writes directly to `.beads/issues.jsonl` (IssueStore.swift:165-289)
+
+writes directly to `.beads/issues.jsonl` only:
 - maintains source of truth
-- git sync works correctly
-- bd CLI will auto-import changes on next run
+- updates in-memory `IssueStore.issues` array immediately
+- does NOT update bd's SQLite database (sandboxed - cannot call bd CLI)
+- bd CLI will auto-import changes on next `bd list` run
+
+### why not write to SQLite?
+
+macOS app cannot rebuild bd's `.beads/beadster.db` because:
+- app is sandboxed (cannot execute bd CLI)
+- SQLite schema is owned by bd CLI
+- attempting to write could break bd CLI compatibility
+
+instead: write to JSONL (source of truth), let bd CLI rebuild its cache.
 
 ### sync behavior
-no need to manually trigger `bd import` because:
-- bd CLI auto-imports when JSONL is newer than DB
-- database is just a cache
-- JSONL is what gets committed to git
+
+- bd CLI auto-imports JSONL when newer than DB
+- macOS app reads hybrid (SQLite + JSONL merge)
+- both stay in sync through JSONL as shared source of truth
 
 ## beadster cloud sync extension
 
@@ -179,8 +196,8 @@ bd CLI:
   bd list/show          → auto-imports JSONL if newer → reads SQLite
 
 macOS app:
-  read operations       → reads SQLite (issues table)
-  write operations      → writes JSONL directly
+  read operations       → reads SQLite baseline + JSONL delta (hybrid merge)
+  write operations      → writes JSONL + updates in-memory array
 
 cloud sync:
   sync daemon           → reads SQLite (issues + beadster_sync tables)

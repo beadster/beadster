@@ -107,7 +107,7 @@ CREATE TABLE issues (
   title TEXT NOT NULL,
   body TEXT,
   status TEXT NOT NULL,
-  priority TEXT,
+  priority INTEGER,  -- 0 (P0), 1 (P1), 2 (P2)
   labels TEXT,  -- JSON array
 
   -- Session tracking (extracted from labels)

@@ -42,9 +42,9 @@ try {
         </div>
         <div class="header-right">
           <span class={`badge status ${issue.status}`}>{issue.status}</span>
-          {issue.priority && (
-            <span class={`badge priority p${issue.priority.replace('P', '')}`}>
-              {issue.priority}
+          {issue.priority !== null && (
+            <span class={`badge priority p${issue.priority}`}>
+              P{issue.priority}
             </span>
           )}
         </div>
