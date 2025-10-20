@@ -150,6 +150,7 @@ struct IssueDetailView: View {
                     }
                 }
                 .padding(.horizontal, 12)
+                .padding(.top, 12)
             }
         }
     }
