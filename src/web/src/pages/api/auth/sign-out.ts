@@ -1,27 +1,28 @@
 import type { APIRoute } from 'astro';
+import { createAuth } from '../../../lib/auth';
 
-export const prerender = false;
-
-export const GET: APIRoute = async ({ redirect, locals }) => {
+const handleSignout = async ({ locals, request }: any) => {
   const db = locals.runtime.env.DB;
   const secret = locals.runtime.env.BETTER_AUTH_SECRET;
+  const auth = createAuth(db, secret, locals.runtime.env);
 
-  // Call better-auth sign-out
-  const auth = (await import('../../../lib/auth')).createAuth(db, secret, locals.runtime.env);
-  await auth.api.signOut({ headers: {} } as any);
+  // Create a signout request
+  const signOutRequest = new Request(new URL('/api/auth/sign-out', request.url), {
+    method: 'POST',
+    headers: request.headers,
+  });
 
-  // Redirect to home
-  return redirect('/', 302);
+  // Call better-auth handler for signout
+  await auth.handler(signOutRequest);
+
+  // Redirect to home page
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: '/',
+    },
+  });
 };
 
-export const POST: APIRoute = async ({ redirect, locals }) => {
-  const db = locals.runtime.env.DB;
-  const secret = locals.runtime.env.BETTER_AUTH_SECRET;
-
-  // Call better-auth sign-out
-  const auth = (await import('../../../lib/auth')).createAuth(db, secret, locals.runtime.env);
-  await auth.api.signOut({ headers: {} } as any);
-
-  // Redirect to home
-  return redirect('/', 302);
-};
+export const GET: APIRoute = handleSignout;
+export const POST: APIRoute = handleSignout;
