@@ -22,7 +22,12 @@ struct BeadsterApp: App {
         .defaultSize(width: 400, height: 700)
         .windowResizability(.contentSize)
         .commands {
-            CommandGroup(replacing: .newItem) {}
+            CommandGroup(replacing: .newItem) {
+                Button("New Issue") {
+                    NotificationCenter.default.post(name: NSNotification.Name("NewIssueShortcut"), object: nil)
+                }
+                .keyboardShortcut("n", modifiers: .command)
+            }
         }
     }
 

@@ -12,9 +12,24 @@ struct AppHeader: View {
     @Binding var isPinned: Bool
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 4) {
             Spacer()
 
+            // New Issue button
+            Button(action: {
+                print("➕ New issue clicked!")
+                contentMode = .newIssue
+            }) {
+                Image(systemName: "plus")
+                    .font(.system(size: 13))
+                    .foregroundColor(.black.opacity(0.6))
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.plain)
+            .background(AppConfig.showDebugColors ? Color.green.opacity(0.5) : Color.clear)
+            .border(AppConfig.showDebugColors ? Color.green : Color.clear, width: 2)
+
+            // Settings button
             Button(action: {
                 print("⚙️  Gear icon clicked! Current mode: \(contentMode)")
                 contentMode = .settings
@@ -29,6 +44,7 @@ struct AppHeader: View {
             .background(AppConfig.showDebugColors ? Color.purple.opacity(0.5) : Color.clear)
             .border(AppConfig.showDebugColors ? Color.purple : Color.clear, width: 2)
 
+            // Pin button
             Button(action: {
                 isPinned.toggle()
                 print("📌 Pin clicked!")

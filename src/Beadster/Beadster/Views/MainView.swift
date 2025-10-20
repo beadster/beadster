@@ -76,6 +76,10 @@ struct MainView: View {
             // Persist project filter to AppStorage (empty string = "All")
             selectedProjectId = newValue ?? ""
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewIssueShortcut"))) { _ in
+            // CMD+N shortcut
+            contentMode = .newIssue
+        }
         .onChange(of: projectStore.projects.count) { oldCount, newCount in
             // When projects change, reload all issues
             if newCount > 0 {
@@ -108,6 +112,12 @@ struct MainView: View {
                 .environmentObject(projectStore)
             case .issueDetail(let issue):
                 IssueDetailView(issue: issue, issueStore: issueStore, contentMode: $contentMode)
+            case .newIssue:
+                NewIssueView(
+                    issueStore: issueStore,
+                    projectStore: projectStore,
+                    contentMode: $contentMode
+                )
             case .settings:
                 SettingsView(
                     projectStore: projectStore,

@@ -86,6 +86,7 @@ enum ContentMode: Equatable {
     case onboarding
     case issuesList
     case issueDetail(Issue)
+    case newIssue
     case settings
 }
 
