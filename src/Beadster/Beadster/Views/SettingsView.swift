@@ -16,7 +16,7 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(alignment: .leading, spacing: 24) {
                     if AppConfig.showAccountUI {
                         AccountSettings(authManager: authManager)
                     }
@@ -29,6 +29,7 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 10)
                 .padding(.top, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(Color.white)
         }
@@ -48,7 +49,6 @@ struct ProjectsSettings: View {
             if projectStore.projects.isEmpty {
                 Text("No projects registered")
                     .foregroundColor(.secondary)
-                    .padding(.horizontal)
             } else {
                 VStack(spacing: 0) {
                     ForEach(projectStore.projects) { project in

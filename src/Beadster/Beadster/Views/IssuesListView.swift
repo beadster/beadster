@@ -56,14 +56,30 @@ struct IssuesListView: View {
     }
 
     var emptyIssuesView: some View {
-        HStack {
-            Text("No issues")
-                .font(.body)
-                .foregroundColor(.secondary)
-            Spacer()
+        VStack(alignment: .leading, spacing: 12) {
+            if projectStore.projects.isEmpty {
+                Text("No issues, please add project")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+
+                Button(action: {
+                    projectStore.selectFolderToScan()
+                }) {
+                    HStack {
+                        Image(systemName: "folder.badge.plus")
+                        Text("Add Projects")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                Text("No issues")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
