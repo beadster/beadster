@@ -266,12 +266,11 @@ public struct Issue: Identifiable, Codable, Hashable {
 
         // Try String (ISO 8601)
         if let dateString = try? container.decode(String.self, forKey: key) {
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let date = formatter.date(from: dateString) {
-                return Int(date.timeIntervalSince1970)
+            if let timestamp = DateUtils.parseISO8601(from: dateString) {
+                return timestamp
             } else {
-                print("Issue: Failed to parse ISO8601 date string: \(dateString)")
+                print("Issue: Failed to parse ISO8601 date string for field '\(key.stringValue)': \(dateString)")
+                print("  String length: \(dateString.count), has Z: \(dateString.hasSuffix("Z")), has +: \(dateString.contains("+"))")
             }
         }
 
@@ -295,13 +294,10 @@ public struct Issue: Identifiable, Codable, Hashable {
         try container.encodeIfPresent(notes, forKey: .notes)
 
         // Encode timestamps as ISO 8601 strings
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-
-        try container.encode(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(createdAt))), forKey: .createdAt)
-        try container.encode(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(updatedAt))), forKey: .updatedAt)
+        try container.encode(DateUtils.formatISO8601(from: createdAt), forKey: .createdAt)
+        try container.encode(DateUtils.formatISO8601(from: updatedAt), forKey: .updatedAt)
         if let closedAt = closedAt {
-            try container.encode(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(closedAt))), forKey: .closedAt)
+            try container.encode(DateUtils.formatISO8601(from: closedAt), forKey: .closedAt)
         }
 
         try container.encodeIfPresent(sessionId, forKey: .sessionId)

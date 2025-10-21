@@ -264,19 +264,14 @@ public class BeadsDatabase {
         if components.count >= 3 {
             // Combine: "2025-10-17T22:19:13.718092+0200"
             let dateTimeStr = "\(components[0])T\(components[1])\(components[2])"
-
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds, .withTimeZone]
-            if let date = formatter.date(from: dateTimeStr) {
-                return Int(date.timeIntervalSince1970)
+            if let timestamp = DateUtils.parseISO8601(from: dateTimeStr) {
+                return timestamp
             }
         }
 
         // Fallback: try standard ISO8601
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: dateStr) {
-            return Int(date.timeIntervalSince1970)
+        if let timestamp = DateUtils.parseISO8601(from: dateStr) {
+            return timestamp
         }
 
         // Last fallback: return current time

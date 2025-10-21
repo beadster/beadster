@@ -57,6 +57,9 @@ struct MainView: View {
         .background(WindowAccessor(isHovering: $isHoveringWindow, alwaysShow: true, isPinned: $isPinned))
         .edgesIgnoringSafeArea(.top)
         .onAppear {
+            // Set issueStore reference in SyncDaemon
+            SyncDaemon.shared.issueStore = issueStore
+
             // Restore project filter from AppStorage
             issueStore.selectedProjectId = selectedProjectId.isEmpty ? nil : selectedProjectId
 

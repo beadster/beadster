@@ -25,17 +25,7 @@ class JSONLManager {
         print("JSONLManager: Found \(lines.count) lines")
 
         let decoder = JSONDecoder()
-        // use custom date formatter that handles timezone offset
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let container = try decoder.singleValueContainer()
-            let dateString = try container.decode(String.self)
-            if let date = dateFormatter.date(from: dateString) {
-                return date
-            }
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateString)")
-        }
+        // Issue model handles its own date decoding via DateUtils
 
         var issues: [Issue] = []
         for (index, line) in lines.enumerated() {
@@ -68,14 +58,7 @@ class JSONLManager {
         }
 
         let encoder = JSONEncoder()
-        // use ISO8601 format with fractional seconds and timezone offset
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        encoder.dateEncodingStrategy = .custom { date, encoder in
-            var container = encoder.singleValueContainer()
-            let dateString = dateFormatter.string(from: date)
-            try container.encode(dateString)
-        }
+        // Issue model handles its own date encoding via DateUtils
 
         let lines = try issues.map { issue in
             let data = try encoder.encode(issue)

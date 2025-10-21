@@ -35,6 +35,9 @@ class SyncDaemon: ObservableObject, FileSyncDelegate {
     // reference to ProjectStore to get latest project data
     weak var projectStore: ProjectStore?
 
+    // reference to IssueStore to reload issues when files change
+    weak var issueStore: IssueStore?
+
     private init() {
         // get hardware-based device ID
         deviceId = DeviceID.shared.getDeviceId()
@@ -116,11 +119,17 @@ class SyncDaemon: ObservableObject, FileSyncDelegate {
     func onFileChanged(project: ProjectInfo) async {
         lastLocalChangeDate = Date()
 
-        // Only sync to cloud if cloud mode is enabled
+        // Reload issues - this will read from database (which has latest changes)
+        print("File changed in \(project.name) - reloading issues")
+        if let issueStore = issueStore {
+            await issueStore.loadIssues(for: project)
+        }
+
+        // Sync to cloud if cloud mode is enabled
         if AppConfig.cloudSyncEnabled {
             await syncProject(project)
         } else {
-            print("File changed in \(project.name) - cloud sync disabled (local-only mode)")
+            print("Cloud sync disabled (local-only mode)")
         }
     }
 

@@ -62,14 +62,35 @@ class IssueStore: ObservableObject {
             projectURL.stopAccessingSecurityScopedResource()
         }
 
-        // HYBRID READ: SQLite baseline + JSONL delta
-        // This ensures we see latest changes even if bd database is stale
-        print("IssueStore: Reading from beads database (baseline)")
+        // Read from BOTH JSONL and database and merge
+        print("IssueStore: Reading from JSONL and database")
 
         do {
-            // Read ALL issues from JSONL (source of truth)
+            var loadedIssues: [Issue] = []
+
+            // Read from JSONL
             let jsonlIssues = try JSONLManager.readIssues(from: projectURL)
-            print("IssueStore: JSONL is source of truth - loaded \(jsonlIssues.count) issues")
+            print("IssueStore: Loaded \(jsonlIssues.count) issues from JSONL")
+
+            // Try to read from database
+            var dbIssues: [Issue] = []
+            if let dbURL = BeadsHelper.findDatabaseFile(in: projectURL) {
+                do {
+                    let db = BeadsDatabase(beadsDir: projectURL)
+                    try db.open()
+                    defer { db.close() }
+                    dbIssues = try db.getAllIssues()
+                    print("IssueStore: Loaded \(dbIssues.count) issues from database")
+                } catch {
+                    print("IssueStore: Could not load from database: \(error)")
+                }
+            } else {
+                print("IssueStore: No database found")
+            }
+
+            // Merge: JSONL + database issues (last write wins by updated_at)
+            loadedIssues = mergeIssues(jsonl: jsonlIssues, database: dbIssues, projectName: project.name)
+            print("IssueStore: Merged result: \(loadedIssues.count) total issues")
 
             // Try to load dependencies from database if it exists
             var localDependencies: [IssueDependency] = []
@@ -88,8 +109,16 @@ class IssueStore: ObservableObject {
             }
 
             await MainActor.run {
-                self.issues = jsonlIssues
-                self.dependencies = localDependencies
+                // Update only issues for this project, keep issues from other projects
+                let otherProjectIssues = self.issues.filter { $0.projectName != project.name }
+                self.issues = otherProjectIssues + loadedIssues
+                print("IssueStore: Updated issues - kept \(otherProjectIssues.count) from other projects, added \(loadedIssues.count) from \(project.name)")
+
+                // Update dependencies for this project
+                let otherProjectDeps = self.dependencies.filter { dep in
+                    !loadedIssues.contains(where: { $0.id == dep.issueId })
+                }
+                self.dependencies = otherProjectDeps + localDependencies
             }
         } catch {
             print("IssueStore: ERROR loading issues from JSONL: \(error)")
@@ -312,40 +341,60 @@ class IssueStore: ObservableObject {
 
         let projectURL = URL(fileURLWithPath: projectPath)
 
-        // read existing issues
-        print("IssueStore: Reading issues from JSONL at \(projectURL.path)")
-        var allIssues = try JSONLManager.readIssues(from: projectURL)
-        print("IssueStore: Read \(allIssues.count) issues from JSONL")
+        // Read from BOTH JSONL and database to find the issue
+        print("IssueStore: Reading from JSONL and database")
+        var jsonlIssues = try JSONLManager.readIssues(from: projectURL)
+        print("IssueStore: Read \(jsonlIssues.count) issues from JSONL")
 
-        // find the issue - if not found, try to pull from cloud first
-        var index = allIssues.firstIndex(where: { $0.id == issueId })
+        // Try to read from database
+        var dbIssues: [Issue] = []
+        if let dbURL = BeadsHelper.findDatabaseFile(in: projectURL) {
+            do {
+                let db = BeadsDatabase(beadsDir: projectURL)
+                try db.open()
+                defer { db.close() }
+                dbIssues = try db.getAllIssues()
+                print("IssueStore: Read \(dbIssues.count) issues from database")
+            } catch {
+                print("IssueStore: Could not read from database: \(error)")
+            }
+        }
 
-        if index == nil {
-            print("IssueStore: Issue \(issueId) not found in JSONL - attempting to pull from cloud")
+        // Try to find issue in JSONL first
+        var issueToUpdate: Issue?
+        var issueIndex: Int?
 
-            // try to fetch from cloud and add to local JSONL
+        if let index = jsonlIssues.firstIndex(where: { $0.id == issueId }) {
+            issueToUpdate = jsonlIssues[index]
+            issueIndex = index
+            print("IssueStore: Found issue in JSONL at index \(index)")
+        } else if let dbIssue = dbIssues.first(where: { $0.id == issueId }) {
+            // Found in database but not JSONL - add it to JSONL
+            print("IssueStore: Found issue in database but not JSONL - will add to JSONL")
+            issueToUpdate = dbIssue
+            jsonlIssues.append(dbIssue)
+            issueIndex = jsonlIssues.count - 1
+        } else {
+            // Not found in JSONL or database - try cloud
+            print("IssueStore: Issue not found in JSONL or database - attempting to pull from cloud")
             if let cloudIssue = try await fetchIssueFromCloud(issueId: issueId) {
                 print("IssueStore: Found issue in cloud, adding to local JSONL")
-                allIssues.append(cloudIssue)
-                index = allIssues.count - 1
-
-                // write to JSONL to persist the cloud issue locally
-                try JSONLManager.writeIssues(allIssues, to: projectURL)
-                print("IssueStore: Added cloud issue to JSONL")
+                issueToUpdate = cloudIssue
+                jsonlIssues.append(cloudIssue)
+                issueIndex = jsonlIssues.count - 1
             } else {
-                print("IssueStore: ERROR - Issue \(issueId) not found in JSONL or cloud")
+                print("IssueStore: ERROR - Issue \(issueId) not found in JSONL, database, or cloud")
                 throw IssueEditError.issueNotFound(issueId)
             }
         }
 
-        guard let issueIndex = index else {
+        guard let index = issueIndex, var updated = issueToUpdate else {
             print("IssueStore: ERROR - Issue \(issueId) not found")
             throw IssueEditError.issueNotFound(issueId)
         }
 
-        print("IssueStore: Found issue at index \(issueIndex)")
+        print("IssueStore: Found issue at index \(index)")
 
-        var updated = allIssues[issueIndex]
         let oldStatus = updated.status
 
         if let title = title {
@@ -365,13 +414,13 @@ class IssueStore: ObservableObject {
         }
         updated.updatedAt = Int(Date().timeIntervalSince1970)
 
-        allIssues[issueIndex] = updated
+        jsonlIssues[index] = updated
 
         print("IssueStore: Updated issue status from '\(oldStatus)' to '\(updated.status)'")
 
         // write back to JSONL (source of truth)
-        print("IssueStore: Writing \(allIssues.count) issues back to JSONL")
-        try JSONLManager.writeIssues(allIssues, to: projectURL)
+        print("IssueStore: Writing \(jsonlIssues.count) issues back to JSONL")
+        try JSONLManager.writeIssues(jsonlIssues, to: projectURL)
         print("IssueStore: Successfully wrote to JSONL")
 
         // NOTE: We do NOT update bd's SQLite database here because:
@@ -530,6 +579,50 @@ class IssueStore: ObservableObject {
             }
 
         return (numbers.max() ?? 0) + 1
+    }
+
+    /// Merge issues from JSONL and database
+    /// Strategy: Take all unique issues, prefer newer version (by updated_at)
+    /// This handles cases where:
+    /// - bd create --no-auto-flush writes to db but not JSONL (db has new issue)
+    /// - git pull updates JSONL but not db (JSONL has new issue)
+    private func mergeIssues(jsonl: [Issue], database: [Issue], projectName: String) -> [Issue] {
+        var merged: [String: Issue] = [:]
+
+        // Add all JSONL issues first
+        for issue in jsonl {
+            merged[issue.id] = issue
+        }
+
+        // Add or override with database issues if they're newer
+        for dbIssue in database {
+            if let jsonlIssue = merged[dbIssue.id] {
+                // Both exist - compare timestamps and take newer
+                if dbIssue.updatedAt > jsonlIssue.updatedAt {
+                    print("IssueStore: Merge - db version of \(dbIssue.id) is newer (\(dbIssue.updatedAt) > \(jsonlIssue.updatedAt))")
+                    var issueWithProject = dbIssue
+                    issueWithProject.projectName = projectName
+                    merged[dbIssue.id] = issueWithProject
+                } else {
+                    print("IssueStore: Merge - jsonl version of \(dbIssue.id) is newer or same (\(jsonlIssue.updatedAt) >= \(dbIssue.updatedAt))")
+                }
+            } else {
+                // Only in database - add it
+                print("IssueStore: Merge - adding db-only issue \(dbIssue.id)")
+                var issueWithProject = dbIssue
+                issueWithProject.projectName = projectName
+                merged[dbIssue.id] = issueWithProject
+            }
+        }
+
+        // Ensure ALL merged issues have projectName set
+        return merged.values.map { issue in
+            var issueWithProject = issue
+            if issueWithProject.projectName == nil {
+                issueWithProject.projectName = projectName
+            }
+            return issueWithProject
+        }
     }
 }
 

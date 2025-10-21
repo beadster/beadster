@@ -26,12 +26,12 @@ struct OnboardingView: View {
                     Link("beads", destination: URL(string: "https://github.com/steveyegge/beads")!)
                         .font(.system(size: 13))
 
-                    Text(".")
-                        .font(.system(size: 13))
-                        .foregroundColor(.black.opacity(0.6))
+//                    Text(".")
+//                        .font(.system(size: 13))
+//                        .foregroundColor(.black.opacity(0.6))
                 }
 
-                Text("you can do:")
+                Text("you can:")
                     .font(.system(size: 13))
                     .foregroundColor(.black.opacity(0.6))
                     .padding(.top, 4)
