@@ -47,13 +47,12 @@ struct BeadsterApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Request notification permissions
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+        // Request notification permissions (optional - used for sync notifications)
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
             if granted {
-                print("✅ Notification permissions granted")
-            } else if let error = error {
-                print("❌ Notification permission error: \(error)")
+                print("Notification permissions granted")
             }
+            // Silently continue if not granted - notifications are optional
         }
     }
 }
