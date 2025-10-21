@@ -5,7 +5,7 @@ import Security
 public class KeychainManager {
     public static let shared = KeychainManager()
 
-    private let service = "com.systemoperator.beadster"
+    private let service = "ai.beadster.mac"
     private let apiKeyAccount = "api_key"
 
     private init() {}
