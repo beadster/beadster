@@ -35,9 +35,19 @@ enum BeadsHelper {
         return dbURL.path
     }
 
-    /// Check if a directory has a beads database
+    /// Check if a directory has a beads database or issues.jsonl
+    /// The .db file is a cache, issues.jsonl is the source of truth
     static func hasBeadsDatabase(at url: URL) -> Bool {
-        return findDatabaseFile(in: url) != nil
+        let beadsDir = url.appendingPathComponent(".beads")
+
+        // Check for .db file (cache) - preferred for fast queries
+        if findDatabaseFile(in: url) != nil {
+            return true
+        }
+
+        // Check for issues.jsonl (source of truth) - always works
+        let jsonlPath = beadsDir.appendingPathComponent("issues.jsonl")
+        return FileManager.default.fileExists(atPath: jsonlPath.path)
     }
 
     /// Get the project prefix from the database config
