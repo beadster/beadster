@@ -46,8 +46,8 @@ struct NewIssueView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
 
-                        TextField("Issue title", text: $title)
-                            .textFieldStyle(.plain)
+                        TextField("Enter issue title", text: $title)
+                            .textFieldStyle(.roundedBorder)
                             .font(.body)
                     }
 
@@ -57,10 +57,25 @@ struct NewIssueView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
 
-                        TextEditor(text: $description)
-                            .font(.body)
-                            .frame(minHeight: 100)
-                            .border(Color.gray.opacity(0.3))
+                        ZStack(alignment: .topLeading) {
+                            if description.isEmpty {
+                                Text("Enter issue description")
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 5)
+                                    .padding(.top, 8)
+                            }
+
+                            TextEditor(text: $description)
+                                .font(.body)
+                                .frame(minHeight: 100)
+                                .scrollContentBackground(.hidden)
+                                .background(.ultraThinMaterial)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                )
+                        }
                     }
 
                     // Priority
