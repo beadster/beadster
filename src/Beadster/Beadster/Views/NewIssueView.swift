@@ -70,7 +70,7 @@ struct NewIssueView: View {
                                 .font(.body)
                                 .frame(minHeight: 100)
                                 .scrollContentBackground(.hidden)
-                                .background(.ultraThinMaterial)
+                                .background(Color(nsColor: .textBackgroundColor))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 6)
                                         .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
