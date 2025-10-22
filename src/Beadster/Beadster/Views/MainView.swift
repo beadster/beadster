@@ -14,6 +14,7 @@ struct MainView: View {
     @StateObject private var projectStore = ProjectStore()
     @StateObject private var issueStore = IssueStore()
     @StateObject private var syncDaemon = SyncDaemon.shared
+    @Environment(\.colorScheme) var colorScheme
 
     @State private var isHoveringWindow = false
     @State private var selectedTab: AppTab = .openIssues
@@ -53,7 +54,7 @@ struct MainView: View {
                 .frame(height: LayoutConstants.footerHeight)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(colorScheme == .light ? Color.white : Color(nsColor: .windowBackgroundColor))
         .background(WindowAccessor(isHovering: $isHoveringWindow, alwaysShow: true, isPinned: $isPinned))
         .edgesIgnoringSafeArea(.top)
         .onAppear {

@@ -15,6 +15,7 @@ struct ContentHeader: View {
     @ObservedObject var issueStore: IssueStore
     @ObservedObject var projectStore: ProjectStore
     @FocusState.Binding var isSearchFocused: Bool
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         Group {
@@ -166,7 +167,7 @@ struct ContentHeader: View {
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(colorScheme == .light ? Color.white : Color(nsColor: .controlBackgroundColor))
                 .cornerRadius(6)
                 .shadow(color: Color.primary.opacity(0.1), radius: 4, x: 0, y: 2)
                 .padding(.horizontal, 10)
