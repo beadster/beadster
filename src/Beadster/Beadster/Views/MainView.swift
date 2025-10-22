@@ -53,7 +53,7 @@ struct MainView: View {
                 .frame(height: LayoutConstants.footerHeight)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.white)
+        .background(Color(nsColor: .windowBackgroundColor))
         .background(WindowAccessor(isHovering: $isHoveringWindow, alwaysShow: true, isPinned: $isPinned))
         .edgesIgnoringSafeArea(.top)
         .onAppear {

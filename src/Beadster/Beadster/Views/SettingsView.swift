@@ -31,7 +31,6 @@ struct SettingsView: View {
                 .padding(.top, 12)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .background(Color.white)
         }
     }
 }

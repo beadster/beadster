@@ -53,7 +53,7 @@ struct ContentHeader: View {
                     }) {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 13))
-                            .foregroundColor(.black.opacity(0.6))
+                            .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -81,7 +81,7 @@ struct ContentHeader: View {
                             .padding(.horizontal, 4)
                             .padding(.vertical, 4)
                             .background(selectedTab == tab ? Color.blue.opacity(0.2) : Color.clear)
-                            .foregroundColor(selectedTab == tab ? .blue : .black.opacity(0.6))
+                            .foregroundColor(selectedTab == tab ? .blue : .secondary)
                             .cornerRadius(4)
                     }
                     .buttonStyle(.plain)
@@ -109,7 +109,7 @@ struct ContentHeader: View {
                         .font(.system(size: 11))
                         .padding(.horizontal, 4)
                         .padding(.vertical, 4)
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.secondary)
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
@@ -130,7 +130,7 @@ struct ContentHeader: View {
                             .padding(.horizontal, 4)
                             .padding(.vertical, 3)
                             .background(viewMode == mode ? Color.blue.opacity(0.2) : Color.clear)
-                            .foregroundColor(viewMode == mode ? .blue : .black.opacity(0.6))
+                            .foregroundColor(viewMode == mode ? .blue : .secondary)
                             .cornerRadius(4)
                     }
                     .buttonStyle(.plain)
@@ -166,9 +166,9 @@ struct ContentHeader: View {
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(Color.white)
+                .background(Color(nsColor: .controlBackgroundColor))
                 .cornerRadius(6)
-                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                .shadow(color: Color.primary.opacity(0.1), radius: 4, x: 0, y: 2)
                 .padding(.horizontal, 10)
                 .onAppear {
                     isSearchFocused = true

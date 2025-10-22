@@ -15,46 +15,46 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 20) {
             Text("welcome to beadster")
                 .font(.system(size: 18, weight: .medium))
-                .foregroundColor(.black.opacity(0.9))
+                .foregroundColor(.secondary)
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 4) {
                     Text("beadster is native macOS client for")
                         .font(.system(size: 13))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.secondary)
 
                     Link("beads", destination: URL(string: "https://github.com/steveyegge/beads")!)
                         .font(.system(size: 13))
 
 //                    Text(".")
 //                        .font(.system(size: 13))
-//                        .foregroundColor(.black.opacity(0.6))
+//                        .foregroundColor(.secondary)
                 }
 
                 Text("you can:")
                     .font(.system(size: 13))
-                    .foregroundColor(.black.opacity(0.6))
+                    .foregroundColor(.secondary)
                     .padding(.top, 4)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("- view beads tasks from different projects")
                         .font(.system(size: 13))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.secondary)
                     Text("- complete tasks and edit tasks")
                         .font(.system(size: 13))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.secondary)
                     Text("- create new tasks")
                         .font(.system(size: 13))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.secondary)
                     Text("- search tasks across all the projects")
                         .font(.system(size: 13))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.secondary)
                 }
 
                 HStack(spacing: 4) {
                     Text("read more")
                         .font(.system(size: 13))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.secondary)
 
                     Link("here", destination: URL(string: "https://beadster.ai/")!)
                         .font(.system(size: 13))

@@ -33,11 +33,11 @@ struct AppFooter: View {
                         if let issueId = syncDaemon.currentSyncingIssueId {
                             Text("issue \(issueId)")
                                 .font(.system(size: 9))
-                                .foregroundColor(.black.opacity(0.6))
+                                .foregroundColor(.secondary)
                         } else {
                             Text("cloud")
                                 .font(.system(size: 9))
-                                .foregroundColor(.black.opacity(0.6))
+                                .foregroundColor(.secondary)
                         }
                     } else if let error = syncDaemon.syncError {
                         // Error badge
@@ -55,7 +55,7 @@ struct AppFooter: View {
 
                         Text(error)
                             .font(.system(size: 9))
-                            .foregroundColor(.black.opacity(0.6))
+                            .foregroundColor(.secondary)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     } else if let lastSync = syncDaemon.lastSyncDate {
@@ -74,7 +74,7 @@ struct AppFooter: View {
 
                         Text("\(lastSync.formatted(.relative(presentation: .named)))")
                             .font(.system(size: 9))
-                            .foregroundColor(.black.opacity(0.6))
+                            .foregroundColor(.secondary)
                     } else {
                         // No sync yet
                         HStack(spacing: 4) {
@@ -111,12 +111,12 @@ struct AppFooter: View {
 
                     Text("\(syncDaemon.watchedProjectsCount) project\(syncDaemon.watchedProjectsCount == 1 ? "" : "s")")
                         .font(.system(size: 9))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.secondary)
 
                     if let lastChange = syncDaemon.lastLocalChangeDate {
                         Text("• changed \(lastChange.formatted(.relative(presentation: .named)))")
                             .font(.system(size: 9))
-                            .foregroundColor(.black.opacity(0.5))
+                            .foregroundColor(.secondary)
                     }
                 } else {
                     HStack(spacing: 4) {

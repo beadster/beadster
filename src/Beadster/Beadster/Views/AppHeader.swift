@@ -22,7 +22,7 @@ struct AppHeader: View {
             }) {
                 Image(systemName: "plus")
                     .font(.system(size: 13))
-                    .foregroundColor(.black.opacity(0.6))
+                    .foregroundColor(.secondary)
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
@@ -37,7 +37,7 @@ struct AppHeader: View {
             }) {
                 Image(systemName: "gearshape")
                     .font(.system(size: 13))
-                    .foregroundColor(.black.opacity(0.6))
+                    .foregroundColor(.secondary)
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
@@ -51,7 +51,7 @@ struct AppHeader: View {
             }) {
                 Image(systemName: isPinned ? "pin.fill" : "pin")
                     .font(.system(size: 13))
-                    .foregroundColor(.black.opacity(0.6))
+                    .foregroundColor(.secondary)
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
@@ -67,7 +67,7 @@ struct AppHeader: View {
             AppConfig.showDebugColors ? AnyView(
                 Text("H:\(LayoutConstants.appHeaderHeight)")
                     .font(.system(size: 8))
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
                     .position(x: 200, y: 14)
             ) : AnyView(EmptyView())
         )
