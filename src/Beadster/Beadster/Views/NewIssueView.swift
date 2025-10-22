@@ -62,13 +62,14 @@ struct NewIssueView: View {
                                 Text("Enter issue description")
                                     .font(.body)
                                     .foregroundColor(.secondary)
-                                    .padding(.horizontal, 5)
-                                    .padding(.top, 8)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
                             }
 
                             TextEditor(text: $description)
                                 .font(.body)
                                 .frame(minHeight: 100)
+                                .padding(4)
                                 .scrollContentBackground(.hidden)
                                 .background(Color(nsColor: .textBackgroundColor))
                                 .overlay(
