@@ -122,6 +122,9 @@ CREATE TABLE issues (
   git_commit_hash TEXT,   -- commit hash when created
   git_is_dirty INTEGER DEFAULT 0,  -- had uncommitted changes
 
+  -- External reference for hybrid workflows (GitHub, Jira, Linear, etc)
+  external_ref TEXT,      -- e.g. github:owner/repo:issue-id
+
   -- Sync
   synced_at INTEGER,
 
@@ -140,6 +143,7 @@ CREATE INDEX idx_issues_status ON issues(status);
 CREATE INDEX idx_issues_session ON issues(session_id);
 CREATE INDEX idx_issues_client ON issues(client);
 CREATE INDEX idx_issues_git_repo ON issues(git_repo_url);
+CREATE INDEX idx_issues_external_ref ON issues(external_ref);
 
 -- Ensure beads_id is unique per source
 CREATE UNIQUE INDEX idx_issues_source_beads_id ON issues(source_id, beads_id);

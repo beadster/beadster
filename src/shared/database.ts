@@ -43,6 +43,7 @@ export interface Issue {
   session_id: string | null;
   client: string | null;
   project_name: string | null;
+  external_ref: string | null;
   created_at: number;
   updated_at: number;
   closed_at: number | null;
