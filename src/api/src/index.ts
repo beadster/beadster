@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { ulid } from 'ulid';
+import { generateId } from '@systemoperator/common/id';
+import { now } from '@systemoperator/common/dates';
 import { createAuth } from './lib/auth';
 import type { Auth } from './lib/auth';
 
@@ -72,13 +73,13 @@ app.post('/v1/auth/register', async (c) => {
 
   const userId = crypto.randomUUID();
   const apiKey = crypto.randomUUID();
-  const now = Date.now();
+  const timestamp = now();
 
   try {
     await c.env.DB.prepare(`
       INSERT INTO users (id, email, api_key, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
-    `).bind(userId, email, apiKey, now, now).run();
+    `).bind(userId, email, apiKey, timestamp, timestamp).run();
 
     return c.json({
       user_id: userId,
@@ -114,9 +115,9 @@ app.post('/v1/sync/push', async (c) => {
   const { source, issues, device_id, client } = await c.req.json();
   console.log('Push request:', JSON.stringify({ source, issueCount: issues.length, firstIssue: issues[0] }));
 
-  const syncLogId = ulid();
-  const startTime = Date.now();
-  const now = startTime;
+  const syncLogId = generateId();
+  const startTime = now();
+  const timestamp = startTime;
 
   let createdCount = 0;
   let updatedCount = 0;
@@ -140,9 +141,9 @@ app.post('/v1/sync/push', async (c) => {
       source.path,
       source.git_repo_url || null,
       source.git_current_branch || null,
-      now,
-      now,
-      now
+      timestamp,
+      timestamp,
+      timestamp
     ).run();
 
     // Upsert issues
@@ -178,7 +179,7 @@ app.post('/v1/sync/push', async (c) => {
           issue.session_id || null,
           issue.client || null,
           issue.project_name || null,
-          now,
+          timestamp,
           issue.updated_at,
           source.id,
           issue.beads_id
@@ -212,7 +213,7 @@ app.post('/v1/sync/push', async (c) => {
           issue.git_branch || null,
           issue.git_commit_hash || null,
           issue.git_is_dirty ? 1 : 0,
-          now,
+          timestamp,
           issue.created_at,
           issue.updated_at
         ).run();
@@ -240,13 +241,13 @@ app.post('/v1/sync/push', async (c) => {
           issue.project_name || null,
           issue.created_at,
           issue.created_at,
-          now,
-          now
+          timestamp,
+          timestamp
         ).run();
       }
     }
 
-    const completedAt = Date.now();
+    const completedAt = now();
     const duration = completedAt - startTime;
 
     // Log successful sync
@@ -279,7 +280,7 @@ app.post('/v1/sync/push', async (c) => {
 
     return c.json({ synced: issues.length, sync_log_id: syncLogId });
   } catch (error: any) {
-    const completedAt = Date.now();
+    const completedAt = now();
     const duration = completedAt - startTime;
 
     // Log failed sync
@@ -329,8 +330,8 @@ app.get('/v1/sync/pull', async (c) => {
     return c.json({ error: 'source_id required' }, 400);
   }
 
-  const syncLogId = ulid();
-  const startTime = Date.now();
+  const syncLogId = generateId();
+  const startTime = now();
 
   try {
     const changes = await c.env.DB.prepare(`
@@ -345,7 +346,7 @@ app.get('/v1/sync/pull', async (c) => {
       labels: issue.labels ? JSON.parse(issue.labels) : []
     }));
 
-    const completedAt = Date.now();
+    const completedAt = now();
     const duration = completedAt - startTime;
     const issueIds = parsedIssues.map((issue: any) => issue.id);
 
@@ -376,7 +377,7 @@ app.get('/v1/sync/pull', async (c) => {
 
     return c.json(parsedIssues);
   } catch (error: any) {
-    const completedAt = Date.now();
+    const completedAt = now();
     const duration = completedAt - startTime;
 
     // Log failed pull
@@ -575,7 +576,7 @@ app.post('/v1/devices/register', async (c) => {
   }
 
   const { device_id, hardware_uuid, device_name, device_type, platform, platform_version } = await c.req.json();
-  const now = Date.now();
+  const timestamp = now();
 
   // Check if device exists
   const existing = await c.env.DB.prepare(`
@@ -588,7 +589,7 @@ app.post('/v1/devices/register', async (c) => {
       UPDATE devices
       SET last_seen = ?, device_name = ?, platform_version = ?
       WHERE id = ?
-    `).bind(now, device_name, platform_version, existing.id).run();
+    `).bind(timestamp, device_name, platform_version, existing.id).run();
 
     return c.json({ device_id: existing.id });
   }
@@ -608,8 +609,8 @@ app.post('/v1/devices/register', async (c) => {
     device_type,
     platform,
     platform_version,
-    now,
-    now
+    timestamp,
+    timestamp
   ).run();
 
   return c.json({ device_id });
@@ -624,7 +625,7 @@ app.post('/v1/device-tracking/record', async (c) => {
   }
 
   const { issue_id, device_id, client } = await c.req.json();
-  const now = Date.now();
+  const timestamp = now();
 
   // Upsert tracking record
   await c.env.DB.prepare(`
@@ -632,7 +633,7 @@ app.post('/v1/device-tracking/record', async (c) => {
     VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(issue_id, device_id) DO UPDATE SET
       last_seen = excluded.last_seen
-  `).bind(issue_id, device_id, client, now, now).run();
+  `).bind(issue_id, device_id, client, timestamp, timestamp).run();
 
   return c.json({ success: true });
 });
@@ -839,10 +840,10 @@ app.get('/v1/sync-stats', async (c) => {
     if (match) {
       const value = parseInt(match[1]);
       const unit = match[2];
-      const now = Date.now();
-      if (unit === 'd') sinceTimestamp = now - (value * 24 * 60 * 60 * 1000);
-      if (unit === 'h') sinceTimestamp = now - (value * 60 * 60 * 1000);
-      if (unit === 'm') sinceTimestamp = now - (value * 60 * 1000);
+      const currentTime = now();
+      if (unit === 'd') sinceTimestamp = currentTime - (value * 24 * 60 * 60 * 1000);
+      if (unit === 'h') sinceTimestamp = currentTime - (value * 60 * 60 * 1000);
+      if (unit === 'm') sinceTimestamp = currentTime - (value * 60 * 1000);
     }
   }
 

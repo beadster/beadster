@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
-import { createD1Adapter } from './d1-adapter';
-import { generateId } from './id';
+import { createD1Adapter } from '@systemoperator/common/lib/d1-adapter';
+import { generateId } from '@systemoperator/common/id';
 import type { D1Database } from '@cloudflare/workers-types';
 
 export function createAuth(

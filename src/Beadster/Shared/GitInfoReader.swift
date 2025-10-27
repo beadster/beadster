@@ -1,5 +1,6 @@
 import Foundation
 
+
 /// Helper to read git information by parsing .git files directly (sandbox-safe)
 public class GitInfoReader {
 

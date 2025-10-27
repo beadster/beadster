@@ -1,11 +1,7 @@
 import { betterAuth } from 'better-auth';
 import type { D1Database } from '@cloudflare/workers-types';
-import { configureTimestampFormat } from '@systemoperator/common/dates';
 import { createD1Adapter } from '@systemoperator/common/lib/d1-adapter';
 import { generateId } from '@systemoperator/common/id';
-
-// Configure timestamp format for beadster (seconds - matches bd tool)
-configureTimestampFormat('seconds');
 
 export function createAuth(db: D1Database, secret?: string, env?: any) {
 	return betterAuth({
