@@ -75,45 +75,86 @@ dynamic viewing and importing of GitHub repos with beads
 **effort:** 2 days (completed)
 **impact:** very high - core web feature
 
-## in progress
+5. **private repo import**
+   - route: /settings/import
+   - OAuth scope expansion to include 'repo' access
+   - uses user's GitHub token for private repo access
+   - API endpoint: POST /api/import/github-private
+   - fetches .beads/issues.jsonl from private repos
+   - same smart matching as public import
+   - connection status checking and guidance
 
-### 🔨 priority 3: GitHub Actions integration (NEXT)
+### ✅ priority 3: GitHub Actions integration (COMPLETED)
 
 CI/CD integration for automated sync
 
-**planned features:**
+**features implemented:**
 
-1. **GitHub Action repository**
-   - create systemoperator/beadster-sync-action
-   - TypeScript implementation
-   - publish to GitHub Marketplace
-
-2. **API token system**
-   - create api_tokens table
-   - token format: bst_xxxxxxxx
+1. **API token system**
+   - api_tokens table with scopes, expiry
+   - token format: bst_xxxxxxxx (32 chars)
    - scopes: sync, read, admin
-   - token management UI in settings
-   - usage tracking and audit logs
+   - token management UI at /settings/tokens
+   - usage tracking via api_token_usage table
 
-3. **sync API endpoints**
-   - POST /api/tokens - create token
-   - GET /api/tokens - list tokens
+2. **sync API endpoints**
+   - POST /api/tokens - create token with scopes
+   - GET /api/tokens - list user's tokens
    - DELETE /api/tokens/:id - revoke token
    - POST /api/sources/:id/sync - batch sync issues
+   - Bearer token authentication
 
-4. **action features**
-   - sync on push, schedule, or workflow_dispatch
-   - configurable beads path
-   - fail on error option
-   - outputs: synced count, source_id
+3. **token management UI**
+   - create tokens with custom scopes
+   - set expiration (30/90/365 days or never)
+   - view usage statistics
+   - one-time token display on creation
+   - revoke tokens
 
-**status:** ready to implement
-**effort:** 5-7 days (estimated)
+4. **comprehensive documentation**
+   - complete setup guide in GITHUB_ACTIONS_PLAN.md
+   - example workflow configurations
+   - troubleshooting section
+
+**effort:** 3 days (completed)
 **impact:** high - enables CI/CD workflows
+
+### ✅ priority 4-8: UI enhancements (COMPLETED)
+
+**filtering UI:**
+- search filter (title/body with SQL LIKE)
+- issue_type filter (bug, feature, task, epic, chore)
+- assignee filter (@me, unassigned)
+- active filter tags display
+- clear filters button
+
+**external_ref display:**
+- parse and display external_ref as badges
+- support GitHub, Jira, Linear formats
+- clickable links to external systems
+- color-coded by platform
+
+**git context display:**
+- repository badge with filter link
+- branch badge
+- issue_type badge
+- assignee badge
+
+**assignee support:**
+- assignee field in create form
+- filter by assignee
+- display assignee badges
+
+**effort:** 1 day (completed)
+**impact:** medium - better user experience
+
+## in progress
+
+nothing currently in progress - all priority features completed!
 
 ## planned (not started)
 
-### priority 4: label filtering (AND/OR semantics)
+### priority 9: label filtering (AND/OR semantics)
 
 match beads CLI behavior with advanced filtering
 
@@ -126,7 +167,7 @@ match beads CLI behavior with advanced filtering
 **effort:** 1 day (estimated)
 **impact:** medium - power user feature
 
-### priority 5: dependencies support
+### priority 10: dependencies support
 
 issue dependency tracking and visualization
 
@@ -140,7 +181,7 @@ issue dependency tracking and visualization
 **effort:** 10-15 days (estimated)
 **impact:** very high - complex but powerful feature
 
-### priority 6: merge/duplicates
+### priority 11: merge/duplicates
 
 duplicate detection and merging
 
@@ -159,8 +200,12 @@ duplicate detection and merging
 | feature | macOS app | web | status |
 |---------|-----------|-----|--------|
 | external_ref | ✅ | ✅ | completed |
-| GitHub import | ❌ | ✅ | completed |
-| GitHub Actions | ❌ | 🔨 | in progress |
+| GitHub import (public) | ❌ | ✅ | completed |
+| GitHub import (private) | ❌ | ✅ | completed |
+| GitHub Actions | ❌ | ✅ | completed |
+| filtering UI | ❌ | ✅ | completed |
+| external_ref display | ❌ | ✅ | completed |
+| assignee support | ❌ | ✅ | completed |
 | label AND/OR | ⏳ | ⏳ | planned |
 | dependencies | ⏳ | ⏳ | planned |
 | merge/duplicates | ❌ | ⏳ | planned |
@@ -185,14 +230,13 @@ these features require bd CLI and won't be implemented in beadster:
 ## next steps
 
 1. ✅ ~~implement external_ref support~~
-2. ✅ ~~implement GitHub import~~
-3. 🔨 implement GitHub Actions integration (current)
-   - create action repository
-   - implement token system
-   - add sync API endpoints
-   - test and publish
-4. implement label filtering (quick win)
-5. plan dependencies support (major feature)
+2. ✅ ~~implement GitHub import (public + private)~~
+3. ✅ ~~implement GitHub Actions integration~~
+4. ✅ ~~implement filtering UI enhancements~~
+5. ✅ ~~implement external_ref display~~
+6. ✅ ~~implement assignee support~~
+7. implement label filtering (quick win)
+8. plan dependencies support (major feature)
 
 ## deployment notes
 

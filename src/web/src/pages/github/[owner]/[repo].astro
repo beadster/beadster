@@ -168,12 +168,14 @@ function getStatusLabel(status: string): string {
             <input type="hidden" name="repo_url" value={`https://github.com/${owner}/${repo}`} />
             <button type="submit">import to my account</button>
           </form>
+          <p class="hint">for private repositories, use <a href="/settings/import">private import</a></p>
         </div>
       )}
 
       {!Astro.locals.user && (
         <div class="login-banner">
           <p>sign in to import this repository to your beadster account</p>
+          <p class="hint">for private repositories, use <a href="/settings/import">private import</a> after signing in</p>
           <a href="/login" class="btn-primary">sign in</a>
         </div>
       )}
@@ -389,6 +391,20 @@ function getStatusLabel(status: string): string {
 
   .import-banner p, .login-banner p {
     margin: 0 0 15px 0;
+  }
+
+  .hint {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .hint a {
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+
+  .hint a:hover {
+    text-decoration: underline;
   }
 
   .import-banner button, .btn-primary {
