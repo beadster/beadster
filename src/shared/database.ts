@@ -249,9 +249,11 @@ export async function createIssue(
     body?: string | null;
     status?: string;
     priority?: number;
+    issue_type?: string | null;
+    assignee?: string | null;
   }
 ): Promise<{ id: string; beads_id: string }> {
-  const { source_id, title, body, status, priority } = data;
+  const { source_id, title, body, status, priority, issue_type, assignee } = data;
 
   // Generate IDs
   const id = crypto.randomUUID();
@@ -278,10 +280,10 @@ export async function createIssue(
   const result = await db.prepare(`
     INSERT INTO issues (
       id, user_id, source_id, beads_id, title, body,
-      status, priority, labels,
+      status, priority, issue_type, assignee, labels,
       synced_at, created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     id,
     userId,
@@ -291,6 +293,8 @@ export async function createIssue(
     body || null,
     status || 'open',
     priority !== undefined ? String(Math.floor(priority)) : '1',
+    issue_type || null,
+    assignee || null,
     '[]',
     now,
     now,
