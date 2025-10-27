@@ -83,6 +83,9 @@ export async function getIssues(db: D1Database, userId: string, filters?: {
   source_id?: string;
   session_id?: string;
   git_repo_url?: string;
+  issue_type?: string;
+  assignee?: string;
+  search?: string;
 }): Promise<Issue[]> {
   let query = `
     SELECT
@@ -112,6 +115,22 @@ export async function getIssues(db: D1Database, userId: string, filters?: {
   if (filters?.git_repo_url) {
     query += ' AND i.git_repo_url = ?';
     params.push(filters.git_repo_url);
+  }
+
+  if (filters?.issue_type) {
+    query += ' AND i.issue_type = ?';
+    params.push(filters.issue_type);
+  }
+
+  if (filters?.assignee) {
+    query += ' AND i.assignee = ?';
+    params.push(filters.assignee);
+  }
+
+  if (filters?.search) {
+    query += ' AND (i.title LIKE ? OR i.body LIKE ?)';
+    const searchParam = `%${filters.search}%`;
+    params.push(searchParam, searchParam);
   }
 
   query += ' ORDER BY i.created_at DESC';

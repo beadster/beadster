@@ -7,8 +7,11 @@ const user = Astro.locals.user;
 let issues: any[] = [];
 let error: string | null = null;
 
-// Get query parameters
+// Get query parameters for filtering
 const repoUrl = Astro.url.searchParams.get('repo');
+const issueType = Astro.url.searchParams.get('type');
+const assignee = Astro.url.searchParams.get('assignee');
+const search = Astro.url.searchParams.get('search');
 
 // Get open issues using shared database module
 if (user) {
@@ -17,9 +20,11 @@ if (user) {
 
     if (db) {
       const filters: any = { status: 'open' };
-      if (repoUrl) {
-        filters.git_repo_url = repoUrl;
-      }
+      if (repoUrl) filters.git_repo_url = repoUrl;
+      if (issueType) filters.issue_type = issueType;
+      if (assignee) filters.assignee = assignee;
+      if (search) filters.search = search;
+
       issues = await getIssues(db, user.id, filters);
     } else {
       error = 'Database binding not available';
@@ -49,6 +54,37 @@ function getRepoName(url: string): string {
     return url;
   }
 }
+
+function parseExternalRef(ref: string | null): { platform: string; repoPath?: string; id: string; url?: string } | null {
+  if (!ref) return null;
+
+  // github:owner/repo:issue-id
+  const githubMatch = ref.match(/^github:([^:]+):(.+)$/);
+  if (githubMatch) {
+    return {
+      platform: 'GitHub',
+      repoPath: githubMatch[1],
+      id: githubMatch[2],
+      url: `https://github.com/${githubMatch[1]}`
+    };
+  }
+
+  // jira:PROJECT-123
+  const jiraMatch = ref.match(/^jira:(.+)$/);
+  if (jiraMatch) {
+    return { platform: 'Jira', id: jiraMatch[1] };
+  }
+
+  // linear:abc-123
+  const linearMatch = ref.match(/^linear:(.+)$/);
+  if (linearMatch) {
+    return { platform: 'Linear', id: linearMatch[1] };
+  }
+
+  return { platform: 'External', id: ref };
+}
+
+const hasFilters = repoUrl || issueType || assignee || search;
 ---
 
 <Layout title={user ? "issues" : "beadster - local-first issue tracker"}>
@@ -62,12 +98,16 @@ function getRepoName(url: string): string {
         <li>macOS native app</li>
         <li>iOS native app (coming soon)</li>
         <li>works with bd CLI tool</li>
-        <li>optional cloud sync across devices (coming soon)</li>
-        <li>native github integration (coming soon)</li>
+        <li>optional cloud sync across devices</li>
+        <li>GitHub integration - browse and import</li>
       </ul>
 
       <p style="margin-top:1rem;">
         <a href="/login" class="btn-primary">sign in with github</a>
+      </p>
+
+      <p style="margin-top:1rem;">
+        <a href="/github/steveyegge/beads" class="text-link">browse GitHub repos with beads →</a>
       </p>
 
       <p style="margin-top:2rem; color: #666;">
@@ -77,7 +117,7 @@ function getRepoName(url: string): string {
   ) : (
     <>
       <nav class="tabs">
-        <a href="/" class={!repoUrl ? "active" : ""}>open</a>
+        <a href="/" class={!hasFilters ? "active" : ""}>open</a>
         <a href="/all">all</a>
         <a href="/closed">closed</a>
         <a href="/labels">labels</a>
@@ -87,15 +127,54 @@ function getRepoName(url: string): string {
       </nav>
 
       <div class="header-row">
-        <h2>
-          {repoUrl ? `${getRepoName(repoUrl)} - open issues` : 'open issues'}
-        </h2>
+        <h2>open issues</h2>
         <div style="display: flex; gap: 10px; align-items: center;">
-          {repoUrl && (
-            <a href="/" class="btn-clear-filter">× clear filter</a>
+          {hasFilters && (
+            <a href="/" class="btn-clear-filter">× clear filters</a>
           )}
           <a href="/new" class="btn-new">+ new issue</a>
         </div>
+      </div>
+
+      <!-- Filters Bar -->
+      <div class="filters-bar">
+        <form class="filters-form" method="get">
+          <input
+            type="search"
+            name="search"
+            placeholder="search title or body..."
+            value={search || ''}
+            class="filter-search"
+          />
+
+          <select name="type" class="filter-select">
+            <option value="">all types</option>
+            <option value="bug" selected={issueType === 'bug'}>bug</option>
+            <option value="feature" selected={issueType === 'feature'}>feature</option>
+            <option value="task" selected={issueType === 'task'}>task</option>
+            <option value="epic" selected={issueType === 'epic'}>epic</option>
+            <option value="chore" selected={issueType === 'chore'}>chore</option>
+          </select>
+
+          <select name="assignee" class="filter-select">
+            <option value="">all assignees</option>
+            <option value="@me" selected={assignee === '@me'}>assigned to me</option>
+            <option value="unassigned" selected={assignee === 'unassigned'}>unassigned</option>
+          </select>
+
+          {repoUrl && <input type="hidden" name="repo" value={repoUrl} />}
+
+          <button type="submit" class="btn-filter">apply</button>
+        </form>
+
+        {hasFilters && (
+          <div class="active-filters">
+            {search && <span class="filter-tag">search: "{search}"</span>}
+            {issueType && <span class="filter-tag">type: {issueType}</span>}
+            {assignee && <span class="filter-tag">assignee: {assignee}</span>}
+            {repoUrl && <span class="filter-tag">repo: {getRepoName(repoUrl)}</span>}
+          </div>
+        )}
       </div>
 
       {error && (
@@ -106,13 +185,15 @@ function getRepoName(url: string): string {
 
       {!error && issues.length === 0 && (
         <div class="empty">
-          <p>no issues yet</p>
+          <p>{hasFilters ? 'no issues match your filters' : 'no issues yet'}</p>
         </div>
       )}
 
       {!error && issues.length > 0 && (
     <ul class="issue-list">
-      {issues.map(issue => (
+      {issues.map(issue => {
+        const externalRef = parseExternalRef(issue.external_ref);
+        return (
         <li class="issue-item">
           <div class="issue-header">
             <div>
@@ -130,31 +211,166 @@ function getRepoName(url: string): string {
                 P{issue.priority}
               </span>
             )}
-            {issue.session_id && (
-              <span class="badge session">
-                {issue.session_id.substring(0, 20)}...
-              </span>
+            {issue.issue_type && (
+              <span class="badge type-badge">{issue.issue_type}</span>
             )}
-            {issue.client && (
-              <span class="badge client">{issue.client}</span>
+            {externalRef && (
+              <a
+                href={externalRef.url || '#'}
+                class="badge external-ref-badge"
+                target={externalRef.url ? '_blank' : undefined}
+                rel={externalRef.url ? 'noopener' : undefined}
+                title={issue.external_ref}
+              >
+                {externalRef.platform}: {externalRef.id}
+              </a>
             )}
-            {issue.project_name && (
-              <span class="badge">{issue.project_name}</span>
+            {issue.git_repo_url && (
+              <a href={`/?repo=${encodeURIComponent(issue.git_repo_url)}`} class="badge repo-badge">
+                📦 {getRepoName(issue.git_repo_url)}
+              </a>
+            )}
+            {issue.assignee && (
+              <span class="badge assignee-badge">@{issue.assignee}</span>
+            )}
+            {issue.git_branch && (
+              <span class="badge branch-badge">🌿 {issue.git_branch}</span>
             )}
             <span>created {formatDate(issue.created_at)}</span>
           </div>
           {issue.body && (
-            <div style="margin-top: 8px; font-size: 14px; color: #666;">
-              {issue.body}
+            <div class="issue-body">
+              {issue.body.length > 200 ? issue.body.substring(0, 200) + '...' : issue.body}
             </div>
           )}
         </li>
-      ))}
+        );
+      })}
     </ul>
       )}
     </>
   )}
 </Layout>
+
+<style>
+  .filters-bar {
+    margin: 20px 0;
+    padding: 15px;
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 8px;
+  }
+
+  .filters-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .filter-search {
+    flex: 1;
+    min-width: 200px;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  .filter-select {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+  }
+
+  .btn-filter {
+    padding: 8px 20px;
+    background: var(--primary-color, #0066cc);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .btn-filter:hover {
+    opacity: 0.9;
+  }
+
+  .active-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  .filter-tag {
+    padding: 4px 10px;
+    background: white;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 4px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  .issue-body {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+  }
+
+  .type-badge {
+    background: #e3f2fd;
+    color: #1976d2;
+  }
+
+  .external-ref-badge {
+    background: #f3e5f5;
+    color: #7b1fa2;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .external-ref-badge:hover {
+    background: #e1bee7;
+  }
+
+  .repo-badge {
+    background: #e8f5e9;
+    color: #2e7d32;
+    text-decoration: none;
+  }
+
+  .repo-badge:hover {
+    background: #c8e6c9;
+  }
+
+  .assignee-badge {
+    background: #fff3e0;
+    color: #f57c00;
+  }
+
+  .branch-badge {
+    background: #fce4ec;
+    color: #c2185b;
+    font-size: 12px;
+  }
+
+  .btn-clear-filter {
+    padding: 8px 15px;
+    background: #f5f5f5;
+    color: #666;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  .btn-clear-filter:hover {
+    background: #e0e0e0;
+  }
+</style>
 
 {user && (
 <script>
