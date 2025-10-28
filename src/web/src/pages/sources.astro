@@ -63,12 +63,25 @@ function formatRelativeTime(timestamp: number): string {
           <div class="source-header">
             <h3 class="source-name">{source.name}</h3>
             <div class="source-badges">
+              {source.is_mirror === 1 ? (
+                <span class="badge mirror">🔄 mirror</span>
+              ) : (
+                <span class="badge owned">📝 owned</span>
+              )}
               <span class={`badge type ${source.type}`}>{source.type}</span>
             </div>
           </div>
 
           {source.path && (
             <div class="source-path">{source.path}</div>
+          )}
+
+          {source.git_repo_url && (
+            <div class="source-git-url">
+              <a href={source.git_repo_url} target="_blank" rel="noopener">
+                {source.git_repo_url}
+              </a>
+            </div>
           )}
 
           <div class="source-stats">
@@ -84,6 +97,12 @@ function formatRelativeTime(timestamp: number): string {
               <span class="stat-value">{source.last_issue_number || 0}</span>
               <span class="stat-label">last number</span>
             </div>
+            {source.is_mirror === 1 && source.auto_sync === 1 && (
+              <div class="stat">
+                <span class="stat-value">every {source.sync_interval_minutes}m</span>
+                <span class="stat-label">auto-sync</span>
+              </div>
+            )}
           </div>
 
           <div class="source-meta">
@@ -92,9 +111,189 @@ function formatRelativeTime(timestamp: number): string {
               <span>• last sync {formatRelativeTime(source.last_sync)}</span>
             )}
           </div>
+
+          {source.is_mirror !== 1 && (
+            <div class="source-actions">
+              <a href={`/new?source=${source.id}`} class="btn-primary-small">+ new issue</a>
+              <a href={`/?source=${source.id}`} class="btn-secondary-small">view issues</a>
+            </div>
+          )}
+
+          {source.is_mirror === 1 && (
+            <div class="source-actions">
+              <a href={`/?source=${source.id}`} class="btn-secondary-small">view issues</a>
+              <span class="read-only-notice">read-only mirror</span>
+            </div>
+          )}
         </li>
       ))}
     </ul>
   )}
 </Layout>
+
+<style>
+  .source-list {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+  }
+
+  .source-item {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    background: var(--bg-primary);
+  }
+
+  .source-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .source-name {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+  }
+
+  .source-badges {
+    display: flex;
+    gap: 8px;
+  }
+
+  .badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+
+  .badge.mirror {
+    background: #e3f2fd;
+    color: #1976d2;
+  }
+
+  .badge.owned {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  .badge.type {
+    background: #f5f5f5;
+    color: #666;
+  }
+
+  .source-path {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-family: monospace;
+    margin-bottom: 10px;
+  }
+
+  .source-git-url {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  .source-git-url a {
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+
+  .source-git-url a:hover {
+    text-decoration: underline;
+  }
+
+  .source-stats {
+    display: flex;
+    gap: 30px;
+    margin: 15px 0;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+
+  .source-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 10px;
+  }
+
+  .source-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .btn-primary-small, .btn-secondary-small {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    text-decoration: none;
+    display: inline-block;
+    cursor: pointer;
+  }
+
+  .btn-primary-small {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+  }
+
+  .btn-primary-small:hover {
+    opacity: 0.9;
+  }
+
+  .btn-secondary-small {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  }
+
+  .btn-secondary-small:hover {
+    background: var(--border-color);
+  }
+
+  .read-only-notice {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+  }
+
+  .error {
+    padding: 15px;
+    background: #ffebee;
+    border: 1px solid #f44336;
+    color: #c62828;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+</style>
 

@@ -81,12 +81,17 @@ CREATE TABLE sources (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
-  type TEXT NOT NULL,  -- 'local', 'virtual', 'inbox'
+  type TEXT NOT NULL,  -- 'local', 'virtual', 'inbox', 'github-mirror'
   path TEXT,
 
   -- Git repository info
   git_repo_url TEXT,      -- remote origin URL
   git_current_branch TEXT, -- current branch
+
+  -- Mirror settings
+  is_mirror INTEGER DEFAULT 0,  -- read-only mirror
+  auto_sync INTEGER DEFAULT 0,  -- enable auto-sync
+  sync_interval_minutes INTEGER DEFAULT 5,  -- sync frequency
 
   last_sync INTEGER,
   last_issue_number INTEGER DEFAULT 0,
