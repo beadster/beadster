@@ -43,7 +43,7 @@ struct ContentHeader: View {
     var issuesListHeader: some View {
         ZStack {
             // Main header content
-            HStack(spacing: 8) {
+            HStack(spacing: 4) {
                 // Search button (when not active)
                 if !showSearch {
                     Button(action: {

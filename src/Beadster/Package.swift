@@ -26,6 +26,13 @@ let package = Package(
             dependencies: ["Shared"],
             path: "CLI",
             sources: ["main.swift", "CLISyncDaemon.swift"]
+        ),
+
+        // Tests
+        .testTarget(
+            name: "SharedTests",
+            dependencies: ["Shared"],
+            path: "Tests/SharedTests"
         )
     ]
 )

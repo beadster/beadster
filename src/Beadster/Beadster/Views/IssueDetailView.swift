@@ -77,16 +77,99 @@ struct IssueDetailView: View {
 
                     Divider()
 
+                    // Metadata section
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let assignee = issue.assignee, !assignee.isEmpty {
+                            HStack {
+                                Text("Assignee:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(assignee)
+                                    .font(.caption)
+                            }
+                        }
+
+                        if let externalRef = issue.externalRef, !externalRef.isEmpty {
+                            HStack {
+                                Text("External Ref:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(externalRef)
+                                    .font(.caption.monospaced())
+                            }
+                        }
+
+                        if let estimatedMinutes = issue.estimatedMinutes {
+                            HStack {
+                                Text("Estimated:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("\(estimatedMinutes) min")
+                                    .font(.caption)
+                            }
+                        }
+
+                        if let closedAt = issue.closedAt {
+                            HStack {
+                                Text("Closed:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(Date(timeIntervalSince1970: TimeInterval(closedAt)).formatted(.relative(presentation: .named)))
+                                    .font(.caption)
+                            }
+                        }
+                    }
+
                     // Description
                     if let description = issue.body, !description.isEmpty {
-                        Text(description)
-                            .font(.body)
-                            .textSelection(.enabled)
-                    } else {
-                        Text("No description")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .italic()
+                        Divider()
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Description")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(description)
+                                .font(.body)
+                                .textSelection(.enabled)
+                        }
+                    }
+
+                    // Design
+                    if let design = issue.design, !design.isEmpty {
+                        Divider()
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Design")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(design)
+                                .font(.body)
+                                .textSelection(.enabled)
+                        }
+                    }
+
+                    // Acceptance Criteria
+                    if let acceptanceCriteria = issue.acceptanceCriteria, !acceptanceCriteria.isEmpty {
+                        Divider()
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Acceptance Criteria")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(acceptanceCriteria)
+                                .font(.body)
+                                .textSelection(.enabled)
+                        }
+                    }
+
+                    // Notes
+                    if let notes = issue.notes, !notes.isEmpty {
+                        Divider()
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Notes")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(notes)
+                                .font(.body)
+                                .textSelection(.enabled)
+                        }
                     }
 
                     // Dependencies

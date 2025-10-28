@@ -83,6 +83,16 @@ struct ProjectRow: View {
                     }
                     .buttonStyle(.plain)
                     .help(copiedProjectId == project.id ? "Copied!" : "Copy path")
+
+                    if let onRemove = onRemove {
+                        Button(action: onRemove) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Remove project")
+                    }
                 }
             }
         }

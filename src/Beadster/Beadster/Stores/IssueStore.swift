@@ -431,7 +431,10 @@ class IssueStore: ObservableObject {
         // update in-memory state for immediate UI feedback
         await MainActor.run {
             if let localIndex = self.issues.firstIndex(where: { $0.id == issueId }) {
-                self.issues[localIndex] = updated
+                self.objectWillChange.send()
+                var updatedIssues = self.issues
+                updatedIssues[localIndex] = updated
+                self.issues = updatedIssues
                 print("IssueStore: Updated in-memory state at index \(localIndex)")
             }
         }

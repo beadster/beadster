@@ -180,6 +180,20 @@ struct IssueRowCompact: View {
                     }
                 }
 
+                // Assignee
+                if let assignee = issue.assignee, !assignee.isEmpty {
+                    Text("@\(assignee)")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+                }
+
+                // External ref
+                if let externalRef = issue.externalRef, !externalRef.isEmpty {
+                    Text(externalRef)
+                        .font(.system(size: 9).monospaced())
+                        .foregroundColor(.secondary)
+                }
+
                 Spacer()
 
                 // Dates

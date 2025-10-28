@@ -91,9 +91,9 @@ public enum IssuePriority: Int, Codable, CaseIterable {
     public var description: String {
         switch self {
         case .p0: return "P0 - Critical"
-        case .p1: return "P1 - High"
-        case .p2: return "P2 - Normal"
-        case .p3: return "P3 - Low"
+        case .p1: return "P1 - Urgent"
+        case .p2: return "P2 - Medium"
+        case .p3: return "P3 - Lower"
         case .p4: return "P4 - Lowest"
         }
     }
@@ -145,6 +145,9 @@ public struct Issue: Identifiable, Codable, Hashable {
     // External reference (for hybrid workflows with Jira, GitHub, Linear, etc.)
     public var externalRef: String?
 
+    // Time estimation
+    public var estimatedMinutes: Int?
+
     // For sync compatibility
     public var beadsId: String { id } // local beads ID (bd-1, bd-2)
 
@@ -166,6 +169,7 @@ public struct Issue: Identifiable, Codable, Hashable {
         case gitCommitHash = "git_commit_hash"
         case gitIsDirty = "git_is_dirty"
         case externalRef = "external_ref"
+        case estimatedMinutes = "estimated_minutes"
     }
 
     public init(id: String, title: String, body: String?, status: String, priority: Int,
@@ -174,7 +178,7 @@ public struct Issue: Identifiable, Codable, Hashable {
          createdAt: Int, updatedAt: Int, closedAt: Int? = nil,
          sessionId: String? = nil, client: String? = nil, projectName: String? = nil,
          gitRepoUrl: String? = nil, gitBranch: String? = nil, gitCommitHash: String? = nil, gitIsDirty: Bool? = nil,
-         externalRef: String? = nil) {
+         externalRef: String? = nil, estimatedMinutes: Int? = nil) {
         self.id = id
         self.title = title
         self.body = body
@@ -197,6 +201,7 @@ public struct Issue: Identifiable, Codable, Hashable {
         self.gitCommitHash = gitCommitHash
         self.gitIsDirty = gitIsDirty
         self.externalRef = externalRef
+        self.estimatedMinutes = estimatedMinutes
     }
 
     public init(from decoder: Decoder) throws {
@@ -249,6 +254,9 @@ public struct Issue: Identifiable, Codable, Hashable {
 
         // External reference
         externalRef = try container.decodeIfPresent(String.self, forKey: .externalRef)
+
+        // Time estimation
+        estimatedMinutes = try container.decodeIfPresent(Int.self, forKey: .estimatedMinutes)
 
         // Labels can be JSON string or array
         if let labelsString = try? container.decode(String.self, forKey: .labels) {
@@ -317,6 +325,7 @@ public struct Issue: Identifiable, Codable, Hashable {
         try container.encodeIfPresent(gitCommitHash, forKey: .gitCommitHash)
         try container.encodeIfPresent(gitIsDirty, forKey: .gitIsDirty)
         try container.encodeIfPresent(externalRef, forKey: .externalRef)
+        try container.encodeIfPresent(estimatedMinutes, forKey: .estimatedMinutes)
     }
 }
 

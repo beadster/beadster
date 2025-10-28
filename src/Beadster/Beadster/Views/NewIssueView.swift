@@ -86,11 +86,9 @@ struct NewIssueView: View {
                             .foregroundColor(.secondary)
 
                         Picker("Priority", selection: $priority) {
-                            Text("P0 (Critical)").tag(0)
-                            Text("P1 (High)").tag(1)
-                            Text("P2 (Medium)").tag(2)
-                            Text("P3 (Low)").tag(3)
-                            Text("P4 (Backlog)").tag(4)
+                            ForEach(IssuePriority.allCases, id: \.self) { priorityCase in
+                                Text(priorityCase.description).tag(priorityCase.rawValue)
+                            }
                         }
                         .labelsHidden()
                     }
