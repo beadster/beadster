@@ -1,0 +1,10 @@
+---
+// Redirect to new URL structure: /{owner}/{repo}
+const { owner, repo } = Astro.params;
+
+if (!owner || !repo) {
+  return Astro.redirect('/');
+}
+
+return Astro.redirect(`/${owner}/${repo}`, 301);
+---

@@ -1,0 +1,425 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { fetchPublicBeads, fetchRepoInfo, checkRepoHasBeads } from '../../../lib/github';
+
+const { owner, repo } = Astro.params;
+
+if (!owner || !repo) {
+  return Astro.redirect('/');
+}
+
+let issues: any[] = [];
+let error: string | null = null;
+let repoInfo: any = null;
+let hasBeads = false;
+
+try {
+  // Check if repo has beads
+  hasBeads = await checkRepoHasBeads(owner, repo);
+
+  if (!hasBeads) {
+    error = 'this repository does not use beads';
+  } else {
+    // Fetch repository info
+    try {
+      repoInfo = await fetchRepoInfo(owner, repo);
+    } catch (e) {
+      console.error('failed to fetch repo info:', e);
+    }
+
+    // Fetch issues from beads
+    issues = await fetchPublicBeads(owner, repo);
+  }
+} catch (e) {
+  error = e instanceof Error ? e.message : String(e);
+}
+
+const openIssues = issues.filter(i => i.status !== 'closed');
+const closedIssues = issues.filter(i => i.status === 'closed');
+
+function formatDate(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString();
+  } catch {
+    return dateStr;
+  }
+}
+
+function getPriorityLabel(priority?: number): string {
+  if (priority === undefined || priority === null) return 'P2';
+  return `P${priority}`;
+}
+
+function getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'open': return 'status-open';
+    case 'in_progress': return 'status-in-progress';
+    case 'blocked': return 'status-blocked';
+    case 'closed': return 'status-closed';
+    default: return 'status-open';
+  }
+}
+
+function getStatusLabel(status: string): string {
+  switch (status) {
+    case 'in_progress': return 'in progress';
+    case 'blocked': return 'blocked';
+    case 'closed': return 'closed';
+    default: return 'open';
+  }
+}
+---
+
+<Layout title={`${owner}/${repo} - beads`}>
+  <div class="github-header">
+    <div class="repo-title">
+      <h1><a href={`https://github.com/${owner}/${repo}`} target="_blank" rel="noopener">{owner}/{repo}</a></h1>
+      {repoInfo && repoInfo.description && (
+        <p class="repo-description">{repoInfo.description}</p>
+      )}
+    </div>
+
+    {!error && (
+      <div class="repo-stats">
+        <div class="stat">
+          <span class="stat-value">{openIssues.length}</span>
+          <span class="stat-label">open</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">{closedIssues.length}</span>
+          <span class="stat-label">closed</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">{issues.length}</span>
+          <span class="stat-label">total</span>
+        </div>
+      </div>
+    )}
+  </div>
+
+  {error && (
+    <div class="error-box">
+      <h3>⚠️ {error}</h3>
+      {error.includes('does not use beads') && (
+        <p>this repository doesn't have a .beads/issues.jsonl file</p>
+      )}
+      {error.includes('not found') && (
+        <p>repository not found or not public</p>
+      )}
+    </div>
+  )}
+
+  {!error && issues.length === 0 && (
+    <div class="empty">
+      <p>no issues found in this repository</p>
+    </div>
+  )}
+
+  {!error && issues.length > 0 && (
+    <div class="issues-container">
+      <nav class="tabs">
+        <a href={`/${owner}/${repo}`}>open ({openIssues.length})</a>
+        <a href={`/${owner}/${repo}/closed`} class="active">closed ({closedIssues.length})</a>
+      </nav>
+
+      <ul class="issue-list">
+        {closedIssues.map(issue => (
+          <li class="issue-item">
+            <div class="issue-header">
+              <span class={`status-badge ${getStatusBadgeClass(issue.status)}`}>
+                {getStatusLabel(issue.status)}
+              </span>
+              <span class="priority-badge">{getPriorityLabel(issue.priority)}</span>
+              {issue.issue_type && (
+                <span class="type-badge">{issue.issue_type}</span>
+              )}
+            </div>
+
+            <h3 class="issue-title">
+              <span class="issue-id">{issue.id}</span>
+              {issue.title}
+            </h3>
+
+            {issue.body && (
+              <p class="issue-body">{issue.body.substring(0, 200)}{issue.body.length > 200 ? '...' : ''}</p>
+            )}
+
+            {issue.labels && issue.labels.length > 0 && (
+              <div class="issue-labels">
+                {issue.labels.map((label: string) => (
+                  <span class="label">{label}</span>
+                ))}
+              </div>
+            )}
+
+            <div class="issue-meta">
+              <span>created {formatDate(issue.created_at)}</span>
+              <span>updated {formatDate(issue.updated_at)}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {Astro.locals.user && (
+        <div class="import-banner">
+          <p>want to import this repository to your beadster account?</p>
+          <form action="/api/import/github" method="post">
+            <input type="hidden" name="repo_url" value={`https://github.com/${owner}/${repo}`} />
+            <button type="submit">import to my account</button>
+          </form>
+          <p class="hint">for private repositories, use <a href="/settings/import">private import</a></p>
+        </div>
+      )}
+
+      {!Astro.locals.user && (
+        <div class="login-banner">
+          <p>sign in to import this repository to your beadster account</p>
+          <p class="hint">for private repositories, use <a href="/settings/import">private import</a> after signing in</p>
+          <a href="/login" class="btn-primary">sign in</a>
+        </div>
+      )}
+    </div>
+  )}
+</Layout>
+
+<style>
+  .github-header {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .repo-title h1 {
+    margin: 0;
+    font-size: 28px;
+  }
+
+  .repo-title h1 a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .repo-title h1 a:hover {
+    text-decoration: underline;
+  }
+
+  .repo-description {
+    margin: 10px 0 0 0;
+    color: var(--text-secondary);
+  }
+
+  .repo-stats {
+    display: flex;
+    gap: 30px;
+    margin-top: 15px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+
+  .error-box {
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .error-box h3 {
+    margin: 0 0 10px 0;
+    color: #c00;
+  }
+
+  .error-box p {
+    margin: 0;
+    color: #666;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+  }
+
+  .issues-container {
+    margin-top: 20px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 20px;
+  }
+
+  .tabs a {
+    padding: 10px 15px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+  }
+
+  .tabs a:hover {
+    color: var(--text-primary);
+  }
+
+  .tabs a.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+  }
+
+  .issue-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .issue-item {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: var(--bg-primary);
+  }
+
+  .issue-header {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .status-badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+
+  .status-open {
+    background: #e3f2fd;
+    color: #1976d2;
+  }
+
+  .status-in-progress {
+    background: #fff3e0;
+    color: #f57c00;
+  }
+
+  .status-blocked {
+    background: #ffebee;
+    color: #d32f2f;
+  }
+
+  .status-closed {
+    background: #f1f3f4;
+    color: #5f6368;
+  }
+
+  .priority-badge, .type-badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    background: #f5f5f5;
+    color: #666;
+  }
+
+  .issue-title {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .issue-id {
+    color: var(--text-secondary);
+    margin-right: 8px;
+    font-weight: 400;
+  }
+
+  .issue-body {
+    margin: 10px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .issue-labels {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 10px 0;
+  }
+
+  .label {
+    padding: 3px 8px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .issue-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 10px;
+  }
+
+  .import-banner, .login-banner {
+    margin-top: 30px;
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .import-banner p, .login-banner p {
+    margin: 0 0 15px 0;
+  }
+
+  .hint {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .hint a {
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+
+  .hint a:hover {
+    text-decoration: underline;
+  }
+
+  .import-banner button, .btn-primary {
+    padding: 10px 20px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .import-banner button:hover, .btn-primary:hover {
+    opacity: 0.9;
+  }
+</style>

@@ -142,6 +142,9 @@ public struct Issue: Identifiable, Codable, Hashable {
     public var gitCommitHash: String?
     public var gitIsDirty: Bool?
 
+    // External reference (for hybrid workflows with Jira, GitHub, Linear, etc.)
+    public var externalRef: String?
+
     // For sync compatibility
     public var beadsId: String { id } // local beads ID (bd-1, bd-2)
 
@@ -162,6 +165,7 @@ public struct Issue: Identifiable, Codable, Hashable {
         case gitBranch = "git_branch"
         case gitCommitHash = "git_commit_hash"
         case gitIsDirty = "git_is_dirty"
+        case externalRef = "external_ref"
     }
 
     public init(id: String, title: String, body: String?, status: String, priority: Int,
@@ -169,7 +173,8 @@ public struct Issue: Identifiable, Codable, Hashable {
          design: String? = nil, acceptanceCriteria: String? = nil, notes: String? = nil,
          createdAt: Int, updatedAt: Int, closedAt: Int? = nil,
          sessionId: String? = nil, client: String? = nil, projectName: String? = nil,
-         gitRepoUrl: String? = nil, gitBranch: String? = nil, gitCommitHash: String? = nil, gitIsDirty: Bool? = nil) {
+         gitRepoUrl: String? = nil, gitBranch: String? = nil, gitCommitHash: String? = nil, gitIsDirty: Bool? = nil,
+         externalRef: String? = nil) {
         self.id = id
         self.title = title
         self.body = body
@@ -191,6 +196,7 @@ public struct Issue: Identifiable, Codable, Hashable {
         self.gitBranch = gitBranch
         self.gitCommitHash = gitCommitHash
         self.gitIsDirty = gitIsDirty
+        self.externalRef = externalRef
     }
 
     public init(from decoder: Decoder) throws {
@@ -240,6 +246,9 @@ public struct Issue: Identifiable, Codable, Hashable {
         } else {
             gitIsDirty = nil
         }
+
+        // External reference
+        externalRef = try container.decodeIfPresent(String.self, forKey: .externalRef)
 
         // Labels can be JSON string or array
         if let labelsString = try? container.decode(String.self, forKey: .labels) {
@@ -307,6 +316,7 @@ public struct Issue: Identifiable, Codable, Hashable {
         try container.encodeIfPresent(gitBranch, forKey: .gitBranch)
         try container.encodeIfPresent(gitCommitHash, forKey: .gitCommitHash)
         try container.encodeIfPresent(gitIsDirty, forKey: .gitIsDirty)
+        try container.encodeIfPresent(externalRef, forKey: .externalRef)
     }
 }
 

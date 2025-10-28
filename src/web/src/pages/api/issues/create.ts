@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { title, body, priority, status, source_id } = data;
+    const { title, body, priority, status, source_id, issue_type, assignee } = data;
 
     if (!title) {
       return new Response(JSON.stringify({ error: 'Title required' }), {
@@ -42,7 +42,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       title,
       body,
       status,
-      priority
+      priority,
+      issue_type,
+      assignee: assignee || null
     });
 
     return new Response(JSON.stringify(result), {

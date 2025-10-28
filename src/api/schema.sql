@@ -122,6 +122,9 @@ CREATE TABLE issues (
   git_commit_hash TEXT,   -- commit hash when created
   git_is_dirty INTEGER DEFAULT 0,  -- had uncommitted changes
 
+  -- External reference for hybrid workflows (GitHub, Jira, Linear, etc)
+  external_ref TEXT,      -- e.g. github:owner/repo:issue-id
+
   -- Sync
   synced_at INTEGER,
 
@@ -140,6 +143,7 @@ CREATE INDEX idx_issues_status ON issues(status);
 CREATE INDEX idx_issues_session ON issues(session_id);
 CREATE INDEX idx_issues_client ON issues(client);
 CREATE INDEX idx_issues_git_repo ON issues(git_repo_url);
+CREATE INDEX idx_issues_external_ref ON issues(external_ref);
 
 -- Ensure beads_id is unique per source
 CREATE UNIQUE INDEX idx_issues_source_beads_id ON issues(source_id, beads_id);
@@ -163,6 +167,38 @@ CREATE TABLE issue_sessions (
 CREATE INDEX idx_issue_sessions_user ON issue_sessions(user_id);
 CREATE INDEX idx_issue_sessions_source ON issue_sessions(source_id);
 CREATE INDEX idx_issue_sessions_last_issue ON issue_sessions(last_issue_at);
+
+-- API tokens for GitHub Actions and integrations
+CREATE TABLE api_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  token TEXT UNIQUE NOT NULL,
+  scopes TEXT NOT NULL,  -- JSON array
+  last_used INTEGER,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_api_tokens_token ON api_tokens(token);
+CREATE INDEX idx_api_tokens_user ON api_tokens(user_id);
+
+-- API token usage tracking
+CREATE TABLE api_token_usage (
+  id TEXT PRIMARY KEY,
+  token_id TEXT NOT NULL,
+  endpoint TEXT NOT NULL,
+  method TEXT NOT NULL,
+  status INTEGER NOT NULL,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY (token_id) REFERENCES api_tokens(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_api_token_usage_token ON api_token_usage(token_id);
+CREATE INDEX idx_api_token_usage_created ON api_token_usage(created_at);
 
 -- Devices for tracking which machine/client
 CREATE TABLE devices (

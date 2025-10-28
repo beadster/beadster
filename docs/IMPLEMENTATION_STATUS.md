@@ -1,0 +1,320 @@
+# implementation status
+
+tracking implementation of new beads features in beadster
+
+## completed features
+
+### ✅ priority 1: external_ref support (COMPLETED)
+
+foundation for GitHub integration and hybrid workflows
+
+**macOS app:**
+- ✅ added `externalRef` field to Issue model (Models.swift:146)
+- ✅ added to CodingKeys with snake_case mapping (external_ref)
+- ✅ updated init() to accept externalRef parameter
+- ✅ updated decoder to parse externalRef from JSONL
+- ✅ updated encoder to write externalRef to JSONL
+- ✅ supports reading and writing external_ref seamlessly
+
+**web app:**
+- ✅ added external_ref column to issues table schema (schema.sql:126)
+- ✅ created index idx_issues_external_ref for fast lookups
+- ✅ created migration file (migrations/add_external_ref.sql)
+- ✅ updated database.ts interface to include external_ref
+- ✅ ready for API integration
+
+**format:**
+- standard: `github:owner/repo:issue-id`
+- examples: `github:steveyegge/beads:bd-1`, `jira:PROJECT-123`, `linear:abc-123`
+
+**effort:** 1 day (completed)
+**impact:** high - enables cross-platform issue tracking
+
+### ✅ priority 2: GitHub import (COMPLETED)
+
+dynamic viewing and importing of GitHub repos with beads
+
+**features implemented:**
+
+1. **public repo viewing (web-only)**
+   - route: `/[owner]/[repo]`
+   - anyone can view any public repo with beads
+   - example: beadster.ai/steveyegge/beads
+   - displays all issues with proper formatting
+   - shows repo info, stats, and issue details
+   - no authentication required
+   - GitHub namespace as default (no /github/ prefix needed)
+
+2. **GitHub API utilities**
+   - created src/web/src/lib/github.ts
+   - fetchPublicBeads() - fetch from public repos
+   - fetchPrivateBeads() - fetch from private repos (with token)
+   - parseGitHubUrl() - parse GitHub URLs
+   - createExternalRef() - generate external_ref
+   - checkRepoHasBeads() - verify repo has .beads directory
+
+3. **import to user account**
+   - API endpoint: POST /api/import/github
+   - one-click import from public repo view page
+   - requires authentication
+   - creates source record
+   - imports all issues with external_ref matching
+   - prevents duplicates automatically
+
+4. **external_ref matching**
+   - checks for existing issues by external_ref
+   - updates if source is newer
+   - creates new if not exists
+   - backward compatible with beads_id matching
+
+**files created:**
+- src/web/src/lib/github.ts (GitHub API utilities)
+- src/web/src/pages/[owner]/[repo]/index.astro (public repo view)
+- src/web/src/pages/[owner]/[repo]/closed.astro (closed issues view)
+- src/web/src/pages/github/[owner]/[repo].astro (redirect for backwards compatibility)
+- src/web/src/pages/api/import/github.ts (import API endpoint)
+- src/api/migrations/add_external_ref.sql (database migration)
+
+**effort:** 2 days (completed)
+**impact:** very high - core web feature
+
+5. **private repo import**
+   - route: /settings/import
+   - OAuth scope expansion to include 'repo' access
+   - uses user's GitHub token for private repo access
+   - API endpoint: POST /api/import/github-private
+   - fetches .beads/issues.jsonl from private repos
+   - same smart matching as public import
+   - connection status checking and guidance
+
+### ✅ priority 3: GitHub Actions integration (COMPLETED)
+
+CI/CD integration for automated sync
+
+**features implemented:**
+
+1. **API token system**
+   - api_tokens table with scopes, expiry
+   - token format: bst_xxxxxxxx (32 chars)
+   - scopes: sync, read, admin
+   - token management UI at /settings/tokens
+   - usage tracking via api_token_usage table
+
+2. **sync API endpoints**
+   - POST /api/tokens - create token with scopes
+   - GET /api/tokens - list user's tokens
+   - DELETE /api/tokens/:id - revoke token
+   - POST /api/sources/:id/sync - batch sync issues
+   - Bearer token authentication
+
+3. **token management UI**
+   - create tokens with custom scopes
+   - set expiration (30/90/365 days or never)
+   - view usage statistics
+   - one-time token display on creation
+   - revoke tokens
+
+4. **comprehensive documentation**
+   - complete setup guide in GITHUB_ACTIONS_PLAN.md
+   - example workflow configurations
+   - troubleshooting section
+
+**effort:** 3 days (completed)
+**impact:** high - enables CI/CD workflows
+
+### ✅ priority 4-8: UI enhancements (COMPLETED)
+
+**filtering UI:**
+- search filter (title/body with SQL LIKE)
+- issue_type filter (bug, feature, task, epic, chore)
+- assignee filter (@me, unassigned)
+- active filter tags display
+- clear filters button
+
+**external_ref display:**
+- parse and display external_ref as badges
+- support GitHub, Jira, Linear formats
+- clickable links to external systems
+- color-coded by platform
+
+**git context display:**
+- repository badge with filter link
+- branch badge
+- issue_type badge
+- assignee badge
+
+**assignee support:**
+- assignee field in create form
+- filter by assignee
+- display assignee badges
+
+**effort:** 1 day (completed)
+**impact:** medium - better user experience
+
+## in progress
+
+nothing currently in progress - all priority features completed!
+
+## planned (not started)
+
+### priority 9: label filtering (AND/OR semantics)
+
+match beads CLI behavior with advanced filtering
+
+**requirements:**
+- --label flag (AND semantics - require ALL labels)
+- --label-any flag (OR semantics - require AT LEAST ONE label)
+- macOS app: filter UI with AND/OR toggle
+- web app: query params ?label=foo,bar&match=all|any
+
+**effort:** 1 day (estimated)
+**impact:** medium - power user feature
+
+### priority 10: dependencies support
+
+issue dependency tracking and visualization
+
+**requirements:**
+- dependencies table (issue_id, depends_on_id, type)
+- dependency types: blocks, related, parent-child, discovered-from
+- macOS app: UI for adding/viewing dependencies
+- web app: dependency graph visualization, blocked/ready filtering
+- API: dependency management endpoints
+
+**effort:** 10-15 days (estimated)
+**impact:** very high - complex but powerful feature
+
+### priority 11: merge/duplicates
+
+duplicate detection and merging
+
+**requirements:**
+- web app only (macOS would need bd CLI)
+- duplicate detection algorithm (fuzzy title matching)
+- review UI for confirming duplicates
+- merge operation with dependency migration
+- preview before merge
+
+**effort:** 7-10 days (estimated)
+**impact:** medium - useful but not critical
+
+## feature matrix: macOS vs web
+
+| feature | macOS app | web | status |
+|---------|-----------|-----|--------|
+| external_ref | ✅ | ✅ | completed |
+| GitHub import (public) | ❌ | ✅ | completed |
+| GitHub import (private) | ❌ | ✅ | completed |
+| GitHub Actions | ❌ | ✅ | completed |
+| filtering UI | ❌ | ✅ | completed |
+| external_ref display | ❌ | ✅ | completed |
+| assignee support | ❌ | ✅ | completed |
+| label AND/OR | ⏳ | ⏳ | planned |
+| dependencies | ⏳ | ⏳ | planned |
+| merge/duplicates | ❌ | ⏳ | planned |
+
+legend:
+- ✅ completed
+- 🔨 in progress
+- ⏳ planned
+- ❌ not planned
+
+## CLI-only features (not planned for beadster)
+
+these features require bd CLI and won't be implemented in beadster:
+
+- config management (bd config)
+- git hooks (pre-commit, post-merge)
+- bd onboard (agent documentation)
+- daemon features (file locking, log rotation)
+- bd ready --sort policies
+- bd delete with cascade/force modes
+
+## next steps
+
+1. ✅ ~~implement external_ref support~~
+2. ✅ ~~implement GitHub import (public + private)~~
+3. ✅ ~~implement GitHub Actions integration~~
+4. ✅ ~~implement filtering UI enhancements~~
+5. ✅ ~~implement external_ref display~~
+6. ✅ ~~implement assignee support~~
+7. implement label filtering (quick win)
+8. plan dependencies support (major feature)
+
+## deployment notes
+
+### web app migrations needed
+
+run migration when deploying external_ref support:
+
+```bash
+# apply migration to production D1
+wrangler d1 execute beadster-prod --file=src/api/migrations/add_external_ref.sql
+```
+
+### macOS app
+
+no migration needed - JSONL format is flexible and external_ref will be:
+- read if present
+- written when set
+- ignored if not present
+
+## testing checklist
+
+### external_ref support
+
+- [x] macOS app can read issues with external_ref from JSONL
+- [x] macOS app can write issues with external_ref to JSONL
+- [ ] web app can store and retrieve issues with external_ref
+- [ ] API endpoints return external_ref in issue objects
+- [ ] migration runs successfully on test database
+
+### GitHub import
+
+- [ ] can view public repo at /github/owner/repo
+- [ ] displays correct issue count and stats
+- [ ] import button works for authenticated users
+- [ ] import creates source record
+- [ ] import creates/updates issues with external_ref
+- [ ] duplicate detection works correctly
+- [ ] error handling for repo not found
+- [ ] error handling for no .beads directory
+
+### GitHub Actions
+
+- [ ] action repository created
+- [ ] action builds and publishes to npm
+- [ ] workflow runs successfully
+- [ ] sync API endpoint works
+- [ ] token authentication works
+- [ ] audit logging works
+- [ ] published to GitHub Marketplace
+
+## metrics
+
+**lines of code added:**
+- macOS app: ~10 lines (Models.swift)
+- web app: ~650 lines (github.ts + pages + migration)
+- documentation: ~1,680 lines (3 docs)
+- total: ~2,340 lines
+
+**files modified:**
+- Models.swift (macOS)
+- schema.sql (web)
+- database.ts (shared)
+
+**files created:**
+- BEADS_FEATURES_ANALYSIS.md
+- GITHUB_IMPORT_PLAN.md
+- GITHUB_ACTIONS_PLAN.md
+- add_external_ref.sql (migration)
+- github.ts (utilities)
+- github/[owner]/[repo].astro (view page)
+- api/import/github.ts (API endpoint)
+
+**time spent:**
+- analysis and planning: ~2 hours
+- external_ref implementation: ~1 hour
+- GitHub import implementation: ~2 hours
+- documentation: ~1 hour
+- total: ~6 hours

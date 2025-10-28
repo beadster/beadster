@@ -1,0 +1,551 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
+const db = Astro.locals.runtime?.env?.DB;
+let tokens: any[] = [];
+let error: string | null = null;
+
+if (db) {
+  try {
+    const result = await db.prepare(`
+      SELECT id, name, scopes, last_used, created_at, expires_at
+      FROM api_tokens
+      WHERE user_id = ?
+      ORDER BY created_at DESC
+    `).bind(Astro.locals.user.id).all();
+
+    tokens = (result.results || []).map((token: any) => ({
+      ...token,
+      scopes: JSON.parse(token.scopes)
+    }));
+  } catch (e) {
+    error = `Failed to fetch tokens: ${e instanceof Error ? e.message : String(e)}`;
+  }
+}
+
+function formatDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleString();
+}
+
+function formatRelativeTime(timestamp: number | null): string {
+  if (!timestamp) return 'never';
+
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
+}
+---
+
+<Layout title="API tokens">
+  <nav class="tabs">
+    <a href="/">open</a>
+    <a href="/settings/tokens" class="active">tokens</a>
+    <a href="/settings/import">import</a>
+  </nav>
+
+  <div class="page-header">
+    <h2>API tokens</h2>
+    <button id="createTokenBtn" class="btn-primary">create new token</button>
+  </div>
+
+  <div class="description">
+    API tokens allow external tools like GitHub Actions to sync issues to beadster
+  </div>
+
+  {error && (
+    <div class="error">{error}</div>
+  )}
+
+  {!error && tokens.length === 0 && (
+    <div class="empty">
+      <p>no tokens created yet</p>
+      <p class="hint">create a token to use with GitHub Actions or other integrations</p>
+    </div>
+  )}
+
+  {!error && tokens.length > 0 && (
+    <div class="tokens-list">
+      {tokens.map(token => (
+        <div class="token-card">
+          <div class="token-header">
+            <h3>{token.name}</h3>
+            <button class="revoke-btn" data-token-id={token.id}>revoke</button>
+          </div>
+
+          <div class="token-info">
+            <div class="info-row">
+              <span class="label">scopes:</span>
+              <span class="value">
+                {token.scopes.map((scope: string) => (
+                  <span class="scope-badge">{scope}</span>
+                ))}
+              </span>
+            </div>
+
+            <div class="info-row">
+              <span class="label">created:</span>
+              <span class="value">{formatDate(token.created_at)}</span>
+            </div>
+
+            <div class="info-row">
+              <span class="label">last used:</span>
+              <span class="value">{formatRelativeTime(token.last_used)}</span>
+            </div>
+
+            {token.expires_at && (
+              <div class="info-row">
+                <span class="label">expires:</span>
+                <span class="value">{formatDate(token.expires_at)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+
+  <!-- Create Token Modal -->
+  <div id="createTokenModal" class="modal">
+    <div class="modal-content">
+      <h3>create new token</h3>
+
+      <form id="createTokenForm">
+        <div class="form-group">
+          <label for="tokenName">token name</label>
+          <input
+            type="text"
+            id="tokenName"
+            name="name"
+            placeholder="github-actions-myrepo"
+            required
+          />
+          <small>descriptive name for this token</small>
+        </div>
+
+        <div class="form-group">
+          <label>scopes</label>
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" name="scopes" value="sync" checked />
+              <span>sync - create and update issues</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="scopes" value="read" />
+              <span>read - read-only access</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="scopes" value="admin" />
+              <span>admin - full access</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="expiresIn">expires in (optional)</label>
+          <select id="expiresIn" name="expires_in_days">
+            <option value="">never</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+            <option value="365">1 year</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" id="cancelBtn">cancel</button>
+          <button type="submit" class="btn-primary">create token</button>
+        </div>
+      </form>
+
+      <!-- Token Created Success -->
+      <div id="tokenCreated" style="display: none;">
+        <div class="success-box">
+          <p>✅ token created successfully!</p>
+          <div class="token-value">
+            <code id="tokenValue"></code>
+            <button id="copyTokenBtn" class="btn-copy">copy</button>
+          </div>
+          <p class="warning">⚠️ save this token now - you won't be able to see it again!</p>
+        </div>
+        <button id="closeModalBtn" class="btn-primary">done</button>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .page-header h2 {
+    margin: 0;
+  }
+
+  .description {
+    margin-bottom: 30px;
+    color: var(--text-secondary);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 30px;
+  }
+
+  .tabs a {
+    padding: 10px 15px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+  }
+
+  .tabs a:hover {
+    color: var(--text-primary);
+  }
+
+  .tabs a.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+  }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .empty p {
+    margin: 10px 0;
+    color: var(--text-secondary);
+  }
+
+  .empty .hint {
+    font-size: 14px;
+  }
+
+  .tokens-list {
+    display: grid;
+    gap: 20px;
+  }
+
+  .token-card {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    background: var(--bg-primary);
+  }
+
+  .token-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+
+  .token-header h3 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .revoke-btn {
+    padding: 6px 12px;
+    background: #fee;
+    color: #c00;
+    border: 1px solid #fcc;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .revoke-btn:hover {
+    background: #fcc;
+  }
+
+  .token-info {
+    display: grid;
+    gap: 10px;
+  }
+
+  .info-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .info-row .label {
+    min-width: 100px;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .info-row .value {
+    font-size: 14px;
+  }
+
+  .scope-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-right: 5px;
+  }
+
+  .btn-primary, .btn-secondary {
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+
+  .btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  }
+
+  .btn-secondary:hover {
+    background: var(--border-color);
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal.show {
+    display: flex;
+  }
+
+  .modal-content {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+  }
+
+  .modal-content h3 {
+    margin: 0 0 20px 0;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+
+  .form-group input[type="text"],
+  .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  .form-group small {
+    display: block;
+    margin-top: 5px;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .checkbox-group {
+    display: grid;
+    gap: 10px;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: normal;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 30px;
+  }
+
+  .success-box {
+    background: #e8f5e9;
+    border: 1px solid #4caf50;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .success-box p {
+    margin: 10px 0;
+  }
+
+  .token-value {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 15px 0;
+  }
+
+  .token-value code {
+    flex: 1;
+    padding: 10px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 13px;
+    word-break: break-all;
+  }
+
+  .btn-copy {
+    padding: 8px 16px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .warning {
+    color: #f57c00;
+    font-size: 14px;
+  }
+
+  .error {
+    padding: 15px;
+    background: #fee;
+    color: #c00;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+</style>
+
+<script>
+  // Modal handling
+  const modal = document.getElementById('createTokenModal');
+  const createBtn = document.getElementById('createTokenBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const closeBtn = document.getElementById('closeModalBtn');
+  const form = document.getElementById('createTokenForm');
+  const tokenCreated = document.getElementById('tokenCreated');
+
+  createBtn?.addEventListener('click', () => {
+    modal?.classList.add('show');
+  });
+
+  cancelBtn?.addEventListener('click', () => {
+    modal?.classList.remove('show');
+    form?.reset();
+  });
+
+  closeBtn?.addEventListener('click', () => {
+    modal?.classList.remove('show');
+    window.location.reload();
+  });
+
+  // Create token
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form as HTMLFormElement);
+    const name = formData.get('name');
+    const scopes = formData.getAll('scopes');
+    const expires_in_days = formData.get('expires_in_days');
+
+    try {
+      const response = await fetch('/api/tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          scopes,
+          expires_in_days: expires_in_days ? Number(expires_in_days) : null
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('failed to create token');
+      }
+
+      const result = await response.json();
+
+      // Show token
+      (document.getElementById('tokenValue') as HTMLElement).textContent = result.token;
+      (form as HTMLFormElement).style.display = 'none';
+      (tokenCreated as HTMLElement).style.display = 'block';
+    } catch (err) {
+      alert('failed to create token: ' + (err as Error).message);
+    }
+  });
+
+  // Copy token
+  document.getElementById('copyTokenBtn')?.addEventListener('click', () => {
+    const tokenValue = (document.getElementById('tokenValue') as HTMLElement).textContent || '';
+    navigator.clipboard.writeText(tokenValue);
+    alert('token copied to clipboard!');
+  });
+
+  // Revoke token
+  document.querySelectorAll('.revoke-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const tokenId = btn.getAttribute('data-token-id');
+      if (!confirm('are you sure you want to revoke this token?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/tokens/${tokenId}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          throw new Error('failed to revoke token');
+        }
+
+        window.location.reload();
+      } catch (err) {
+        alert('failed to revoke token: ' + (err as Error).message);
+      }
+    });
+  });
+</script>

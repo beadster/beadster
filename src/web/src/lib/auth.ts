@@ -15,6 +15,7 @@ export function createAuth(db: D1Database, secret?: string, env?: any) {
 			github: {
 				clientId: env?.GITHUB_CLIENT_ID || '',
 				clientSecret: env?.GITHUB_CLIENT_SECRET || '',
+				scope: ['user:email', 'repo'],
 			},
 		},
 
