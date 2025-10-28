@@ -66,7 +66,7 @@ API endpoint for importing private repos:
 **files modified:**
 - src/web/src/pages/index.astro - added link to private import
 - src/web/src/pages/settings/tokens.astro - added import tab
-- src/web/src/pages/github/[owner]/[repo].astro - added hints about private import
+- src/web/src/pages/[owner]/[repo]/index.astro - added hints about private import
 
 **navigation added:**
 - homepage: link to /settings/import for private repos
@@ -129,7 +129,7 @@ else:
 - src/web/src/lib/auth.ts (OAuth scope)
 - src/web/src/pages/index.astro (homepage link)
 - src/web/src/pages/settings/tokens.astro (navigation tab)
-- src/web/src/pages/github/[owner]/[repo].astro (hints and guidance)
+- src/web/src/pages/[owner]/[repo]/index.astro (hints and guidance)
 - docs/IMPLEMENTATION_STATUS.md (status updates)
 
 ## user experience

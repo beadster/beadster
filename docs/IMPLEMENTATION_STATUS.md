@@ -37,12 +37,13 @@ dynamic viewing and importing of GitHub repos with beads
 **features implemented:**
 
 1. **public repo viewing (web-only)**
-   - route: `/github/[owner]/[repo]`
+   - route: `/[owner]/[repo]`
    - anyone can view any public repo with beads
-   - example: beadster.ai/github/steveyegge/beads
+   - example: beadster.ai/steveyegge/beads
    - displays all issues with proper formatting
    - shows repo info, stats, and issue details
    - no authentication required
+   - GitHub namespace as default (no /github/ prefix needed)
 
 2. **GitHub API utilities**
    - created src/web/src/lib/github.ts
@@ -68,7 +69,9 @@ dynamic viewing and importing of GitHub repos with beads
 
 **files created:**
 - src/web/src/lib/github.ts (GitHub API utilities)
-- src/web/src/pages/github/[owner]/[repo].astro (public repo view)
+- src/web/src/pages/[owner]/[repo]/index.astro (public repo view)
+- src/web/src/pages/[owner]/[repo]/closed.astro (closed issues view)
+- src/web/src/pages/github/[owner]/[repo].astro (redirect for backwards compatibility)
 - src/web/src/pages/api/import/github.ts (import API endpoint)
 - src/api/migrations/add_external_ref.sql (database migration)
 
