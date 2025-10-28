@@ -213,7 +213,7 @@ function getStatusLabel(status: string): string {
     <div class="error-box">
       <h3>⚠️ {error}</h3>
       {error.includes('does not use beads') && (
-        <p>this repository doesn't have a .beads/issues.jsonl file</p>
+        <p>this repository doesn't have a .beads/ directory with issues (beads.jsonl or issues.jsonl)</p>
       )}
       {error.includes('not found') && (
         <p>repository not found or not public</p>

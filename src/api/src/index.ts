@@ -1177,32 +1177,6 @@ function parseIssueTimestamp(dateStr: string | number): number {
   }
 }
 
-// Helper: Authenticate user by session or API key
-async function authenticate(c: any): Promise<any | null> {
-  const auth = c.get('auth');
-
-  // Try session authentication first (from cookies)
-  try {
-    const session = await auth.api.getSession({ headers: c.req.raw.headers });
-    if (session?.user) {
-      return session.user;
-    }
-  } catch (error) {
-    // Session auth failed, try API key
-  }
-
-  // Try API key authentication (for CLI/MCP)
-  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '') || c.req.query('api_key');
-  if (apiKey) {
-    const user = await c.env.DB.prepare(`
-      SELECT * FROM users WHERE api_key = ?
-    `).bind(apiKey).first();
-    return user;
-  }
-
-  return null;
-}
-
 // Export worker with scheduled handler
 export default {
   fetch: app.fetch,

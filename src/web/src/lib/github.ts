@@ -51,29 +51,42 @@ export function parseExternalRef(ref: string): { platform: string; repoPath: str
 }
 
 /**
- * Fetch issues.jsonl from a public GitHub repository
+ * Fetch issues from a public GitHub repository
+ * Tries: beads.jsonl, issues.jsonl
  */
 export async function fetchPublicBeads(
   owner: string,
   repo: string,
   branch: string = 'main'
 ): Promise<Issue[]> {
-  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/.beads/issues.jsonl`;
+  const filenames = ['beads.jsonl', 'issues.jsonl'];
+  let lastError: Error | null = null;
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('repository not found or no .beads/issues.jsonl');
+  for (const filename of filenames) {
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/.beads/${filename}`;
+
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const jsonl = await response.text();
+        return parseJSONL(jsonl, owner, repo);
+      }
+      if (response.status === 404) {
+        lastError = new Error(`no .beads/${filename} found`);
+        continue;
+      }
+      throw new Error(`GitHub API error: ${response.statusText}`);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
     }
-    throw new Error(`GitHub API error: ${response.statusText}`);
   }
 
-  const jsonl = await response.text();
-  return parseJSONL(jsonl, owner, repo);
+  throw lastError || new Error('repository not found or no .beads/*.jsonl file');
 }
 
 /**
- * Fetch issues.jsonl from a private GitHub repository (requires token)
+ * Fetch issues from a private GitHub repository (requires token)
+ * Tries: beads.jsonl, issues.jsonl
  */
 export async function fetchPrivateBeads(
   owner: string,
@@ -81,28 +94,43 @@ export async function fetchPrivateBeads(
   token: string,
   branch: string = 'main'
 ): Promise<Issue[]> {
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/.beads/issues.jsonl?ref=${branch}`;
+  const filenames = ['beads.jsonl', 'issues.jsonl'];
+  let lastError: Error | null = null;
 
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github.v3.raw',
-      'User-Agent': 'Beadster-Import'
-    }
-  });
+  for (const filename of filenames) {
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/.beads/${filename}?ref=${branch}`;
 
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('repository not found or no .beads/issues.jsonl');
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3.raw',
+          'User-Agent': 'Beadster-Import'
+        }
+      });
+
+      if (response.ok) {
+        const jsonl = await response.text();
+        return parseJSONL(jsonl, owner, repo);
+      }
+
+      if (response.status === 404) {
+        lastError = new Error(`no .beads/${filename} found`);
+        continue;
+      }
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('authentication failed - check GitHub token');
+      }
+      throw new Error(`GitHub API error: ${response.statusText}`);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('authentication failed')) {
+        throw err;
+      }
+      lastError = err instanceof Error ? err : new Error(String(err));
     }
-    if (response.status === 401 || response.status === 403) {
-      throw new Error('authentication failed - check GitHub token');
-    }
-    throw new Error(`GitHub API error: ${response.statusText}`);
   }
 
-  const jsonl = await response.text();
-  return parseJSONL(jsonl, owner, repo);
+  throw lastError || new Error('repository not found or no .beads/*.jsonl file');
 }
 
 /**
@@ -129,17 +157,23 @@ function parseJSONL(jsonl: string, owner: string, repo: string): Issue[] {
 }
 
 /**
- * Check if a GitHub repository has beads by checking for .beads/issues.jsonl
+ * Check if a GitHub repository has beads by checking for any .jsonl file in .beads/
+ * Tries: beads.jsonl, issues.jsonl
  */
 export async function checkRepoHasBeads(owner: string, repo: string, branch: string = 'main'): Promise<boolean> {
-  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/.beads/issues.jsonl`;
+  const filenames = ['beads.jsonl', 'issues.jsonl'];
 
-  try {
-    const response = await fetch(url, { method: 'HEAD' });
-    return response.ok;
-  } catch {
-    return false;
+  for (const filename of filenames) {
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/.beads/${filename}`;
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.ok) return true;
+    } catch {
+      // Continue to next filename
+    }
   }
+
+  return false;
 }
 
 /**
