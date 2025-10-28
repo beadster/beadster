@@ -30,4 +30,8 @@
       "custom_domain": true,
     },
   ],
+
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  }
 }

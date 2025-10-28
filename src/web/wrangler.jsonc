@@ -35,8 +35,4 @@
       "custom_domain": true,
     },
   ],
-  // Cron trigger for syncing GitHub mirrors every 5 minutes
-  "triggers": {
-    "crons": ["*/5 * * * *"]
-  }
 }

@@ -9,11 +9,14 @@ if (!Astro.locals.user) {
 
 let sources: any[] = [];
 let error: string | null = null;
+const preselectedSourceId = Astro.url.searchParams.get('source');
 
 try {
   const db = Astro.locals.runtime?.env?.DB;
   if (db) {
     sources = await getSources(db, Astro.locals.user.id);
+    // Filter out mirrors - can't create issues on read-only mirrors
+    sources = sources.filter(s => s.is_mirror !== 1);
   } else {
     error = 'Database binding not available';
   }
@@ -45,9 +48,12 @@ try {
         <select id="source" name="source" required>
           <option value="">select project...</option>
           {sources.map(source => (
-            <option value={source.id}>{source.name}</option>
+            <option value={source.id} selected={source.id === preselectedSourceId}>
+              {source.name}
+            </option>
           ))}
         </select>
+        <small>only owned projects (mirrors are read-only)</small>
       </div>
 
       <div class="form-group">

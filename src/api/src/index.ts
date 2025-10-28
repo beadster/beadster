@@ -4,6 +4,7 @@ import { generateId } from '@systemoperator/common/id';
 import { now } from '@systemoperator/common/dates';
 import { createAuth } from './lib/auth';
 import type { Auth } from './lib/auth';
+import { fetchPublicBeads } from './lib/github';
 
 type Bindings = {
   DB: D1Database;
@@ -976,4 +977,237 @@ async function authenticate(c: any): Promise<any | null> {
   return null;
 }
 
-export default app;
+// Cron: Sync GitHub mirrors every 5 minutes
+app.get('/v1/cron/sync-mirrors', async (c) => {
+  // Verify this is a Cloudflare cron request
+  const cronHeader = c.req.header('cf-cron');
+  if (!cronHeader) {
+    return c.json({ error: 'unauthorized - not a cron request' }, 401);
+  }
+
+  const db = c.env.DB;
+  if (!db) {
+    return c.json({ error: 'database not available' }, 500);
+  }
+
+  try {
+    const results = await syncAllMirrors(db);
+    return c.json({
+      success: true,
+      synced: results.length,
+      results
+    });
+  } catch (err) {
+    console.error('mirror sync failed:', err);
+    return c.json({
+      error: err instanceof Error ? err.message : 'sync failed'
+    }, 500);
+  }
+});
+
+// Helper: Sync all GitHub mirrors
+async function syncAllMirrors(db: D1Database) {
+  const nowTimestamp = Date.now();
+  const sources = await db.prepare(`
+    SELECT * FROM sources
+    WHERE auto_sync = 1
+      AND is_mirror = 1
+      AND type = 'github-mirror'
+      AND (last_sync IS NULL OR last_sync < ?)
+  `).bind(nowTimestamp - (5 * 60 * 1000)).all();
+
+  console.log(`syncing ${sources.results?.length || 0} mirrors`);
+
+  const results = [];
+  for (const source of sources.results || []) {
+    try {
+      const result = await syncMirrorSource(db, source);
+      results.push(result);
+    } catch (err) {
+      console.error(`failed to sync source ${source.id}:`, err);
+      results.push({
+        source_id: source.id,
+        error: err instanceof Error ? err.message : String(err)
+      });
+    }
+  }
+
+  return results;
+}
+
+// Helper: Sync a single GitHub mirror source
+async function syncMirrorSource(db: D1Database, source: any) {
+  const match = source.git_repo_url?.match(/github\.com[\/:]([^\/]+)\/([^\/\.]+)/);
+  if (!match) {
+    throw new Error(`invalid repo URL: ${source.git_repo_url}`);
+  }
+
+  const owner = match[1];
+  const repo = match[2];
+  const branch = source.git_current_branch || 'main';
+
+  const issues = await fetchPublicBeads(owner, repo, branch);
+
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  for (const issue of issues) {
+    try {
+      const result = await syncMirrorIssue(db, source.user_id, source.id, issue);
+      if (result === 'created') created++;
+      else if (result === 'updated') updated++;
+      else skipped++;
+    } catch (err) {
+      console.error('failed to sync issue:', issue.id, err);
+      skipped++;
+    }
+  }
+
+  await db.prepare(`
+    UPDATE sources SET last_sync = ?, updated_at = ? WHERE id = ?
+  `).bind(Date.now(), Date.now(), source.id).run();
+
+  console.log(`synced ${source.name}: ${created} created, ${updated} updated, ${skipped} skipped`);
+
+  return {
+    source_id: source.id,
+    name: source.name,
+    created,
+    updated,
+    skipped,
+    total: issues.length
+  };
+}
+
+// Helper: Sync a single issue
+async function syncMirrorIssue(
+  db: D1Database,
+  userId: string,
+  sourceId: string,
+  issue: any
+): Promise<'created' | 'updated' | 'skipped'> {
+  const externalRef = issue.external_ref;
+
+  if (externalRef) {
+    const existing = await db.prepare(`
+      SELECT id, updated_at FROM issues
+      WHERE user_id = ? AND external_ref = ?
+    `).bind(userId, externalRef).first();
+
+    if (existing) {
+      const sourceUpdatedAt = parseIssueTimestamp(issue.updated_at);
+      if (sourceUpdatedAt > existing.updated_at) {
+        await updateMirrorIssue(db, existing.id, issue);
+        return 'updated';
+      } else {
+        return 'skipped';
+      }
+    }
+  }
+
+  const duplicate = await db.prepare(`
+    SELECT id FROM issues
+    WHERE user_id = ? AND source_id = ? AND beads_id = ?
+  `).bind(userId, sourceId, issue.id).first();
+
+  if (duplicate) {
+    if (externalRef) {
+      await db.prepare(`
+        UPDATE issues SET external_ref = ? WHERE id = ?
+      `).bind(externalRef, duplicate.id).run();
+    }
+    await updateMirrorIssue(db, duplicate.id, issue);
+    return 'updated';
+  }
+
+  const issueId = `iss_${generateId()}`;
+  await db.prepare(`
+    INSERT INTO issues (
+      id, user_id, source_id, beads_id, title, body, status, priority,
+      issue_type, labels, external_ref, created_at, updated_at, closed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    issueId,
+    userId,
+    sourceId,
+    issue.id,
+    issue.title,
+    issue.body || issue.description || null,
+    issue.status,
+    issue.priority ?? 2,
+    issue.issue_type || null,
+    JSON.stringify(issue.labels || []),
+    externalRef,
+    parseIssueTimestamp(issue.created_at),
+    parseIssueTimestamp(issue.updated_at),
+    issue.closed_at ? parseIssueTimestamp(issue.closed_at) : null
+  ).run();
+
+  return 'created';
+}
+
+// Helper: Update a mirrored issue
+async function updateMirrorIssue(db: D1Database, issueId: string, issue: any) {
+  await db.prepare(`
+    UPDATE issues
+    SET title = ?, body = ?, status = ?, priority = ?,
+        issue_type = ?, labels = ?, updated_at = ?, closed_at = ?
+    WHERE id = ?
+  `).bind(
+    issue.title,
+    issue.body || issue.description || null,
+    issue.status,
+    issue.priority ?? 2,
+    issue.issue_type || null,
+    JSON.stringify(issue.labels || []),
+    parseIssueTimestamp(issue.updated_at),
+    issue.closed_at ? parseIssueTimestamp(issue.closed_at) : null,
+    issueId
+  ).run();
+}
+
+// Helper: Parse timestamp from issue
+function parseIssueTimestamp(dateStr: string | number): number {
+  if (typeof dateStr === 'number') return dateStr;
+  try {
+    return Math.floor(new Date(dateStr).getTime());
+  } catch {
+    return Date.now();
+  }
+}
+
+// Helper: Authenticate user by session or API key
+async function authenticate(c: any): Promise<any | null> {
+  const auth = c.get('auth');
+
+  // Try session authentication first (from cookies)
+  try {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (session?.user) {
+      return session.user;
+    }
+  } catch (error) {
+    // Session auth failed, try API key
+  }
+
+  // Try API key authentication (for CLI/MCP)
+  const apiKey = c.req.header('Authorization')?.replace('Bearer ', '') || c.req.query('api_key');
+  if (apiKey) {
+    const user = await c.env.DB.prepare(`
+      SELECT * FROM users WHERE api_key = ?
+    `).bind(apiKey).first();
+    return user;
+  }
+
+  return null;
+}
+
+// Export worker with scheduled handler
+export default {
+  fetch: app.fetch,
+  async scheduled(event: any, env: any, ctx: any) {
+    console.log('cron triggered:', new Date(event.scheduledTime).toISOString());
+    ctx.waitUntil(syncAllMirrors(env.DB));
+  }
+};
