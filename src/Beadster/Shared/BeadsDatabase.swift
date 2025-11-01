@@ -25,12 +25,46 @@ public class BeadsDatabase {
     }
 
     public func open() throws {
-        guard sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
+        // Check if WAL file exists
+        let walPath = dbPath + "-wal"
+        let walExists = FileManager.default.fileExists(atPath: walPath)
+        print("BeadsDatabase: Opening \(dbPath)")
+        print("BeadsDatabase: WAL file exists: \(walExists) at \(walPath)")
+
+        // If WAL file doesn't exist, open with READWRITE first to reset journal mode, then reopen as READONLY
+        if !walExists {
+            print("BeadsDatabase: WAL file missing, opening READWRITE to reset journal mode")
+            var tempDb: OpaquePointer?
+            let tempOpenResult = sqlite3_open_v2(dbPath, &tempDb, SQLITE_OPEN_READWRITE, nil)
+            if tempOpenResult == SQLITE_OK {
+                print("BeadsDatabase: Temporarily opened READWRITE, setting journal_mode to DELETE")
+                var errMsg: UnsafeMutablePointer<CChar>?
+                sqlite3_exec(tempDb, "PRAGMA journal_mode=DELETE", nil, nil, &errMsg)
+                if let errMsg = errMsg {
+                    print("BeadsDatabase: PRAGMA error: \(String(cString: errMsg))")
+                    sqlite3_free(errMsg)
+                }
+                sqlite3_close(tempDb)
+                print("BeadsDatabase: Closed temporary READWRITE connection")
+            } else {
+                print("BeadsDatabase: Could not open READWRITE (code: \(tempOpenResult)), will try READONLY anyway")
+            }
+        }
+
+        let openResult = sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY, nil)
+        print("BeadsDatabase: sqlite3_open_v2 result: \(openResult) (0 = OK)")
+
+        guard openResult == SQLITE_OK else {
+            if let db = db {
+                let errorMessage = String(cString: sqlite3_errmsg(db))
+                print("BeadsDatabase: Open failed with error: \(errorMessage)")
+            }
             throw DatabaseError.cantOpen
         }
 
         // set busy timeout to 5 seconds
         sqlite3_busy_timeout(db, 5000)
+        print("BeadsDatabase: Successfully opened database")
     }
 
     public func close() {

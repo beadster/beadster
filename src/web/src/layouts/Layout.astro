@@ -1093,6 +1093,85 @@ const user = Astro.locals.user;
                 color: var(--color-text);
                 text-align: center;
             }
+
+            /* mirror/github repo styles */
+            .mirror-banner {
+                padding: 12px 15px;
+                background: #e3f2fd;
+                border: 1px solid #90caf9;
+                border-radius: 6px;
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 14px;
+                flex-wrap: wrap;
+            }
+
+            .mirror-banner a {
+                color: var(--color-primary);
+                text-decoration: none;
+                font-weight: 500;
+            }
+
+            .mirror-banner a:hover {
+                text-decoration: underline;
+            }
+
+            .sync-time {
+                color: #666;
+                font-size: 13px;
+            }
+
+            .repo-header {
+                margin-bottom: 20px;
+            }
+
+            .repo-header h1 {
+                margin: 0;
+                font-size: 24px;
+            }
+
+            .repo-header h1 a {
+                color: inherit;
+                text-decoration: none;
+            }
+
+            .repo-header h1 a:hover {
+                text-decoration: underline;
+            }
+
+            .repo-description {
+                margin: 8px 0 0 0;
+                color: var(--text-secondary);
+                font-size: 14px;
+            }
+
+            .auto-import-notice {
+                margin-top: 20px;
+                padding: 12px 15px;
+                background: #e8f5e9;
+                border: 1px solid #4caf50;
+                border-radius: 6px;
+                font-size: 14px;
+                color: #2e7d32;
+                text-align: center;
+            }
+
+            .auto-import-notice a {
+                color: #2e7d32;
+                font-weight: 500;
+            }
+
+            .badge.type-badge {
+                background: #e3f2fd;
+                color: #1976d2;
+            }
+
+            .badge.label-badge {
+                background: #e8f5e9;
+                color: #2e7d32;
+            }
         </style>
     </head>
     <body>
