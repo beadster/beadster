@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getRepositories } from '../../../shared/database';
+import { formatRelativeTime, getRepoName } from '../../../shared/utils';
 
 // Require authentication
 if (!Astro.locals.user) {
@@ -19,32 +20,6 @@ try {
   }
 } catch (e) {
   error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
-}
-
-function formatRelativeTime(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 0) return `${days}d ago`;
-  if (hours > 0) return `${hours}h ago`;
-  if (minutes > 0) return `${minutes}m ago`;
-  return 'just now';
-}
-
-function getRepoName(url: string): string {
-  // Extract repo name from git URL
-  // https://github.com/user/repo.git -> user/repo
-  // git@github.com:user/repo.git -> user/repo
-  try {
-    const match = url.match(/([^/:]+\/[^/:]+?)(\.git)?$/);
-    return match ? match[1] : url;
-  } catch {
-    return url;
-  }
 }
 ---
 

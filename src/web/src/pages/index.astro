@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import IssueListItem from '../components/IssueListItem.astro';
 import { getIssues } from '../../../shared/database';
 
 const user = Astro.locals.user;
@@ -32,56 +33,6 @@ if (user) {
   } catch (e) {
     error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
   }
-}
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleDateString();
-}
-
-function getPriorityClass(priority: number | null): string {
-  if (priority === null) return '';
-  if (priority === 0) return 'priority';
-  if (priority === 1) return 'priority p1';
-  return 'priority p2';
-}
-
-function getRepoName(url: string): string {
-  // Extract repo name from git URL
-  try {
-    const match = url.match(/([^/:]+\/[^/:]+?)(\.git)?$/);
-    return match ? match[1] : url;
-  } catch {
-    return url;
-  }
-}
-
-function parseExternalRef(ref: string | null): { platform: string; repoPath?: string; id: string; url?: string } | null {
-  if (!ref) return null;
-
-  // github:owner/repo:issue-id
-  const githubMatch = ref.match(/^github:([^:]+):(.+)$/);
-  if (githubMatch) {
-    return {
-      platform: 'GitHub',
-      repoPath: githubMatch[1],
-      id: githubMatch[2],
-      url: `https://github.com/${githubMatch[1]}`
-    };
-  }
-
-  // jira:PROJECT-123
-  const jiraMatch = ref.match(/^jira:(.+)$/);
-  if (jiraMatch) {
-    return { platform: 'Jira', id: jiraMatch[1] };
-  }
-
-  // linear:abc-123
-  const linearMatch = ref.match(/^linear:(.+)$/);
-  if (linearMatch) {
-    return { platform: 'Linear', id: linearMatch[1] };
-  }
-
-  return { platform: 'External', id: ref };
 }
 
 const hasFilters = repoUrl || issueType || assignee || search;
@@ -183,63 +134,11 @@ const hasFilters = repoUrl || issueType || assignee || search;
       )}
 
       {!error && issues.length > 0 && (
-    <ul class="issue-list">
-      {issues.map(issue => {
-        const externalRef = parseExternalRef(issue.external_ref);
-        return (
-        <li class="issue-item">
-          <div class="issue-header">
-            <div>
-              <span class="issue-id">{issue.beads_id}</span>
-              <a href={`/issues/${issue.id}`} class="issue-title">{issue.title}</a>
-            </div>
-            <div class="issue-actions">
-              <button class="btn-close" data-id={issue.id}>✓ close</button>
-            </div>
-          </div>
-          <div class="issue-meta">
-            <span class={`badge status ${issue.status}`}>{issue.status}</span>
-            {issue.priority !== null && (
-              <span class={`badge ${getPriorityClass(issue.priority)}`}>
-                P{issue.priority}
-              </span>
-            )}
-            {issue.issue_type && (
-              <span class="badge type-badge">{issue.issue_type}</span>
-            )}
-            {externalRef && (
-              <a
-                href={externalRef.url || '#'}
-                class="badge external-ref-badge"
-                target={externalRef.url ? '_blank' : undefined}
-                rel={externalRef.url ? 'noopener' : undefined}
-                title={issue.external_ref}
-              >
-                {externalRef.platform}: {externalRef.id}
-              </a>
-            )}
-            {issue.git_repo_url && (
-              <a href={`/?repo=${encodeURIComponent(issue.git_repo_url)}`} class="badge repo-badge">
-                📦 {getRepoName(issue.git_repo_url)}
-              </a>
-            )}
-            {issue.assignee && (
-              <span class="badge assignee-badge">@{issue.assignee}</span>
-            )}
-            {issue.git_branch && (
-              <span class="badge branch-badge">🌿 {issue.git_branch}</span>
-            )}
-            <span>created {formatDate(issue.created_at)}</span>
-          </div>
-          {issue.body && (
-            <div class="issue-body">
-              {issue.body.length > 200 ? issue.body.substring(0, 200) + '...' : issue.body}
-            </div>
-          )}
-        </li>
-        );
-      })}
-    </ul>
+        <ul class="issue-list">
+          {issues.map(issue => (
+            <IssueListItem issue={issue} showCloseButton={true} />
+          ))}
+        </ul>
       )}
     </>
   )}
@@ -248,32 +147,32 @@ const hasFilters = repoUrl || issueType || assignee || search;
 <style>
   .filters-bar {
     display: flex;
-    gap: 8px;
-    margin: 10px 0;
+    gap: var(--space-sm);
+    margin: var(--space-md) 0;
     align-items: center;
   }
 
   .filter-search {
     flex: 1;
     min-width: 200px;
-    padding: 6px 10px;
-    border: 1px solid var(--color-border, #ddd);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border-dark);
     border-radius: var(--border-radius);
     font-size: var(--font-base);
   }
 
   .filter-select {
-    padding: 6px 10px;
-    border: 1px solid var(--color-border, #ddd);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border-dark);
     border-radius: var(--border-radius);
     font-size: var(--font-base);
-    background: white;
+    background: var(--color-bg);
     cursor: pointer;
   }
 
   .btn-filter {
-    padding: 6px 16px;
-    background: var(--color-primary, #0066cc);
+    padding: var(--space-sm) var(--space-xl);
+    background: var(--color-primary);
     color: white;
     border: none;
     border-radius: var(--border-radius);
@@ -282,64 +181,7 @@ const hasFilters = repoUrl || issueType || assignee || search;
   }
 
   .btn-filter:hover {
-    opacity: 0.9;
-  }
-
-  .issue-body {
-    margin-top: 8px;
-    font-size: 14px;
-    color: #666;
-    line-height: 1.5;
-  }
-
-  .type-badge {
-    background: #e3f2fd;
-    color: #1976d2;
-  }
-
-  .external-ref-badge {
-    background: #f3e5f5;
-    color: #7b1fa2;
-    text-decoration: none;
-    cursor: pointer;
-  }
-
-  .external-ref-badge:hover {
-    background: #e1bee7;
-  }
-
-  .repo-badge {
-    background: #e8f5e9;
-    color: #2e7d32;
-    text-decoration: none;
-  }
-
-  .repo-badge:hover {
-    background: #c8e6c9;
-  }
-
-  .assignee-badge {
-    background: #fff3e0;
-    color: #f57c00;
-  }
-
-  .branch-badge {
-    background: #fce4ec;
-    color: #c2185b;
-    font-size: 12px;
-  }
-
-  .btn-clear-filter {
-    padding: 8px 15px;
-    background: #f5f5f5;
-    color: #666;
-    text-decoration: none;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-
-  .btn-clear-filter:hover {
-    background: #e0e0e0;
+    background: var(--color-primary-hover);
   }
 </style>
 

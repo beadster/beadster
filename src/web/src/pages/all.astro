@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import IssueListItem from '../components/IssueListItem.astro';
 import { getIssues } from '../../../shared/database';
 
 // Require authentication
@@ -20,17 +21,6 @@ try {
   }
 } catch (e) {
   error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
-}
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleDateString();
-}
-
-function getPriorityClass(priority: number | null): string {
-  if (priority === null) return '';
-  if (priority === 0) return 'priority';
-  if (priority === 1) return 'priority p1';
-  return 'priority p2';
 }
 ---
 
@@ -60,37 +50,12 @@ function getPriorityClass(priority: number | null): string {
   {!error && issues.length > 0 && (
     <ul class="issue-list">
       {issues.map(issue => (
-        <li class="issue-item">
-          <div class="issue-header">
-            <span class="issue-id">{issue.beads_id}</span>
-            <a href={`/issues/${issue.id}`} class="issue-title">{issue.title}</a>
-          </div>
-          <div class="issue-meta">
-            <span class={`badge status ${issue.status}`}>{issue.status}</span>
-            {issue.priority !== null && (
-              <span class={`badge ${getPriorityClass(issue.priority)}`}>
-                P{issue.priority}
-              </span>
-            )}
-            {issue.session_id && (
-              <span class="badge session">
-                {issue.session_id.substring(0, 20)}...
-              </span>
-            )}
-            {issue.client && (
-              <span class="badge client">{issue.client}</span>
-            )}
-            {issue.project_name && (
-              <span class="badge">{issue.project_name}</span>
-            )}
-            <span>created {formatDate(issue.created_at)}</span>
-          </div>
-          {issue.body && (
-            <div class="issue-body-text">
-              {issue.body}
-            </div>
-          )}
-        </li>
+        <IssueListItem
+          issue={issue}
+          showSessionInfo={true}
+          showGitInfo={false}
+          showExternalRef={false}
+        />
       ))}
     </ul>
   )}

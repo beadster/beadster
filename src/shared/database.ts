@@ -536,3 +536,121 @@ export async function getUserStats(db: D1Database, userId: string): Promise<{
     recent_activity
   };
 }
+
+/**
+ * Get source by git repo URL
+ */
+export async function getSourceByRepoUrl(db: D1Database, userId: string, repoUrl: string): Promise<any | null> {
+  const result = await db.prepare(`
+    SELECT * FROM sources
+    WHERE user_id = ? AND git_repo_url = ?
+  `).bind(userId, repoUrl).first();
+
+  return result || null;
+}
+
+/**
+ * Create a GitHub mirror source
+ */
+export async function createMirrorSource(
+  db: D1Database,
+  userId: string,
+  data: {
+    name: string;
+    repoUrl: string;
+    branch?: string;
+    syncIntervalMinutes?: number;
+  }
+): Promise<string> {
+  const sourceId = `src_${generateId()}`;
+  const now = Math.floor(Date.now() / 1000);
+
+  await db.prepare(`
+    INSERT INTO sources (
+      id, user_id, name, type, git_repo_url, git_current_branch,
+      is_mirror, auto_sync, sync_interval_minutes,
+      last_sync, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    sourceId,
+    userId,
+    data.name,
+    'github-mirror',
+    data.repoUrl,
+    data.branch || 'main',
+    1,  // is_mirror
+    1,  // auto_sync enabled
+    data.syncIntervalMinutes || 5,
+    now,  // last_sync
+    now,
+    now
+  ).run();
+
+  return sourceId;
+}
+
+/**
+ * Import issue from external source
+ */
+export async function importIssue(
+  db: D1Database,
+  userId: string,
+  sourceId: string,
+  issueData: any
+): Promise<void> {
+  const externalRef = issueData.external_ref;
+
+  // Check for existing by external_ref
+  if (externalRef) {
+    const existing = await db.prepare(`
+      SELECT id FROM issues WHERE user_id = ? AND external_ref = ?
+    `).bind(userId, externalRef).first();
+
+    if (existing) return; // skip if exists
+  }
+
+  // Create new issue
+  const issueId = `iss_${generateId()}`;
+  const now = Math.floor(Date.now() / 1000);
+
+  await db.prepare(`
+    INSERT INTO issues (
+      id, user_id, source_id, beads_id, title, body, status, priority,
+      issue_type, labels, external_ref, created_at, updated_at, closed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    issueId,
+    userId,
+    sourceId,
+    issueData.id,
+    issueData.title,
+    issueData.body || issueData.description || null,
+    issueData.status,
+    issueData.priority ?? 2,
+    issueData.issue_type || null,
+    JSON.stringify(issueData.labels || []),
+    externalRef,
+    parseTimestamp(issueData.created_at),
+    parseTimestamp(issueData.updated_at),
+    issueData.closed_at ? parseTimestamp(issueData.closed_at) : null
+  ).run();
+}
+
+/**
+ * Generate random ID
+ */
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+/**
+ * Parse timestamp from various formats
+ */
+function parseTimestamp(dateStr: string | number): number {
+  if (typeof dateStr === 'number') return dateStr;
+  try {
+    return Math.floor(new Date(dateStr).getTime() / 1000);
+  } catch {
+    return Math.floor(Date.now() / 1000);
+  }
+}

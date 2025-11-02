@@ -1,6 +1,9 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import MirrorBanner from '../../../components/MirrorBanner.astro';
+import IssueListItem from '../../../components/IssueListItem.astro';
 import { fetchPublicBeads, fetchRepoInfo, checkRepoHasBeads } from '../../../lib/github';
+import { getSourceByRepoUrl, createMirrorSource, importIssue } from '../../../../../shared/database';
 
 const { owner, repo } = Astro.params;
 
@@ -19,7 +22,6 @@ const user = Astro.locals.user;
 const db = Astro.locals.runtime?.env?.DB;
 
 try {
-  // Check if repo has beads
   hasBeads = await checkRepoHasBeads(owner, repo);
 
   if (!hasBeads) {
@@ -35,38 +37,16 @@ try {
     // If user is logged in, auto-import as mirror
     if (user && db) {
       const repoUrl = `https://github.com/${owner}/${repo}`;
-
-      // Check if source already exists
-      source = await db.prepare(`
-        SELECT * FROM sources
-        WHERE user_id = ? AND git_repo_url = ?
-      `).bind(user.id, repoUrl).first();
+      source = await getSourceByRepoUrl(db, user.id, repoUrl);
 
       // Auto-import if not exists
       if (!source) {
-        const sourceId = `src_${generateId()}`;
-        const now = Date.now();
-
-        await db.prepare(`
-          INSERT INTO sources (
-            id, user_id, name, type, git_repo_url, git_current_branch,
-            is_mirror, auto_sync, sync_interval_minutes,
-            last_sync, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(
-          sourceId,
-          user.id,
-          `${owner}/${repo}`,
-          'github-mirror',
+        const sourceId = await createMirrorSource(db, user.id, {
+          name: `${owner}/${repo}`,
           repoUrl,
-          'main',
-          1,  // is_mirror
-          1,  // auto_sync enabled
-          5,  // sync every 5 minutes
-          now,  // last_sync (now since we're importing)
-          now,
-          now
-        ).run();
+          branch: 'main',
+          syncIntervalMinutes: 5
+        });
 
         // Fetch and import issues
         const fetchedIssues = await fetchPublicBeads(owner, repo);
@@ -80,11 +60,7 @@ try {
         }
 
         isAutoImported = true;
-
-        // Re-fetch source to get the data
-        source = await db.prepare(`
-          SELECT * FROM sources WHERE id = ?
-        `).bind(sourceId).first();
+        source = await getSourceByRepoUrl(db, user.id, repoUrl);
       }
     }
 
@@ -95,103 +71,17 @@ try {
   error = e instanceof Error ? e.message : String(e);
 }
 
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
-
-async function importIssue(db: any, userId: string, sourceId: string, issue: any) {
-  const externalRef = issue.external_ref;
-
-  // Check for existing by external_ref
-  if (externalRef) {
-    const existing = await db.prepare(`
-      SELECT id FROM issues WHERE user_id = ? AND external_ref = ?
-    `).bind(userId, externalRef).first();
-
-    if (existing) return; // skip if exists
-  }
-
-  // Create new issue
-  const issueId = `iss_${generateId()}`;
-  await db.prepare(`
-    INSERT INTO issues (
-      id, user_id, source_id, beads_id, title, body, status, priority,
-      issue_type, labels, external_ref, created_at, updated_at, closed_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(
-    issueId,
-    userId,
-    sourceId,
-    issue.id,
-    issue.title,
-    issue.body || issue.description || null,
-    issue.status,
-    issue.priority ?? 2,
-    issue.issue_type || null,
-    JSON.stringify(issue.labels || []),
-    externalRef,
-    parseTimestamp(issue.created_at),
-    parseTimestamp(issue.updated_at),
-    issue.closed_at ? parseTimestamp(issue.closed_at) : null
-  ).run();
-}
-
-function parseTimestamp(dateStr: string | number): number {
-  if (typeof dateStr === 'number') return dateStr;
-  try {
-    return Math.floor(new Date(dateStr).getTime());
-  } catch {
-    return Date.now();
-  }
-}
-
 const openIssues = issues.filter(i => i.status !== 'closed');
-const closedIssues = issues.filter(i => i.status === 'closed');
-
-function formatDate(dateStr: string): string {
-  try {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString();
-  } catch {
-    return dateStr;
-  }
-}
-
-function getPriorityLabel(priority?: number): string {
-  if (priority === undefined || priority === null) return 'P2';
-  return `P${priority}`;
-}
-
-function getStatusBadgeClass(status: string): string {
-  switch (status) {
-    case 'open': return 'status-open';
-    case 'in_progress': return 'status-in-progress';
-    case 'blocked': return 'status-blocked';
-    case 'closed': return 'status-closed';
-    default: return 'status-open';
-  }
-}
-
-function getStatusLabel(status: string): string {
-  switch (status) {
-    case 'in_progress': return 'in progress';
-    case 'blocked': return 'blocked';
-    case 'closed': return 'closed';
-    default: return 'open';
-  }
-}
 ---
 
 <Layout title={`${owner}/${repo} - beadster`}>
-  {/* Mirror badge at top */}
   {source && (
-    <div class="mirror-banner">
-      <span class="mirror-icon">🔄</span>
-      <span>read-only mirror of <a href={`https://github.com/${owner}/${repo}`} target="_blank" rel="noopener">{owner}/{repo}</a></span>
-      {source.last_sync && (
-        <span class="sync-time">• syncs every {source.sync_interval_minutes}min • last: {new Date(source.last_sync).toLocaleString()}</span>
-      )}
-    </div>
+    <MirrorBanner
+      owner={owner}
+      repo={repo}
+      syncIntervalMinutes={source.sync_interval_minutes}
+      lastSync={source.last_sync}
+    />
   )}
 
   {!source && (
@@ -203,18 +93,15 @@ function getStatusLabel(status: string): string {
     </div>
   )}
 
-  {/* Tabs navigation */}
   <nav class="tabs">
     <a href={`/${owner}/${repo}`} class="active">open</a>
     <a href={`/${owner}/${repo}/closed`}>closed</a>
   </nav>
 
-  {/* Header row */}
   <div class="header-row">
     <h2>open issues</h2>
   </div>
 
-  {/* Error state */}
   {error && (
     <div class="error">
       <p>{error}</p>
@@ -226,20 +113,18 @@ function getStatusLabel(status: string): string {
     </div>
   )}
 
-  {/* Empty state */}
   {!error && issues.length === 0 && (
     <div class="empty">
       <p>no issues found in this repository</p>
     </div>
   )}
 
-  {/* Issue list */}
-  {!error && issues.length > 0 && (
+  {!error && openIssues.length > 0 && (
     <ul class="issue-list">
       {openIssues.map(issue => (
         <li class="issue-item">
           <div class="issue-header">
-            <div>
+            <div class="issue-header-left">
               <span class="issue-id">{issue.id}</span>
               <a href={`/${owner}/${repo}/${issue.id}`} class="issue-title">{issue.title}</a>
             </div>
@@ -255,10 +140,10 @@ function getStatusLabel(status: string): string {
             {issue.labels && issue.labels.length > 0 && issue.labels.map((label: string) => (
               <span class="badge label-badge">{label}</span>
             ))}
-            <span>created {formatDate(issue.created_at)}</span>
+            <span>created {new Date(issue.created_at).toLocaleDateString()}</span>
           </div>
           {issue.body && (
-            <div class="issue-body">
+            <div class="issue-body-text">
               {issue.body.length > 200 ? issue.body.substring(0, 200) + '...' : issue.body}
             </div>
           )}
@@ -267,7 +152,6 @@ function getStatusLabel(status: string): string {
     </ul>
   )}
 
-  {/* Auto-import notice */}
   {isAutoImported && (
     <div class="auto-import-notice">
       ✨ auto-imported to your account - view in <a href="/">your issues</a>
@@ -276,88 +160,9 @@ function getStatusLabel(status: string): string {
 </Layout>
 
 <style>
-  .mirror-banner {
-    padding: 12px 15px;
-    background: #e3f2fd;
-    border: 1px solid #90caf9;
-    border-radius: 6px;
-    margin-bottom: 20px;
+  .issue-header-left {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    flex-wrap: wrap;
-  }
-
-  .mirror-banner a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: 500;
-  }
-
-  .mirror-banner a:hover {
-    text-decoration: underline;
-  }
-
-  .sync-time {
-    color: #666;
-    font-size: 13px;
-  }
-
-  .repo-header {
-    margin-bottom: 20px;
-  }
-
-  .repo-header h1 {
-    margin: 0;
-    font-size: 24px;
-  }
-
-  .repo-header h1 a {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .repo-header h1 a:hover {
-    text-decoration: underline;
-  }
-
-  .repo-description {
-    margin: 8px 0 0 0;
-    color: var(--text-secondary);
-    font-size: 14px;
-  }
-
-  .auto-import-notice {
-    margin-top: 20px;
-    padding: 12px 15px;
-    background: #e8f5e9;
-    border: 1px solid #4caf50;
-    border-radius: 6px;
-    font-size: 14px;
-    color: #2e7d32;
-    text-align: center;
-  }
-
-  .auto-import-notice a {
-    color: #2e7d32;
-    font-weight: 500;
-  }
-
-  .type-badge {
-    background: #e3f2fd;
-    color: #1976d2;
-  }
-
-  .label-badge {
-    background: #e8f5e9;
-    color: #2e7d32;
-  }
-
-  .issue-body {
-    margin-top: 8px;
-    font-size: 14px;
-    color: #666;
-    line-height: 1.5;
+    gap: var(--space-sm);
   }
 </style>

@@ -1,6 +1,8 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import MirrorBanner from '../../../components/MirrorBanner.astro';
 import { fetchPublicBeads, fetchRepoInfo, checkRepoHasBeads } from '../../../lib/github';
+import { getSourceByRepoUrl } from '../../../../../shared/database';
 
 const { owner, repo } = Astro.params;
 
@@ -13,7 +15,6 @@ let error: string | null = null;
 let repoInfo: any = null;
 let hasBeads = false;
 let source: any = null;
-let isAutoImported = false;
 
 const user = Astro.locals.user;
 const db = Astro.locals.runtime?.env?.DB;
@@ -32,10 +33,7 @@ try {
 
     if (user && db) {
       const repoUrl = `https://github.com/${owner}/${repo}`;
-      source = await db.prepare(`
-        SELECT * FROM sources
-        WHERE user_id = ? AND git_repo_url = ?
-      `).bind(user.id, repoUrl).first();
+      source = await getSourceByRepoUrl(db, user.id, repoUrl);
     }
 
     issues = await fetchPublicBeads(owner, repo);
@@ -44,28 +42,17 @@ try {
   error = e instanceof Error ? e.message : String(e);
 }
 
-const openIssues = issues.filter(i => i.status !== 'closed');
 const closedIssues = issues.filter(i => i.status === 'closed');
-
-function formatDate(dateStr: string): string {
-  try {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString();
-  } catch {
-    return dateStr;
-  }
-}
 ---
 
 <Layout title={`${owner}/${repo} - beadster`}>
   {source && (
-    <div class="mirror-banner">
-      <span class="mirror-icon">🔄</span>
-      <span>read-only mirror of <a href={`https://github.com/${owner}/${repo}`} target="_blank" rel="noopener">{owner}/{repo}</a></span>
-      {source.last_sync && (
-        <span class="sync-time">• syncs every {source.sync_interval_minutes}min • last: {new Date(source.last_sync).toLocaleString()}</span>
-      )}
-    </div>
+    <MirrorBanner
+      owner={owner}
+      repo={repo}
+      syncIntervalMinutes={source.sync_interval_minutes}
+      lastSync={source.last_sync}
+    />
   )}
 
   {!source && (
@@ -108,7 +95,7 @@ function formatDate(dateStr: string): string {
       {closedIssues.map(issue => (
         <li class="issue-item">
           <div class="issue-header">
-            <div>
+            <div class="issue-header-left">
               <span class="issue-id">{issue.id}</span>
               <a href={`/${owner}/${repo}/${issue.id}`} class="issue-title">{issue.title}</a>
             </div>
@@ -124,10 +111,10 @@ function formatDate(dateStr: string): string {
             {issue.labels && issue.labels.length > 0 && issue.labels.map((label: string) => (
               <span class="badge label-badge">{label}</span>
             ))}
-            <span>created {formatDate(issue.created_at)}</span>
+            <span>created {new Date(issue.created_at).toLocaleDateString()}</span>
           </div>
           {issue.body && (
-            <div class="issue-body">
+            <div class="issue-body-text">
               {issue.body.length > 200 ? issue.body.substring(0, 200) + '...' : issue.body}
             </div>
           )}
@@ -138,72 +125,9 @@ function formatDate(dateStr: string): string {
 </Layout>
 
 <style>
-  .mirror-banner {
-    padding: 12px 15px;
-    background: #e3f2fd;
-    border: 1px solid #90caf9;
-    border-radius: 6px;
-    margin-bottom: 20px;
+  .issue-header-left {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    flex-wrap: wrap;
-  }
-
-  .mirror-banner a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: 500;
-  }
-
-  .mirror-banner a:hover {
-    text-decoration: underline;
-  }
-
-  .sync-time {
-    color: #666;
-    font-size: 13px;
-  }
-
-  .repo-header {
-    margin-bottom: 20px;
-  }
-
-  .repo-header h1 {
-    margin: 0;
-    font-size: 24px;
-  }
-
-  .repo-header h1 a {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .repo-header h1 a:hover {
-    text-decoration: underline;
-  }
-
-  .repo-description {
-    margin: 8px 0 0 0;
-    color: var(--text-secondary);
-    font-size: 14px;
-  }
-
-  .type-badge {
-    background: #e3f2fd;
-    color: #1976d2;
-  }
-
-  .label-badge {
-    background: #e8f5e9;
-    color: #2e7d32;
-  }
-
-  .issue-body {
-    margin-top: 8px;
-    font-size: 14px;
-    color: #666;
-    line-height: 1.5;
+    gap: var(--space-sm);
   }
 </style>

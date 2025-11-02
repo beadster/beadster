@@ -1,0 +1,148 @@
+---
+import { getPriorityClass, parseExternalRef, getRepoName, formatDate } from '../../../../shared/utils';
+
+interface Props {
+  issue: any;
+  showCloseButton?: boolean;
+  showExternalRef?: boolean;
+  showGitInfo?: boolean;
+  showSessionInfo?: boolean;
+  showBody?: boolean;
+  bodyMaxLength?: number;
+}
+
+const {
+  issue,
+  showCloseButton = false,
+  showExternalRef = true,
+  showGitInfo = true,
+  showSessionInfo = false,
+  showBody = true,
+  bodyMaxLength = 200,
+} = Astro.props;
+
+const externalRef = showExternalRef ? parseExternalRef(issue.external_ref) : null;
+---
+
+<li class="issue-item">
+  <div class="issue-header">
+    <div class="issue-header-left">
+      <span class="issue-id">{issue.beads_id}</span>
+      <a href={`/issues/${issue.id}`} class="issue-title">{issue.title}</a>
+    </div>
+    {showCloseButton && (
+      <div class="issue-actions">
+        <button class="btn-close" data-id={issue.id}>✓ close</button>
+      </div>
+    )}
+  </div>
+  <div class="issue-meta">
+    <span class={`badge status ${issue.status}`}>{issue.status}</span>
+    {issue.priority !== null && (
+      <span class={`badge ${getPriorityClass(issue.priority)}`}>
+        P{issue.priority}
+      </span>
+    )}
+    {issue.issue_type && (
+      <span class="badge type-badge">{issue.issue_type}</span>
+    )}
+    {externalRef && (
+      <a
+        href={externalRef.url || '#'}
+        class="badge external-ref-badge"
+        target={externalRef.url ? '_blank' : undefined}
+        rel={externalRef.url ? 'noopener' : undefined}
+        title={issue.external_ref}
+      >
+        {externalRef.platform}: {externalRef.id}
+      </a>
+    )}
+    {showGitInfo && issue.git_repo_url && (
+      <a href={`/?repo=${encodeURIComponent(issue.git_repo_url)}`} class="badge repo-badge">
+        📦 {getRepoName(issue.git_repo_url)}
+      </a>
+    )}
+    {issue.assignee && (
+      <span class="badge assignee-badge">@{issue.assignee}</span>
+    )}
+    {showGitInfo && issue.git_branch && (
+      <span class="badge branch-badge">🌿 {issue.git_branch}</span>
+    )}
+    {showSessionInfo && issue.session_id && (
+      <span class="badge session">
+        {issue.session_id.substring(0, 20)}...
+      </span>
+    )}
+    {showSessionInfo && issue.client && (
+      <span class="badge client">{issue.client}</span>
+    )}
+    {issue.project_name && (
+      <span class="badge">{issue.project_name}</span>
+    )}
+    {issue.labels && issue.labels.length > 0 && issue.labels.map((label: string) => (
+      <span class="badge label-badge">{label}</span>
+    ))}
+    <span>created {formatDate(issue.created_at)}</span>
+    {issue.closed_at && <span>closed {formatDate(issue.closed_at)}</span>}
+  </div>
+  {showBody && issue.body && (
+    <div class="issue-body-text">
+      {issue.body.length > bodyMaxLength ? issue.body.substring(0, bodyMaxLength) + '...' : issue.body}
+    </div>
+  )}
+</li>
+
+<style>
+  .issue-header {
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .issue-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex: 1;
+  }
+
+  .type-badge {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+  }
+
+  .external-ref-badge {
+    background: var(--color-purple-bg);
+    color: var(--color-purple);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .external-ref-badge:hover {
+    opacity: 0.8;
+  }
+
+  .repo-badge {
+    background: var(--color-success-bg);
+    color: var(--color-success-dark);
+    text-decoration: none;
+  }
+
+  .repo-badge:hover {
+    opacity: 0.8;
+  }
+
+  .assignee-badge {
+    background: #fff3e0;
+    color: #f57c00;
+  }
+
+  .branch-badge {
+    background: #fce4ec;
+    color: #c2185b;
+  }
+
+  .label-badge {
+    background: var(--color-success-bg);
+    color: var(--color-success-dark);
+  }
+</style>

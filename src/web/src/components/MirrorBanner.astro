@@ -1,0 +1,18 @@
+---
+interface Props {
+  owner: string;
+  repo: string;
+  syncIntervalMinutes?: number;
+  lastSync?: number;
+}
+
+const { owner, repo, syncIntervalMinutes, lastSync } = Astro.props;
+---
+
+<div class="mirror-banner">
+  <span class="mirror-icon">🔄</span>
+  <span>read-only mirror of <a href={`https://github.com/${owner}/${repo}`} target="_blank" rel="noopener">{owner}/{repo}</a></span>
+  {syncIntervalMinutes && lastSync && (
+    <span class="sync-time">• syncs every {syncIntervalMinutes}min • last: {new Date(lastSync).toLocaleString()}</span>
+  )}
+</div>
