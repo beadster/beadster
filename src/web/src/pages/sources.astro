@@ -60,71 +60,40 @@ function formatRelativeTime(timestamp: number): string {
     <ul class="source-list">
       {sources.map(source => (
         <li class="source-item">
-          <div class="source-header">
-            <h3 class="source-name">{source.name}</h3>
-            <div class="source-badges">
-              {source.is_mirror === 1 ? (
-                <span class="badge mirror">🔄 mirror</span>
-              ) : (
-                <span class="badge owned">📝 owned</span>
-              )}
-              <span class={`badge type ${source.type}`}>{source.type}</span>
-            </div>
-          </div>
-
-          {source.path && (
-            <div class="source-path">{source.path}</div>
-          )}
-
-          {source.git_repo_url && (
-            <div class="source-git-url">
-              <a href={source.git_repo_url} target="_blank" rel="noopener">
-                {source.git_repo_url}
-              </a>
-            </div>
-          )}
-
-          <div class="source-stats">
-            <div class="stat">
-              <span class="stat-value">{source.issue_count}</span>
-              <span class="stat-label">total issues</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value">{source.open_count}</span>
-              <span class="stat-label">open</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value">{source.last_issue_number || 0}</span>
-              <span class="stat-label">last number</span>
-            </div>
-            {source.is_mirror === 1 && source.auto_sync === 1 && (
-              <div class="stat">
-                <span class="stat-value">every {source.sync_interval_minutes}m</span>
-                <span class="stat-label">auto-sync</span>
+          <a href={`/?source=${source.id}`} class="source-link">
+            <div class="source-header">
+              <h3 class="source-name">{source.name}</h3>
+              <div class="source-stats-inline">
+                <span class="stat-badge">{source.issue_count} total</span>
+                <span class="stat-badge open">{source.open_count} open</span>
+                {source.is_mirror === 1 ? (
+                  <span class="badge mirror">🔄 mirror</span>
+                ) : (
+                  <span class="badge owned">📝 owned</span>
+                )}
+                <span class={`badge type ${source.type}`}>{source.type}</span>
               </div>
-            )}
-          </div>
-
-          <div class="source-meta">
-            <span>created {formatDate(source.created_at)}</span>
-            {source.last_sync && (
-              <span>• last sync {formatRelativeTime(source.last_sync)}</span>
-            )}
-          </div>
-
-          {source.is_mirror !== 1 && (
-            <div class="source-actions">
-              <a href={`/new?source=${source.id}`} class="btn-primary-small">+ new issue</a>
-              <a href={`/?source=${source.id}`} class="btn-secondary-small">view issues</a>
             </div>
-          )}
 
-          {source.is_mirror === 1 && (
-            <div class="source-actions">
-              <a href={`/?source=${source.id}`} class="btn-secondary-small">view issues</a>
-              <span class="read-only-notice">read-only mirror</span>
+            {source.path && (
+              <div class="source-path">{source.path}</div>
+            )}
+
+            {source.git_repo_url && (
+              <div class="source-git-url">{source.git_repo_url}</div>
+            )}
+
+            <div class="source-meta">
+              <span>created {formatDate(source.created_at)}</span>
+              {source.last_sync && (
+                <span>• last sync {formatRelativeTime(source.last_sync)}</span>
+              )}
+              <span>• last #{source.last_issue_number || 0}</span>
+              {source.is_mirror === 1 && source.auto_sync === 1 && (
+                <span>• auto-sync every {source.sync_interval_minutes}m</span>
+              )}
             </div>
-          )}
+          </a>
         </li>
       ))}
     </ul>
@@ -135,39 +104,71 @@ function formatRelativeTime(timestamp: number): string {
   .source-list {
     list-style: none;
     padding: 0;
-    margin: 20px 0;
+    margin: 10px 0;
   }
 
   .source-item {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 15px;
-    background: var(--bg-primary);
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    margin-bottom: 10px;
+    transition: all 0.2s;
+  }
+
+  .source-item::before {
+    content: none !important;
+  }
+
+  .source-item:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-lighter);
+  }
+
+  .source-link {
+    display: block;
+    padding: 12px;
+    text-decoration: none;
+    color: inherit;
   }
 
   .source-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
   }
 
   .source-name {
     margin: 0;
-    font-size: 18px;
+    font-size: var(--font-lg);
     font-weight: 500;
+    color: var(--color-text);
   }
 
-  .source-badges {
+  .source-stats-inline {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .stat-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: var(--font-sm);
+    font-weight: 500;
+    background: var(--color-neutral);
+    color: var(--color-text-light);
+  }
+
+  .stat-badge.open {
+    background: var(--color-success-bg);
+    color: var(--color-success-dark);
   }
 
   .badge {
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: var(--font-sm);
     font-weight: 500;
     text-transform: uppercase;
   }
@@ -188,97 +189,24 @@ function formatRelativeTime(timestamp: number): string {
   }
 
   .source-path {
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-family: monospace;
-    margin-bottom: 10px;
+    font-size: var(--font-sm);
+    color: var(--color-text-light);
+    font-family: var(--font-mono);
+    margin-bottom: 6px;
   }
 
   .source-git-url {
-    font-size: 13px;
-    margin-bottom: 10px;
-  }
-
-  .source-git-url a {
-    color: var(--primary-color);
-    text-decoration: none;
-  }
-
-  .source-git-url a:hover {
-    text-decoration: underline;
-  }
-
-  .source-stats {
-    display: flex;
-    gap: 30px;
-    margin: 15px 0;
-  }
-
-  .stat {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .stat-value {
-    font-size: 20px;
-    font-weight: 600;
-  }
-
-  .stat-label {
-    font-size: 12px;
-    color: var(--text-secondary);
-    text-transform: uppercase;
+    font-size: var(--font-sm);
+    color: var(--color-text-light);
+    font-family: var(--font-mono);
+    margin-bottom: 6px;
   }
 
   .source-meta {
     display: flex;
-    gap: 10px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-top: 10px;
-  }
-
-  .source-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid var(--border-color);
-  }
-
-  .btn-primary-small, .btn-secondary-small {
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 13px;
-    text-decoration: none;
-    display: inline-block;
-    cursor: pointer;
-  }
-
-  .btn-primary-small {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-  }
-
-  .btn-primary-small:hover {
-    opacity: 0.9;
-  }
-
-  .btn-secondary-small {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-  }
-
-  .btn-secondary-small:hover {
-    background: var(--border-color);
-  }
-
-  .read-only-notice {
-    font-size: 13px;
-    color: var(--text-secondary);
+    gap: 8px;
+    font-size: var(--font-sm);
+    color: var(--color-text-lighter);
   }
 
   .empty {

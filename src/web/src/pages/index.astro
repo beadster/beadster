@@ -141,45 +141,34 @@ const hasFilters = repoUrl || issueType || assignee || search;
       </div>
 
       <!-- Filters Bar -->
-      <div class="filters-bar">
-        <form class="filters-form" method="get">
-          <input
-            type="search"
-            name="search"
-            placeholder="search title or body..."
-            value={search || ''}
-            class="filter-search"
-          />
+      <form class="filters-bar" method="get">
+        <input
+          type="search"
+          name="search"
+          placeholder="search title or body..."
+          value={search || ''}
+          class="filter-search"
+        />
 
-          <select name="type" class="filter-select">
-            <option value="">all types</option>
-            <option value="bug" selected={issueType === 'bug'}>bug</option>
-            <option value="feature" selected={issueType === 'feature'}>feature</option>
-            <option value="task" selected={issueType === 'task'}>task</option>
-            <option value="epic" selected={issueType === 'epic'}>epic</option>
-            <option value="chore" selected={issueType === 'chore'}>chore</option>
-          </select>
+        <select name="type" class="filter-select">
+          <option value="">all types</option>
+          <option value="bug" selected={issueType === 'bug'}>bug</option>
+          <option value="feature" selected={issueType === 'feature'}>feature</option>
+          <option value="task" selected={issueType === 'task'}>task</option>
+          <option value="epic" selected={issueType === 'epic'}>epic</option>
+          <option value="chore" selected={issueType === 'chore'}>chore</option>
+        </select>
 
-          <select name="assignee" class="filter-select">
-            <option value="">all assignees</option>
-            <option value="@me" selected={assignee === '@me'}>assigned to me</option>
-            <option value="unassigned" selected={assignee === 'unassigned'}>unassigned</option>
-          </select>
+        <select name="assignee" class="filter-select">
+          <option value="">all assignees</option>
+          <option value="@me" selected={assignee === '@me'}>assigned to me</option>
+          <option value="unassigned" selected={assignee === 'unassigned'}>unassigned</option>
+        </select>
 
-          {repoUrl && <input type="hidden" name="repo" value={repoUrl} />}
+        {repoUrl && <input type="hidden" name="repo" value={repoUrl} />}
 
-          <button type="submit" class="btn-filter">apply</button>
-        </form>
-
-        {hasFilters && (
-          <div class="active-filters">
-            {search && <span class="filter-tag">search: "{search}"</span>}
-            {issueType && <span class="filter-tag">type: {issueType}</span>}
-            {assignee && <span class="filter-tag">assignee: {assignee}</span>}
-            {repoUrl && <span class="filter-tag">repo: {getRepoName(repoUrl)}</span>}
-          </div>
-        )}
-      </div>
+        <button type="submit" class="btn-filter">apply</button>
+      </form>
 
       {error && (
         <div class="error">
@@ -258,64 +247,42 @@ const hasFilters = repoUrl || issueType || assignee || search;
 
 <style>
   .filters-bar {
-    margin: 20px 0;
-    padding: 15px;
-    background: var(--bg-secondary, #f8f9fa);
-    border-radius: 8px;
-  }
-
-  .filters-form {
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+    align-items: center;
   }
 
   .filter-search {
     flex: 1;
     min-width: 200px;
-    padding: 8px 12px;
-    border: 1px solid var(--border-color, #ddd);
-    border-radius: 4px;
-    font-size: 14px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: var(--border-radius);
+    font-size: var(--font-base);
   }
 
   .filter-select {
-    padding: 8px 12px;
-    border: 1px solid var(--border-color, #ddd);
-    border-radius: 4px;
-    font-size: 14px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: var(--border-radius);
+    font-size: var(--font-base);
     background: white;
     cursor: pointer;
   }
 
   .btn-filter {
-    padding: 8px 20px;
-    background: var(--primary-color, #0066cc);
+    padding: 6px 16px;
+    background: var(--color-primary, #0066cc);
     color: white;
     border: none;
-    border-radius: 4px;
-    font-size: 14px;
+    border-radius: var(--border-radius);
+    font-size: var(--font-base);
     cursor: pointer;
   }
 
   .btn-filter:hover {
     opacity: 0.9;
-  }
-
-  .active-filters {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 10px;
-  }
-
-  .filter-tag {
-    padding: 4px 10px;
-    background: white;
-    border: 1px solid var(--border-color, #ddd);
-    border-radius: 4px;
-    font-size: 13px;
-    color: #666;
   }
 
   .issue-body {
