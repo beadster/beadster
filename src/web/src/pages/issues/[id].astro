@@ -37,7 +37,6 @@ try {
     <div class="issue-detail">
       <div class="issue-header">
         <div class="header-left">
-          <span class="issue-id">{issue.beads_id}</span>
           <h1 class="issue-title">{issue.title}</h1>
         </div>
         <div class="header-right">
@@ -57,6 +56,11 @@ try {
       )}
 
       <div class="metadata-compact">
+        <div class="meta-row">
+          <span class="meta-label">id:</span>
+          <span class="meta-value">{issue.beads_id}</span>
+        </div>
+
         {issue.labels && issue.labels.length > 0 && (
           <div class="meta-row">
             <span class="meta-label">labels:</span>
@@ -181,10 +185,9 @@ try {
         throw new Error('Failed to update issue');
       }
 
-      alert('Issue updated successfully');
       window.location.reload();
     } catch (error) {
-      alert('Failed to update issue');
+      console.error('Failed to update issue:', error);
     }
   });
 
