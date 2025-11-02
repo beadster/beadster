@@ -178,45 +178,8 @@ if (db) {
   }
 
   .description {
-    margin-bottom: 30px;
+    margin-bottom: var(--space-xl);
     color: var(--text-secondary);
-  }
-
-  .tabs {
-    display: flex;
-    gap: 20px;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 30px;
-  }
-
-  .tabs a {
-    padding: 10px 15px;
-    text-decoration: none;
-    color: var(--text-secondary);
-    border-bottom: 2px solid transparent;
-  }
-
-  .tabs a:hover {
-    color: var(--text-primary);
-  }
-
-  .tabs a.active {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-  }
-
-  .empty {
-    text-align: center;
-    padding: 60px 20px;
-  }
-
-  .empty p {
-    margin: 10px 0;
-    color: var(--text-secondary);
-  }
-
-  .empty .hint {
-    font-size: 14px;
   }
 
   .tokens-list {
@@ -244,17 +207,17 @@ if (db) {
   }
 
   .revoke-btn {
-    padding: 6px 12px;
-    background: #fee;
-    color: #c00;
-    border: 1px solid #fcc;
-    border-radius: 4px;
-    font-size: 13px;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger-light);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-sm);
     cursor: pointer;
   }
 
   .revoke-btn:hover {
-    background: #fcc;
+    background: var(--color-danger-light);
   }
 
   .token-info {
@@ -280,39 +243,12 @@ if (db) {
 
   .scope-badge {
     display: inline-block;
-    padding: 3px 8px;
-    background: #e3f2fd;
-    color: #1976d2;
-    border-radius: 4px;
-    font-size: 12px;
-    margin-right: 5px;
-  }
-
-  .btn-primary, .btn-secondary {
-    padding: 10px 20px;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    border: none;
-  }
-
-  .btn-primary {
-    background: var(--primary-color);
-    color: white;
-  }
-
-  .btn-primary:hover {
-    opacity: 0.9;
-  }
-
-  .btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-  }
-
-  .btn-secondary:hover {
-    background: var(--border-color);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-sm);
+    margin-right: var(--space-xs);
   }
 
   .modal {
@@ -390,11 +326,11 @@ if (db) {
   }
 
   .success-box {
-    background: #e8f5e9;
-    border: 1px solid #4caf50;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
+    background: var(--color-success-bg);
+    border: 1px solid var(--color-success);
+    border-radius: var(--border-radius);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
   }
 
   .success-box p {
@@ -428,16 +364,8 @@ if (db) {
   }
 
   .warning {
-    color: #f57c00;
-    font-size: 14px;
-  }
-
-  .error {
-    padding: 15px;
-    background: #fee;
-    color: #c00;
-    border-radius: 4px;
-    margin-bottom: 20px;
+    color: var(--color-warning);
+    font-size: var(--font-base);
   }
 </style>
 
