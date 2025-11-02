@@ -66,17 +66,17 @@ function getPriorityClass(priority: number | null): string {
 ---
 
 <Layout title="session">
-  <div style="margin-bottom: 20px;">
-    <a href="/sessions" style="color: #0066cc; text-decoration: none;">← back to sessions</a>
+  <div class="back-link-wrapper">
+    <a href="/sessions" class="back-link">← back to sessions</a>
   </div>
 
-  <div style="margin-bottom: 30px;">
+  <div class="section-wrapper">
     <h2>session details</h2>
     {sessionInfo && (
-      <div style="margin-top: 10px;">
+      <div class="meta-section">
         <span class="badge client">{sessionInfo.client}</span>
         {sessionInfo.project_name && (
-          <span class="badge" style="margin-left: 10px;">{sessionInfo.project_name}</span>
+          <span class="badge badge-ml">{sessionInfo.project_name}</span>
         )}
       </div>
     )}
@@ -96,7 +96,7 @@ function getPriorityClass(priority: number | null): string {
 
   {!error && issues.length > 0 && (
     <div>
-      <h3 style="margin-bottom: 15px; font-size: 18px; color: #666;">
+      <h3 class="section-header">
         {issues.length} issue{issues.length !== 1 ? 's' : ''} in this session
       </h3>
       <ul class="issue-list">
@@ -116,7 +116,7 @@ function getPriorityClass(priority: number | null): string {
               <span>created {formatDateTime(issue.created_at)}</span>
             </div>
             {issue.body && (
-              <div style="margin-top: 8px; font-size: 14px; color: #666;">
+              <div class="issue-body-text">
                 {issue.body}
               </div>
             )}

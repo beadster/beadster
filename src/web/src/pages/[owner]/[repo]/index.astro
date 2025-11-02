@@ -219,7 +219,7 @@ function getStatusLabel(status: string): string {
     <div class="error">
       <p>{error}</p>
       {error.includes('does not use beads') && (
-        <p style="margin-top:0.5rem;font-size:14px;color:#666;">
+        <p class="secondary-text mt-05">
           this repository doesn't have a .beads/ directory with issues (beads.jsonl or issues.jsonl)
         </p>
       )}

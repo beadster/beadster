@@ -102,19 +102,19 @@ const hasFilters = repoUrl || issueType || assignee || search;
         <li>GitHub integration - browse and import</li>
       </ul>
 
-      <p style="margin-top:1rem;">
+      <p class="mt-1">
         <a href="/login" class="btn-primary">sign in with github</a>
       </p>
 
-      <p style="margin-top:1rem;">
+      <p class="mt-1">
         <a href="/steveyegge/beads" class="text-link">browse public GitHub repos with beads →</a>
       </p>
 
-      <p style="margin-top:0.5rem;">
+      <p class="mt-05">
         <a href="/settings/import" class="text-link">import private GitHub repos →</a>
       </p>
 
-      <p style="margin-top:2rem; color: #666;">
+      <p class="secondary-text mt-2">
         download: <a href="https://apps.apple.com/us/app/beadster-issue-tracking/id6754286462?mt=12">macOS app</a>
       </p>
     </>
@@ -132,7 +132,7 @@ const hasFilters = repoUrl || issueType || assignee || search;
 
       <div class="header-row">
         <h2>open issues</h2>
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <div class="flex-header-actions">
           {hasFilters && (
             <a href="/" class="btn-clear-filter">× clear filters</a>
           )}

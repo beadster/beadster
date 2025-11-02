@@ -87,7 +87,7 @@ function getPriorityClass(priority: number | null): string {
             <span>closed {issue.closed_at ? formatDate(issue.closed_at) : 'unknown'}</span>
           </div>
           {issue.body && (
-            <div style="margin-top: 8px; font-size: 14px; color: #666;">
+            <div class="issue-body-text">
               {issue.body}
             </div>
           )}

@@ -62,7 +62,7 @@ function formatDateTime(timestamp: number): string {
     <ul class="session-list">
       {sessions.map(session => (
         <li class="session-item">
-          <a href={`/sessions/${session.id}`} style="text-decoration: none; color: inherit; display: block;">
+          <a href={`/sessions/${session.id}`} class="session-link">
             <div class="session-header">
               <span class="badge client">{session.client}</span>
               {session.project_name && (

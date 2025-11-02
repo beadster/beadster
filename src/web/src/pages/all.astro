@@ -86,7 +86,7 @@ function getPriorityClass(priority: number | null): string {
             <span>created {formatDate(issue.created_at)}</span>
           </div>
           {issue.body && (
-            <div style="margin-top: 8px; font-size: 14px; color: #666;">
+            <div class="issue-body-text">
               {issue.body}
             </div>
           )}
