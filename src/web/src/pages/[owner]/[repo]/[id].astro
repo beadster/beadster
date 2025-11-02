@@ -1,0 +1,146 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { fetchPublicBeads } from '../../../lib/github';
+
+const { owner, repo, id } = Astro.params;
+
+if (!owner || !repo || !id) {
+  return Astro.redirect('/');
+}
+
+let issue: any = null;
+let error: string | null = null;
+
+try {
+  const issues = await fetchPublicBeads(owner, repo);
+  issue = issues.find(i => i.id === id);
+
+  if (!issue) {
+    error = 'Issue not found';
+  }
+} catch (e) {
+  error = e instanceof Error ? e.message : String(e);
+}
+
+function formatDate(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString();
+  } catch {
+    return dateStr;
+  }
+}
+---
+
+<Layout title={issue ? `${issue.id}: ${issue.title}` : 'Issue'}>
+  <div class="back-link-container">
+    <a href={`/${owner}/${repo}`} class="back-link">← back to {owner}/{repo}</a>
+  </div>
+
+  {error && (
+    <div class="error">{error}</div>
+  )}
+
+  {issue && (
+    <div class="issue-detail">
+      <div class="issue-header">
+        <div class="header-left">
+          <span class="issue-id">{issue.id}</span>
+          <h1 class="issue-title">{issue.title}</h1>
+        </div>
+        <div class="header-right">
+          <span class={`badge status ${issue.status}`}>{issue.status}</span>
+          {issue.priority !== undefined && issue.priority !== null && (
+            <span class={`badge priority p${issue.priority}`}>
+              P{issue.priority}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {issue.body && (
+        <div class="issue-body">
+          {issue.body}
+        </div>
+      )}
+
+      <div class="metadata-compact">
+        {issue.labels && issue.labels.length > 0 && (
+          <div class="meta-row">
+            <span class="meta-label">labels:</span>
+            <div class="labels-list">
+              {issue.labels.map((label: string) => (
+                <span class="badge label">{label}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {issue.issue_type && (
+          <div class="meta-row">
+            <span class="meta-label">type:</span>
+            <span class="meta-value">{issue.issue_type}</span>
+          </div>
+        )}
+
+        <div class="meta-row">
+          <span class="meta-label">created:</span>
+          <span class="meta-value">{formatDate(issue.created_at)}</span>
+        </div>
+
+        <div class="meta-row">
+          <span class="meta-label">updated:</span>
+          <span class="meta-value">{formatDate(issue.updated_at)}</span>
+        </div>
+
+        {issue.closed_at && (
+          <div class="meta-row">
+            <span class="meta-label">closed:</span>
+            <span class="meta-value">{formatDate(issue.closed_at)}</span>
+          </div>
+        )}
+      </div>
+
+      <div class="mirror-notice">
+        <p>🔄 this is a read-only mirror from <a href={`https://github.com/${owner}/${repo}`} target="_blank" rel="noopener">{owner}/{repo}</a></p>
+        <p style="font-size: 13px; color: #666; margin-top: 8px;">
+          to edit this issue, visit the source repository on GitHub
+        </p>
+      </div>
+    </div>
+  )}
+</Layout>
+
+<style>
+  .back-link-container {
+    margin-bottom: 20px;
+  }
+
+  .back-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: var(--font-base);
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  .mirror-notice {
+    margin-top: 30px;
+    padding: 15px;
+    background: #e3f2fd;
+    border: 1px solid #90caf9;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .mirror-notice p {
+    margin: 0;
+  }
+
+  .mirror-notice a {
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+</style>

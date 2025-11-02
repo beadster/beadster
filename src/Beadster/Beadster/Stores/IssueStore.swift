@@ -296,13 +296,21 @@ class IssueStore: ObservableObject {
         // read existing issues
         let existingIssues = try JSONLManager.readIssues(from: projectURL)
 
-        // generate next issue ID
+        // generate hash-based issue ID (beads v0.20.1+ compatible)
         let projectName = projectURL.lastPathComponent
-        let nextNumber = getNextIssueNumber(existingIssues: existingIssues, projectName: projectName)
-        let newId = "\(projectName)-\(nextNumber)"
+        let creator = ProcessInfo.processInfo.userName  // Use system username as creator
+        let timestamp = Date()
+        let newId = HashIDGenerator.generateUniqueID(
+            prefix: projectName,
+            title: title,
+            description: description,
+            creator: creator,
+            timestamp: timestamp,
+            existingIssues: existingIssues
+        )
 
         // create new issue
-        let now = Int(Date().timeIntervalSince1970)
+        let now = Int(timestamp.timeIntervalSince1970)
         let newIssue = Issue(
             id: newId,
             title: title,
@@ -569,19 +577,6 @@ class IssueStore: ObservableObject {
             print("IssueStore: Error fetching from cloud: \(error)")
             return nil
         }
-    }
-
-    private func getNextIssueNumber(existingIssues: [Issue], projectName: String) -> Int {
-        let prefix = "\(projectName)-"
-        let numbers = existingIssues
-            .map { $0.id }
-            .filter { $0.hasPrefix(prefix) }
-            .compactMap { id -> Int? in
-                let numberPart = id.dropFirst(prefix.count)
-                return Int(numberPart)
-            }
-
-        return (numbers.max() ?? 0) + 1
     }
 
     /// Merge issues from JSONL and database

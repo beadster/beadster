@@ -4,6 +4,7 @@
  */
 
 import type { D1Database } from '@cloudflare/workers-types';
+import { generateUniqueID } from './hashIdGenerator';
 
 // Enums for issue fields
 export enum IssueStatus {
@@ -259,23 +260,30 @@ export async function createIssue(
   const id = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
 
-  // Get source and increment issue number
+  // Get source
   const source: any = await db.prepare(`
-    SELECT id, name, last_issue_number FROM sources WHERE id = ? AND user_id = ?
+    SELECT id, name FROM sources WHERE id = ? AND user_id = ?
   `).bind(source_id, userId).first();
 
   if (!source) {
     throw new Error('Source not found');
   }
 
-  // Generate beads_id using source name as prefix
-  const issueNumber = (source.last_issue_number || 0) + 1;
-  const beadsId = `${source.name}-${issueNumber}`;
+  // Get existing issues for collision detection
+  const existingIssuesResult = await db.prepare(`
+    SELECT beads_id as id FROM issues WHERE source_id = ?
+  `).bind(source_id).all();
+  const existingIssues = existingIssuesResult.results.map(row => ({ id: row.id as string }));
 
-  // Update source's last_issue_number
-  await db.prepare(`
-    UPDATE sources SET last_issue_number = ?, updated_at = ? WHERE id = ?
-  `).bind(issueNumber, now, source.id).run();
+  // Generate hash-based beads_id (beads v0.20.1+ compatible)
+  const beadsId = generateUniqueID(
+    source.name,  // prefix
+    title,
+    body || null,
+    userId,  // creator
+    new Date(now * 1000),  // timestamp
+    existingIssues
+  );
 
   const result = await db.prepare(`
     INSERT INTO issues (
