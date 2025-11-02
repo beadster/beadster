@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { formatDateTime, formatRelativeTime } from '../../../../shared/utils';
 
 if (!Astro.locals.user) {
   return Astro.redirect('/login');
@@ -25,26 +26,6 @@ if (db) {
   } catch (e) {
     error = `Failed to fetch tokens: ${e instanceof Error ? e.message : String(e)}`;
   }
-}
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleString();
-}
-
-function formatRelativeTime(timestamp: number | null): string {
-  if (!timestamp) return 'never';
-
-  const now = Date.now();
-  const diff = now - timestamp;
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 0) return `${days}d ago`;
-  if (hours > 0) return `${hours}h ago`;
-  if (minutes > 0) return `${minutes}m ago`;
-  return 'just now';
 }
 ---
 
@@ -96,18 +77,18 @@ function formatRelativeTime(timestamp: number | null): string {
 
             <div class="info-row">
               <span class="label">created:</span>
-              <span class="value">{formatDate(token.created_at)}</span>
+              <span class="value">{formatDateTime(token.created_at / 1000)}</span>
             </div>
 
             <div class="info-row">
               <span class="label">last used:</span>
-              <span class="value">{formatRelativeTime(token.last_used)}</span>
+              <span class="value">{token.last_used ? formatRelativeTime(token.last_used) : 'never'}</span>
             </div>
 
             {token.expires_at && (
               <div class="info-row">
                 <span class="label">expires:</span>
-                <span class="value">{formatDate(token.expires_at)}</span>
+                <span class="value">{formatDateTime(token.expires_at / 1000)}</span>
               </div>
             )}
           </div>

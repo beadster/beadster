@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getSessions } from '../../../shared/database';
+import { formatDate, formatDateTime } from '../../../shared/utils';
 
 // Require authentication
 if (!Astro.locals.user) {
@@ -32,14 +33,6 @@ try {
   }
 } catch (e) {
   error = `Failed to fetch: ${e instanceof Error ? e.message : String(e)}`;
-}
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleDateString();
-}
-
-function formatDateTime(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleString();
 }
 ---
 
