@@ -44,6 +44,20 @@ struct AppHeader: View {
             .background(AppConfig.showDebugColors ? Color.purple.opacity(0.5) : Color.clear)
             .border(AppConfig.showDebugColors ? Color.purple : Color.clear, width: 2)
 
+            // Help button
+            Button(action: {
+                print("❓ Help icon clicked!")
+                contentMode = .help
+            }) {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.plain)
+            .background(AppConfig.showDebugColors ? Color.blue.opacity(0.5) : Color.clear)
+            .border(AppConfig.showDebugColors ? Color.blue : Color.clear, width: 2)
+
             // Pin button
             Button(action: {
                 isPinned.toggle()

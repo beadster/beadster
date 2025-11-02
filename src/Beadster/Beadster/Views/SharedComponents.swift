@@ -88,6 +88,7 @@ enum ContentMode: Equatable {
     case issueDetail(Issue)
     case newIssue
     case settings
+    case help
 }
 
 // MARK: - Tree Node

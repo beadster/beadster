@@ -130,6 +130,12 @@ struct MainView: View {
                         contentMode = .issuesList
                     }
                 )
+            case .help:
+                HelpView(
+                    onClose: {
+                        contentMode = .issuesList
+                    }
+                )
             }
         }
     }
