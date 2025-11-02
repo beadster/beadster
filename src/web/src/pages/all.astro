@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import TabNav from '../components/TabNav.astro';
 import IssueListItem from '../components/IssueListItem.astro';
 import { getIssues } from '../../../shared/database';
 
@@ -25,13 +26,7 @@ try {
 ---
 
 <Layout title="issues">
-  <nav class="tabs">
-    <a href="/">open</a>
-    <a href="/all" class="active">all</a>
-    <a href="/closed">closed</a>
-    <a href="/labels">labels</a>
-    <a href="/tree">tree</a>
-  </nav>
+  <TabNav active="all" />
 
   <h2>all issues</h2>
 

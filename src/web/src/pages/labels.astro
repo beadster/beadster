@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import TabNav from '../components/TabNav.astro';
 import { getIssuesByLabel } from '../../../shared/database';
 
 // Require authentication
@@ -25,13 +26,7 @@ const sortedLabels = Array.from(labelGroups.keys()).sort();
 ---
 
 <Layout title="labels">
-  <nav class="tabs">
-    <a href="/">open</a>
-    <a href="/all">all</a>
-    <a href="/closed">closed</a>
-    <a href="/labels" class="active">labels</a>
-    <a href="/tree">tree</a>
-  </nav>
+  <TabNav active="labels" />
 
   <h2>labels</h2>
 

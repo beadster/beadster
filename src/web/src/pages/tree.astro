@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import TabNav from '../components/TabNav.astro';
 
 // Require authentication
 if (!Astro.locals.user) {
@@ -8,14 +9,7 @@ if (!Astro.locals.user) {
 ---
 
 <Layout title="tree">
-  <nav class="tabs">
-    <a href="/">open</a>
-    <a href="/all">all</a>
-    <a href="/closed">closed</a>
-    <a href="/labels">labels</a>
-    <a href="/tree" class="active">tree</a>
-    <a href="/stats">stats</a>
-  </nav>
+  <TabNav active="tree" />
 
   <h2>dependency tree</h2>
 

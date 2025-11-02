@@ -35,10 +35,6 @@ try {
   error = `Failed to fetch stats: ${e instanceof Error ? e.message : String(e)}`;
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
 const completionRate = stats.closed_issues && stats.total_issues
   ? Math.round((stats.closed_issues / stats.total_issues) * 100)
   : 0;
@@ -91,7 +87,7 @@ const completionRate = stats.closed_issues && stats.total_issues
           <ChartSection
             title="recent activity (last 7 days)"
             items={stats.recent_activity.map(item => ({
-              label: formatDate(item.date),
+              label: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
               value: item.count
             }))}
           />
