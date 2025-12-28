@@ -1,0 +1,72 @@
+# Not open sourced yet
+src/
+docs/
+design/
+.beads/
+scripts/
+CLAUDE.md
+NATIVE_INTEGRATIONS.md
+PLANETSCALE_MIGRATION.md
+PRODUCTION_READINESS.md
+package-lock.json
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.build/
+*.js.map
+
+# Environment
+.env
+.env.local
+.env.production
+.dev.vars
+
+# Wrangler
+.wrangler/
+.mf/
+wrangler.toml
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.xcuserstate
+xcuserdata/
+DerivedData/
+
+# Swift
+.swiftpm/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Config files with secrets
+config.json
+.beadster/
+
+# Build artifacts
+*.o
+*.a
+*.dylib
+*.so
