@@ -22,7 +22,7 @@ struct AppHeader: View {
             }) {
                 Image(systemName: "plus")
                     .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
@@ -37,7 +37,7 @@ struct AppHeader: View {
             }) {
                 Image(systemName: "gearshape")
                     .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
@@ -51,7 +51,7 @@ struct AppHeader: View {
             }) {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
@@ -65,7 +65,7 @@ struct AppHeader: View {
             }) {
                 Image(systemName: isPinned ? "pin.fill" : "pin")
                     .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)

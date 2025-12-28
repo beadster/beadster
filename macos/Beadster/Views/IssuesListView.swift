@@ -60,7 +60,7 @@ struct IssuesListView: View {
             if projectStore.projects.isEmpty {
                 Text("No issues, please add project")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
 
                 Button(action: {
                     projectStore.selectFolderToScan()
@@ -74,7 +74,7 @@ struct IssuesListView: View {
             } else {
                 Text("No issues")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
             }
         }
         .padding(.horizontal, 10)

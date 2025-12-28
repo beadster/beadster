@@ -20,7 +20,7 @@ struct IssueDetailView: View {
                     HStack {
                         Text(issue.id)
                             .font(.bdIssueID)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
 
                         Spacer()
 
@@ -55,15 +55,15 @@ struct IssueDetailView: View {
 
                         Text("created \(Date(timeIntervalSince1970: TimeInterval(issue.createdAt)).formatted(.relative(presentation: .named)))")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
 
                         Text("•")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
 
                         Text("updated \(Date(timeIntervalSince1970: TimeInterval(issue.updatedAt)).formatted(.relative(presentation: .named)))")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                     }
 
                     // Labels
@@ -83,7 +83,7 @@ struct IssueDetailView: View {
                             HStack {
                                 Text("Assignee:")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.bdSecondary)
                                 Text(assignee)
                                     .font(.caption)
                             }
@@ -93,7 +93,7 @@ struct IssueDetailView: View {
                             HStack {
                                 Text("External Ref:")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.bdSecondary)
                                 Text(externalRef)
                                     .font(.bdExternalRef)
                             }
@@ -103,7 +103,7 @@ struct IssueDetailView: View {
                             HStack {
                                 Text("Estimated:")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.bdSecondary)
                                 Text("\(estimatedMinutes) min")
                                     .font(.caption)
                             }
@@ -113,7 +113,7 @@ struct IssueDetailView: View {
                             HStack {
                                 Text("Closed:")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.bdSecondary)
                                 Text(Date(timeIntervalSince1970: TimeInterval(closedAt)).formatted(.relative(presentation: .named)))
                                     .font(.caption)
                             }
@@ -126,7 +126,7 @@ struct IssueDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Description")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.bdSecondary)
                             Text(description)
                                 .font(.body)
                                 .textSelection(.enabled)
@@ -139,7 +139,7 @@ struct IssueDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Design")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.bdSecondary)
                             Text(design)
                                 .font(.body)
                                 .textSelection(.enabled)
@@ -152,7 +152,7 @@ struct IssueDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Acceptance Criteria")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.bdSecondary)
                             Text(acceptanceCriteria)
                                 .font(.body)
                                 .textSelection(.enabled)
@@ -165,7 +165,7 @@ struct IssueDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Notes")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.bdSecondary)
                             Text(notes)
                                 .font(.body)
                                 .textSelection(.enabled)
@@ -189,7 +189,7 @@ struct IssueDetailView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Blocked by:")
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(.bdSecondary)
 
                                     ForEach(blockingIssues, id: \.dependsOnId) { dep in
                                         if let blockingIssue = issueStore.issues.first(where: { $0.id == dep.dependsOnId }) {
@@ -212,7 +212,7 @@ struct IssueDetailView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Blocks:")
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(.bdSecondary)
 
                                     ForEach(blockedByIssues, id: \.issueId) { dep in
                                         if let blockedIssue = issueStore.issues.first(where: { $0.id == dep.issueId }) {
@@ -285,7 +285,7 @@ struct DependencyRow: View {
 
             Text(issue.id)
                 .font(.bdIssueID)
-                .foregroundColor(.secondary)
+                .foregroundColor(.bdSecondary)
 
             Text(issue.title)
                 .font(.caption)

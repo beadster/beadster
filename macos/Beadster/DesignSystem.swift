@@ -5,6 +5,11 @@
 
 import SwiftUI
 
+// MARK: - Colors
+extension Color {
+    static let bdSecondary = Color.primary.opacity(0.75)
+}
+
 // MARK: - Typography
 extension Font {
     // Berkeley Mono - Logo

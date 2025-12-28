@@ -29,7 +29,7 @@ struct NewIssueView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Project")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
 
                         Picker("Project", selection: $selectedProjectId) {
                             Text("Select project...").tag(nil as String?)
@@ -44,7 +44,7 @@ struct NewIssueView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Title")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
 
                         TextField("Enter issue title", text: $title)
                             .textFieldStyle(.roundedBorder)
@@ -55,13 +55,13 @@ struct NewIssueView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Description (optional)")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
 
                         ZStack(alignment: .topLeading) {
                             if description.isEmpty {
                                 Text("Enter issue description")
                                     .font(.body)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.bdSecondary)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 8)
                             }
@@ -83,7 +83,7 @@ struct NewIssueView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Priority")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
 
                         Picker("Priority", selection: $priority) {
                             ForEach(IssuePriority.allCases, id: \.self) { priorityCase in
@@ -97,7 +97,7 @@ struct NewIssueView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Status")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
 
                         Picker("Status", selection: $status) {
                             ForEach(IssueStatus.allCases, id: \.self) { status in
@@ -111,7 +111,7 @@ struct NewIssueView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Type")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
 
                         Picker("Type", selection: $issueType) {
                             ForEach(IssueType.allCases, id: \.self) { type in

@@ -47,7 +47,7 @@ struct ProjectsSettings: View {
 
             if projectStore.projects.isEmpty {
                 Text("No projects registered")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
             } else {
                 VStack(spacing: 0) {
                     ForEach(projectStore.projects) { project in
@@ -104,7 +104,7 @@ struct AccountSettings: View {
                                 if let email = user.githubEmail {
                                     Text(email)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(.bdSecondary)
                                 }
                             }
                         }
@@ -122,11 +122,11 @@ struct AccountSettings: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Cloud sync is disabled")
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
 
                         Text("Sign in with GitHub to sync your issues across devices and access them on the web.")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                             .fixedSize(horizontal: false, vertical: true)
 
                         Button(action: {
@@ -186,7 +186,7 @@ struct SyncSettings: View {
                         Text("Last Sync")
                         Spacer()
                         Text(lastSync.formatted(.relative(presentation: .named)))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                     }
                 }
 
@@ -219,7 +219,7 @@ struct SyncSettings: View {
                         Text("Auto Sync")
                         Spacer()
                         Text("Every 1 minute")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                     }
                 }
 
@@ -234,7 +234,7 @@ struct SyncSettings: View {
                     Text("Watching Projects")
                     Spacer()
                     Text("\(syncDaemon.watchedProjectsCount)")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.bdSecondary)
                 }
             }
             .padding(.horizontal)

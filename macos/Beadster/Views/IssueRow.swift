@@ -105,7 +105,7 @@ struct IssueRowCompact: View {
             if let description = issue.body, !description.isEmpty {
                 Text(description)
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
                     .lineLimit(1)
             }
 
@@ -125,7 +125,7 @@ struct IssueRowCompact: View {
                     if issue.labels.count > 3 {
                         Text("+\(issue.labels.count - 3)")
                             .font(.system(size: 9))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                     }
                 }
             }
@@ -154,7 +154,7 @@ struct IssueRowCompact: View {
             if let description = issue.body, !description.isEmpty {
                 Text(description)
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
                     .lineLimit(2)
             }
 
@@ -175,7 +175,7 @@ struct IssueRowCompact: View {
                         if issue.labels.count > 3 {
                             Text("+\(issue.labels.count - 3)")
                                 .font(.system(size: 9))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.bdSecondary)
                         }
                     }
                 }
@@ -184,14 +184,14 @@ struct IssueRowCompact: View {
                 if let assignee = issue.assignee, !assignee.isEmpty {
                     Text("@\(assignee)")
                         .font(.system(size: 9))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.bdSecondary)
                 }
 
                 // External ref
                 if let externalRef = issue.externalRef, !externalRef.isEmpty {
                     Text(externalRef)
                         .font(.bdExternalRef)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.bdSecondary)
                 }
 
                 Spacer()
@@ -200,15 +200,15 @@ struct IssueRowCompact: View {
                 HStack(spacing: 6) {
                     Text("created \(Date(timeIntervalSince1970: TimeInterval(issue.createdAt)).formatted(.relative(presentation: .named)))")
                         .font(.system(size: 9))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.bdSecondary)
 
                     Text("•")
                         .font(.system(size: 9))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.bdSecondary)
 
                     Text("updated \(Date(timeIntervalSince1970: TimeInterval(issue.updatedAt)).formatted(.relative(presentation: .named)))")
                         .font(.system(size: 9))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.bdSecondary)
                 }
             }
 

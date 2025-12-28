@@ -19,7 +19,7 @@ struct HelpView: View {
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.bdSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -30,25 +30,25 @@ struct HelpView: View {
             // Content
             VStack(alignment: .leading, spacing: 20) {
                 Text("Please me with any questions or feedback:")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text("Email:")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                         Link("hi@beadster.ai", destination: URL(string: "mailto:hi@beadster.ai")!)
                             .foregroundColor(.blue)
                     }
 
                     HStack {
                         Text("iMessage:")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                         Link("+1 415-910-8321", destination: URL(string: "imessage://+14159108321")!)
                             .foregroundColor(.blue)
                     }
                     HStack {
                         Text("Support development:")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                         Link("one time or recurring donations", destination: URL(string: "https://patronat.com/anton+")!)
                             .foregroundColor(.blue)
                     }
@@ -64,7 +64,7 @@ struct HelpView: View {
                         Link("tinysend.com", destination: URL(string: "https://tinysend.com")!)
                             .foregroundColor(.blue)
                         Text("- indie newsletter publishing")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                     }
                 }
 

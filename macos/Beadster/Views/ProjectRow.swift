@@ -46,19 +46,19 @@ struct ProjectRow: View {
                     if let sourceId = project.sourceId {
                         Text(sourceId)
                             .font(.bdHashID)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                     }
                 }
 
                 Text(project.path)
                     .font(.bdHashID)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
                     .lineLimit(1)
 
                 if let lastSync = project.lastSync {
                     Text("Synced \(lastSync.formatted(.relative(presentation: .named)))")
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.bdSecondary)
                 }
             }
 
@@ -71,7 +71,7 @@ struct ProjectRow: View {
                     }) {
                         Image(systemName: "folder")
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                     }
                     .buttonStyle(.plain)
                     .help("Open in Finder")
@@ -88,7 +88,7 @@ struct ProjectRow: View {
                         Button(action: onRemove) {
                             Image(systemName: "trash")
                                 .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.bdSecondary)
                         }
                         .buttonStyle(.plain)
                         .help("Remove project")

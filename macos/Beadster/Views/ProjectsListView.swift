@@ -30,7 +30,7 @@ struct ProjectsListView: View {
         VStack(spacing: 20) {
             Text("No projects connected")
                 .font(.system(size: 18, weight: .medium))
-                .foregroundColor(.secondary)
+                .foregroundColor(.bdSecondary)
 
             Button(action: {
                 projectStore.selectFolderToScan()

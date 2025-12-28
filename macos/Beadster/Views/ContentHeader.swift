@@ -54,7 +54,7 @@ struct ContentHeader: View {
                     }) {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 13))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -110,7 +110,7 @@ struct ContentHeader: View {
                         .font(.system(size: 11))
                         .padding(.horizontal, 4)
                         .padding(.vertical, 4)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.bdSecondary)
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
@@ -148,7 +148,7 @@ struct ContentHeader: View {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.bdSecondary)
 
                     TextField("Search...", text: $issueStore.searchText)
                         .textFieldStyle(.plain)
@@ -161,7 +161,7 @@ struct ContentHeader: View {
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.bdSecondary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -188,7 +188,7 @@ struct ContentHeader: View {
             }) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.bdSecondary)
             }
             .buttonStyle(.plain)
         }
