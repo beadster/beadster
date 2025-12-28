@@ -109,7 +109,7 @@ struct IssueRowCompact: View {
                     .lineLimit(1)
             }
 
-            // Row 3: Project name + Labels
+            // Row 3: Project name + Labels + Dates
             HStack(spacing: 4) {
                 // Project name (first badge)
                 if let projectName = issue.projectName {
@@ -127,6 +127,23 @@ struct IssueRowCompact: View {
                             .font(.system(size: 9))
                             .foregroundColor(.bdSecondary)
                     }
+                }
+
+                Spacer()
+
+                // Dates
+                HStack(spacing: 6) {
+                    Text("created \(Date(timeIntervalSince1970: TimeInterval(issue.createdAt)).formatted(.relative(presentation: .named)))")
+                        .font(.system(size: 9))
+                        .foregroundColor(.bdSecondary)
+
+                    Text("•")
+                        .font(.system(size: 9))
+                        .foregroundColor(.bdSecondary)
+
+                    Text("updated \(Date(timeIntervalSince1970: TimeInterval(issue.updatedAt)).formatted(.relative(presentation: .named)))")
+                        .font(.system(size: 9))
+                        .foregroundColor(.bdSecondary)
                 }
             }
         }
