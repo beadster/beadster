@@ -31,17 +31,19 @@ struct MainView: View {
             // App Header (titlebar)
             AppHeader(contentMode: $contentMode, isPinned: $isPinned)
 
-            // Content Header
-            ContentHeader(
-                contentMode: $contentMode,
-                selectedTab: $selectedTab,
-                viewMode: $viewMode,
-                showSearch: $showSearch,
-                issueStore: issueStore,
-                projectStore: projectStore,
-                isSearchFocused: $isSearchFocused
-            )
-            Divider()
+            // Content Header (hide for help and settings)
+            if contentMode != .help && contentMode != .settings {
+                ContentHeader(
+                    contentMode: $contentMode,
+                    selectedTab: $selectedTab,
+                    viewMode: $viewMode,
+                    showSearch: $showSearch,
+                    issueStore: issueStore,
+                    projectStore: projectStore,
+                    isSearchFocused: $isSearchFocused
+                )
+                Divider()
+            }
 
             // Content Area (takes remaining space)
             contentArea

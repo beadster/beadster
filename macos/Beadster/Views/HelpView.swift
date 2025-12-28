@@ -29,14 +29,14 @@ struct HelpView: View {
 
             // Content
             VStack(alignment: .leading, spacing: 20) {
-                Text("Please me with any questions or feedback:")
+                Text("Please reach out with any questions or feedback:")
                     .foregroundColor(.bdSecondary)
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text("Email:")
                             .foregroundColor(.bdSecondary)
-                        Link("hi@beadster.ai", destination: URL(string: "mailto:hi@beadster.ai")!)
+                        Link("anton@systemoperator.com", destination: URL(string: "mailto:anton@systemoperator.com")!)
                             .foregroundColor(.blue)
                     }
 
@@ -49,21 +49,26 @@ struct HelpView: View {
                     HStack {
                         Text("Support development:")
                             .foregroundColor(.bdSecondary)
-                        Link("one time or recurring donations", destination: URL(string: "https://patronat.com/anton+")!)
+                        Link("one time or recurring donations", destination: URL(string: "https://buymeacoffee.com/podviaznikov")!)
                             .foregroundColor(.blue)
                     }
                 }
 
-                
                 Divider()
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Other Products")
                         .font(.headline)
                     HStack {
-                        Link("tinysend.com", destination: URL(string: "https://tinysend.com")!)
+                        Link("tinydot.com", destination: URL(string: "https://tinydot.com")!)
                             .foregroundColor(.blue)
-                        Text("- indie newsletter publishing")
+                        Text("- personal website builder")
+                            .foregroundColor(.bdSecondary)
+                    }
+                    HStack {
+                        Link("beadster.ai", destination: URL(string: "https://beadster.ai")!)
+                            .foregroundColor(.blue)
+                        Text("- local-first issue tracker")
                             .foregroundColor(.bdSecondary)
                     }
                 }
