@@ -34,7 +34,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Beadster/Beadster.entitlements
         ENABLE_HARDENED_RUNTIME: YES
         ENABLE_PREVIEWS: YES
-        GENERATE_INFOPLIST_FILE: YES
+        GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Beadster/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: "Beadster: Issue Tracking"
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
@@ -52,7 +52,3 @@ targets:
           SWIFT_COMPILATION_MODE: wholemodule
           DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
           ENABLE_NS_ASSERTIONS: NO
-    info:
-      path: Beadster/Info.plist
-    entitlements:
-      path: Beadster/Beadster.entitlements
