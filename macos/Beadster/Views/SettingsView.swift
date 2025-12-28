@@ -15,6 +15,21 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Header with close button
+            HStack {
+                Text("Settings")
+                    .font(.headline)
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.bdSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+
+            Divider()
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     if AppConfig.showAccountUI {
