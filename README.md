@@ -13,7 +13,7 @@ macOS app for browsing and managing issues from `.beads/` directories in your gi
 
 ## Install
 
-[Download from Mac App Store](https://apps.apple.com/app/beadster/id6744899498)
+[Download from Mac App Store](https://apps.apple.com/us/app/beadster-issue-tracking/id6754286462)
 
 ## Structure
 
