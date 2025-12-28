@@ -1,0 +1,58 @@
+name: Beadster
+options:
+  bundleIdPrefix: ai.beadster
+  deploymentTarget:
+    macOS: "15.5"
+  xcodeVersion: "16.4"
+  developmentLanguage: en
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: 6TW2DVT32T
+    SWIFT_VERSION: "5.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CLANG_CXX_LANGUAGE_STANDARD: gnu++20
+    GCC_C_LANGUAGE_STANDARD: gnu17
+
+targets:
+  Beadster:
+    type: application
+    platform: macOS
+    sources:
+      - path: Beadster
+        excludes:
+          - "**/.DS_Store"
+      - path: Shared
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ai.beadster.mac
+        CURRENT_PROJECT_VERSION: 9
+        MARKETING_VERSION: 1.3
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Beadster/Beadster.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_PREVIEWS: YES
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Beadster/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: "Beadster: Issue Tracking"
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+          SWIFT_OPTIMIZATION_LEVEL: -Onone
+          DEBUG_INFORMATION_FORMAT: dwarf
+          MTL_ENABLE_DEBUG_INFO: INCLUDE_SOURCE
+        Release:
+          SWIFT_COMPILATION_MODE: wholemodule
+          DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+          ENABLE_NS_ASSERTIONS: NO
+    info:
+      path: Beadster/Info.plist
+    entitlements:
+      path: Beadster/Beadster.entitlements
