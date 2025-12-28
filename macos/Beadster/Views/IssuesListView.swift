@@ -17,7 +17,7 @@ struct IssuesListView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 0) {
+            LazyVStack(spacing: 0) {
                 if issueStore.isLoading {
                     ProgressView()
                         .padding()
@@ -27,6 +27,7 @@ struct IssuesListView: View {
                     issuesList
                 }
             }
+            .animation(.easeInOut(duration: 0.2), value: issueStore.issues)
         }
         .focusable()
         .focused($isFocused)
@@ -105,6 +106,7 @@ struct IssuesListView: View {
                         selectedIssueIndex = index
                         contentMode = .issueDetail(issue)
                     }
+                    .transition(.opacity)
 
                 Divider()
             }
