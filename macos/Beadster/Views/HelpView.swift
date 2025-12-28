@@ -36,7 +36,7 @@ struct HelpView: View {
                     HStack {
                         Text("Email:")
                             .foregroundColor(.bdSecondary)
-                        Link("anton@systemoperator.com", destination: URL(string: "mailto:anton@systemoperator.com")!)
+                        Link("hi@beadster.ai", destination: URL(string: "mailto:hi@beadster.ai")!)
                             .foregroundColor(.blue)
                     }
 
@@ -49,7 +49,13 @@ struct HelpView: View {
                     HStack {
                         Text("Support development:")
                             .foregroundColor(.bdSecondary)
-                        Link("one time or recurring donations", destination: URL(string: "https://buymeacoffee.com/podviaznikov")!)
+                        Link("one time or recurring donations", destination: URL(string: "https://patronat.com/anton+")!)
+                            .foregroundColor(.blue)
+                    }
+                    HStack {
+                        Text("Source code:")
+                            .foregroundColor(.bdSecondary)
+                        Link("github.com/beadster/beadster", destination: URL(string: "https://github.com/beadster/beadster")!)
                             .foregroundColor(.blue)
                     }
                 }
@@ -63,12 +69,6 @@ struct HelpView: View {
                         Link("tinydot.com", destination: URL(string: "https://tinydot.com")!)
                             .foregroundColor(.blue)
                         Text("- personal website builder")
-                            .foregroundColor(.bdSecondary)
-                    }
-                    HStack {
-                        Link("beadster.ai", destination: URL(string: "https://beadster.ai")!)
-                            .foregroundColor(.blue)
-                        Text("- local-first issue tracker")
                             .foregroundColor(.bdSecondary)
                     }
                 }
