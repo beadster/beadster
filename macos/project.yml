@@ -29,13 +29,18 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ai.beadster.mac
         CURRENT_PROJECT_VERSION: 9
-        MARKETING_VERSION: 1.3
+        MARKETING_VERSION: 1.4
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: Beadster/Beadster.entitlements
         ENABLE_HARDENED_RUNTIME: YES
         ENABLE_PREVIEWS: YES
-        GENERATE_INFOPLIST_FILE: NO
+        GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: Beadster/Info.plist
+        REGISTER_APP_GROUPS: YES
+        SDKROOT: auto
+        SUPPORTED_PLATFORMS: macosx
+        SUPPORTS_MACCATALYST: NO
+        SWIFT_EMIT_LOC_STRINGS: YES
         INFOPLIST_KEY_CFBundleDisplayName: "Beadster: Issue Tracking"
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
