@@ -65,12 +65,14 @@ struct HelpView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Other Products")
                         .font(.headline)
-                    HStack {
-                        Link("tinydot.com", destination: URL(string: "https://tinydot.com")!)
-                            .foregroundColor(.blue)
-                        Text("- personal website builder")
-                            .foregroundColor(.bdSecondary)
-                    }
+                    Link("patronat.com", destination: URL(string: "https://patronat.com")!)
+                        .foregroundColor(.blue)
+                    Link("tinydot.com", destination: URL(string: "https://tinydot.com")!)
+                        .foregroundColor(.blue)
+                    Link("tinysend.com", destination: URL(string: "https://tinysend.com")!)
+                        .foregroundColor(.blue)
+                    Link("original.me", destination: URL(string: "https://original.me")!)
+                        .foregroundColor(.blue)
                 }
 
                 Spacer()
