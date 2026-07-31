@@ -3,11 +3,13 @@ import Foundation
 public class FileWatcher {
     private let path: String
     private let callback: () -> Void
+    private let latency: CFTimeInterval
     private var streamRef: FSEventStreamRef?
     private let queue = DispatchQueue(label: "com.beadster.filewatcher")
 
-    public init(path: String, callback: @escaping () -> Void) {
+    public init(path: String, latency: CFTimeInterval = 1.0, callback: @escaping () -> Void) {
         self.path = path
+        self.latency = latency
         self.callback = callback
     }
 
@@ -30,7 +32,7 @@ public class FileWatcher {
             &context,
             pathsToWatch,
             FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
-            1.0,
+            latency,
             FSEventStreamCreateFlags(kFSEventStreamCreateFlagFileEvents)
         )
 
