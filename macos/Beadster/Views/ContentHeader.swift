@@ -61,32 +61,36 @@ struct ContentHeader: View {
 
                 Spacer()
 
-                // Status Filter Tabs (Open, All, Closed)
-                ForEach(AppTab.allCases, id: \.self) { tab in
-                    Button(action: {
-                        selectedTab = tab
-                        // Update filter based on tab
-                        switch tab {
-                        case .openIssues:
-                            issueStore.filter = .open
-                        case .allIssues:
-                            issueStore.filter = .all
-                        case .closedIssues:
-                            issueStore.filter = .closed
-                        }
-                        // Always switch to issues list when changing filter tabs
-                        contentMode = .issuesList
-                    }) {
-                        Text(tab.rawValue)
-                            .font(.system(size: 11))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 4)
-                            .background(selectedTab == tab ? Color.blue.opacity(0.2) : Color.clear)
-                            .foregroundColor(selectedTab == tab ? .blue : .secondary)
-                            .cornerRadius(4)
+                // Status/type filters
+                statusFilterButton(.openIssues)
+
+                Menu {
+                    Button("All") {
+                        selectAllIssues(issueType: nil)
                     }
-                    .buttonStyle(.plain)
+                    Divider()
+                    Button("Bug") {
+                        selectAllIssues(issueType: IssueType.bug.rawValue)
+                    }
+                    Button("Feature") {
+                        selectAllIssues(issueType: IssueType.feature.rawValue)
+                    }
+                    Button("Task") {
+                        selectAllIssues(issueType: IssueType.task.rawValue)
+                    }
+                } label: {
+                    Text(issueTypeFilterLabel)
+                    .font(.system(size: 11))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 4)
+                    .background(selectedTab == .allIssues ? Color.blue.opacity(0.2) : Color.clear)
+                    .foregroundColor(selectedTab == .allIssues ? .blue : .secondary)
+                    .cornerRadius(4)
                 }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+
+                statusFilterButton(.closedIssues)
 
                 // Divider
                 Rectangle()
@@ -176,6 +180,46 @@ struct ContentHeader: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func statusFilterButton(_ tab: AppTab) -> some View {
+        Button(action: {
+            selectedTab = tab
+            issueStore.selectedIssueType = nil
+            switch tab {
+            case .openIssues:
+                issueStore.filter = .open
+            case .allIssues:
+                issueStore.filter = .all
+            case .closedIssues:
+                issueStore.filter = .closed
+            }
+            contentMode = .issuesList
+        }) {
+            Text(tab.rawValue)
+                .font(.system(size: 11))
+                .padding(.horizontal, 4)
+                .padding(.vertical, 4)
+                .background(selectedTab == tab ? Color.blue.opacity(0.2) : Color.clear)
+                .foregroundColor(selectedTab == tab ? .blue : .secondary)
+                .cornerRadius(4)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var issueTypeFilterLabel: String {
+        guard let selectedIssueType = issueStore.selectedIssueType else {
+            return "All"
+        }
+        return selectedIssueType.capitalized
+    }
+
+    private func selectAllIssues(issueType: String?) {
+        selectedTab = .allIssues
+        issueStore.filter = .all
+        issueStore.selectedIssueType = issueType
+        contentMode = .issuesList
     }
 
     var settingsHeader: some View {
