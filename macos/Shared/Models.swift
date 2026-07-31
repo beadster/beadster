@@ -154,7 +154,9 @@ public struct Issue: Identifiable, Codable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, title, status, priority, labels, assignee
         case body
+        case description
         case issueType = "issue_type"
+        case type
         case design
         case acceptanceCriteria = "acceptance_criteria"
         case notes
@@ -210,6 +212,7 @@ public struct Issue: Identifiable, Codable, Hashable {
         id = try container.decode(String.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
         body = try container.decodeIfPresent(String.self, forKey: .body)
+            ?? container.decodeIfPresent(String.self, forKey: .description)
         status = try container.decode(String.self, forKey: .status)
 
         // Handle priority as Int or String
@@ -223,6 +226,7 @@ public struct Issue: Identifiable, Codable, Hashable {
         }
 
         issueType = try container.decodeIfPresent(String.self, forKey: .issueType)
+            ?? container.decodeIfPresent(String.self, forKey: .type)
         assignee = try container.decodeIfPresent(String.self, forKey: .assignee)
         design = try container.decodeIfPresent(String.self, forKey: .design)
         acceptanceCriteria = try container.decodeIfPresent(String.self, forKey: .acceptanceCriteria)
