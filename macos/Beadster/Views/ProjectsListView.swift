@@ -75,6 +75,7 @@ struct ProjectsListView: View {
             if selectedProjectIndex < projectStore.projects.count {
                 selectedTab = .openIssues
                 issueStore.filter = .open
+                issueStore.selectedIssueType = nil
                 contentMode = .issuesList
             }
             return .handled

@@ -17,6 +17,7 @@ class IssueStore: ObservableObject {
     @Published var searchText: String = ""
     @Published var selectedPriority: Int? = nil
     @Published var selectedLabels: Set<String> = []
+    @Published var selectedIssueType: String? = nil
     @Published var selectedProjectId: String? = nil  // nil means "All"
 
     func loadIssues(for project: ProjectInfo) async {
@@ -243,6 +244,11 @@ class IssueStore: ObservableObject {
             filtered = filtered.filter { $0.priority == priority }
         }
 
+        // filter by issue type
+        if let selectedIssueType {
+            filtered = filtered.filter { $0.issueType == selectedIssueType }
+        }
+
         // filter by labels
         if !selectedLabels.isEmpty {
             filtered = filtered.filter { issue in
@@ -264,6 +270,7 @@ class IssueStore: ObservableObject {
     func clearFilters() {
         searchText = ""
         selectedPriority = nil
+        selectedIssueType = nil
         selectedLabels.removeAll()
         filter = .all
     }
