@@ -42,6 +42,9 @@ targets:
       # beads 1.3.1 in-process; build it with: bash BeadsFFI/build.sh archive
       - framework: BeadsFFI/build/BeadsFFI.xcframework
         embed: false
+    scheme:
+      testTargets:
+        - BeadsterTests
     # common/lib/a11y: a new unnamed icon button, ungated animation or silent tap target fails
     # the build (the ratchet in AppStore/accessibility.json only goes down)
     preBuildScripts:
@@ -80,6 +83,22 @@ targets:
           SWIFT_COMPILATION_MODE: wholemodule
           DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
           ENABLE_NS_ASSERTIONS: NO
+
+  # the app's own logic; hosted in the app, so running it launches beadster ([L], Q5)
+  BeadsterTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: BeadsterTests
+    dependencies:
+      # BeadsKit and AppCatalog come with the host app: linking them here as well links them
+      # twice and leaves AppCatalog's EditorKit symbols unresolved in the host
+      - target: Beadster
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ai.beadster.mac.tests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
 
   # P4: the sandbox proof. Same entitlements, its own bundle id and container. Launching it is
   # anton's [L] step (one click in the open panel); building it is part of the gates.
