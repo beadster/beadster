@@ -84,3 +84,12 @@ extension ProjectLibrary {
         return ActivityItem.grouped(items.sorted { $0.event.at > $1.event.at })
     }
 }
+
+extension ProjectLibrary {
+    /// Every project's memories (bd remember), project by project, keys in order.
+    public func memoriesEverywhere() async -> [(projectID: String, project: String, memory: Memory)] {
+        await eachOpen { entry, ws in
+            ((try? await ws.memories()) ?? []).map { (entry.id, entry.found.name, $0) }
+        }
+    }
+}

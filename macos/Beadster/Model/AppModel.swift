@@ -197,6 +197,7 @@ final class AppModel {
         await loadWorking()
         if selection == .workflows { await loadWorkflows() }
         if selection == .activity { await loadActivity() }
+        if selection == .memories { await loadMemories() }
         if let loadStart { lastLoadSeconds = Date().timeIntervalSince(loadStart) }
         backgroundLoading = false
         await watch()
@@ -212,6 +213,7 @@ final class AppModel {
     func opened(_ place: Place?) async {
         if place == .workflows && workflows.isEmpty { await loadWorkflows() }
         if place == .activity && !activityLoaded { await loadActivity() }
+        if place == .memories && !memoriesLoaded { await loadMemories() }
     }
 
     // MARK: Agents
@@ -270,6 +272,45 @@ final class AppModel {
 
     func loadWorkflows() async {
         workflows = await library.workflowsEverywhere().map { FlowRow(projectID: $0.projectID, project: $0.project, workflow: $0.workflow) }
+    }
+
+    // MARK: Memories
+
+    struct MemoryRow: Identifiable, Hashable {
+        var id: String { "\(projectID)|\(memory.key)" }
+        let projectID: String
+        let project: String
+        let memory: Memory
+    }
+
+    private(set) var memories: [MemoryRow] = []
+    var selectedMemory: MemoryRow.ID?
+    private var memoriesLoaded = false
+
+    func loadMemories() async {
+        memories = await library.memoriesEverywhere().map { MemoryRow(projectID: $0.projectID, project: $0.project, memory: $0.memory) }
+        memoriesLoaded = true
+    }
+
+    /// Saves new text under the same key (bd remember --key), or forgets the memory.
+    func saveMemory(_ row: MemoryRow, text: String) async {
+        await memoryWrite(row) { ws, actor throws(BeadsError) in try await ws.remember(text, key: row.memory.key, as: actor) }
+    }
+
+    func forgetMemory(_ row: MemoryRow) async {
+        await memoryWrite(row) { ws, actor throws(BeadsError) in try await ws.forget(row.memory.key, as: actor) }
+        selectedMemory = nil
+    }
+
+    private func memoryWrite(_ row: MemoryRow, _ change: (Workspace, String) async throws(BeadsError) -> Void) async {
+        guard let ws = await library.workspace(row.projectID) else { return }
+        do {
+            try await change(ws, actor)
+            lastError = nil
+        } catch {
+            lastError = "\(error)"
+        }
+        await loadMemories()
     }
 
     // MARK: A bead's history

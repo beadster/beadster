@@ -19,7 +19,7 @@ struct ReadyView: View {
                 TableColumn("Priority") { r in PriorityText(priority: r.bead.priority) }.width(56)
                 TableColumn("Title") { r in Text(r.bead.title) }.width(min: 200, ideal: 420)
                 TableColumn("Project") { r in Text(r.project) }.width(min: 70, ideal: 100, max: 160)
-                TableColumn("ID") { r in Text(r.bead.id).monospaced().foregroundStyle(.secondary) }.width(min: 60, ideal: 80, max: 110)
+                TableColumn("ID") { r in Text(r.bead.id).foregroundStyle(.secondary) }.width(min: 60, ideal: 80, max: 110)
                 TableColumn("Created") { r in Text(r.bead.createdAt, format: .relative(presentation: .named)).monospacedDigit() }
                     .width(min: 70, ideal: 100, max: 130)
             }

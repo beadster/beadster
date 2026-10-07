@@ -17,6 +17,7 @@ struct MainWindow: View {
                     Group {
                         if model.historyTarget != nil { VersionInspector(model: model) }
                         else if model.selection == .agents { LeaseInspector(model: model) }
+                        else if model.selection == .memories { MemoryInspector(model: model) }
                         else { BeadInspector(model: model) }
                     }
                     .inspectorColumnWidth(min: 280, ideal: 320)
@@ -66,6 +67,9 @@ struct MainWindow: View {
             return "\(n.formatted()) working" + (quiet > 0 ? ", \(quiet.formatted()) not answering" : "")
         case .activity:
             return "The last 7 days"
+        case .memories:
+            let n = model.memories.count
+            return "\(n.formatted()) \(n == 1 ? "memory" : "memories")"
         case .workflows:
             let n = model.workflows.count
             return "\(n.formatted()) \(n == 1 ? "workflow" : "workflows")"
@@ -168,6 +172,7 @@ struct PlaceView: View {
             case .agents: AgentsView(model: model)
             case .workflows: WorkflowsView(model: model)
             case .activity: ActivityView(model: model)
+            case .memories: MemoriesView(model: model)
             default: ContentUnavailableView(place.title, systemImage: place.symbol)
             }
         } else {

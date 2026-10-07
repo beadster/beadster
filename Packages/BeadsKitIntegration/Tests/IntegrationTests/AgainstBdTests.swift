@@ -159,3 +159,13 @@ func readyMatchesBd(_ name: String) async throws {
     #expect(now.priority == 1)
     #expect(try await ws.history(bead.id).count == entries.count + 1, "the restore is one more version")
 }
+
+@Test func memoriesEditAndForgetThroughBeads() async throws {
+    let ws = try await open(try copy("memories"))
+    try await ws.remember("Always npm run deploy, never wrangler deploy.", key: "deploy-rule", as: "anton")
+    var all = try await ws.memories()
+    #expect(all.first { $0.key == "deploy-rule" }?.text == "Always npm run deploy, never wrangler deploy.")
+    try await ws.forget("vault-history", as: "anton")
+    all = try await ws.memories()
+    #expect(all.map(\.key) == ["deploy-rule"])
+}

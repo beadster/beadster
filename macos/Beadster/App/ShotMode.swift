@@ -34,7 +34,7 @@ enum ShotMode {
         "agents": NSSize(width: 1280, height: 680), "workflows": NSSize(width: 1100, height: 680),
         "map": NSSize(width: 1100, height: 720), "activity": NSSize(width: 1100, height: 640),
         "live": NSSize(width: 1100, height: 640),
-        "history": NSSize(width: 1280, height: 560),
+        "history": NSSize(width: 1280, height: 560), "memories": NSSize(width: 1280, height: 600),
     ]
 
     /// The bd fixtures scripts/mac-screenshots.sh copies into the rig's container.
@@ -87,6 +87,14 @@ enum ShotMode {
                         await model.showHistory(of: bead, in: row.projectID)
                     }
                 }
+            }
+        case "memories":
+            MainWindow(model: model).task {
+                model.sceneBusy = true
+                defer { model.sceneBusy = false }
+                model.selection = .memories
+                await model.load(plainFolder: fixtures)
+                model.selectedMemory = model.memories.first?.id
             }
         case "agents":
             MainWindow(model: model).task {
