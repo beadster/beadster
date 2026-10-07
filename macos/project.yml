@@ -28,10 +28,6 @@ targets:
       - path: Beadster
         excludes:
           - "**/.DS_Store"
-      - path: Shared
-        excludes:
-          - "**/.DS_Store"
-          - FileWatcher.swift
     dependencies:
       - package: FSEventsWatcher
     settings:
@@ -44,7 +40,6 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
         ENABLE_PREVIEWS: YES
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_FILE: Beadster/Info.plist
         REGISTER_APP_GROUPS: YES
         SDKROOT: auto
         SUPPORTED_PLATFORMS: macosx
