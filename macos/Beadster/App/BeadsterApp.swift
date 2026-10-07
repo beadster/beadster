@@ -29,7 +29,8 @@ struct BeadsterApp: App {
         }
 
         Settings {
-            SettingsBoard()
+            // U12 builds Settings
+            ContentUnavailableView("Settings", systemImage: "gearshape").frame(width: 480, height: 320)
         }
     }
 

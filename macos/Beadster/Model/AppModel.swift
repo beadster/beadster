@@ -60,7 +60,7 @@ final class AppModel {
             guard let access = folders.access(for: folder) else { continue }
             await library.add(folderKey: folder.key, access: access, projects: folder.included(folders.projects(in: folder)))
         }
-        await publish()
+        await publishAll()
     }
 
     /// A folder the person just chose, waiting for them to pick its projects in the sheet.
@@ -73,6 +73,72 @@ final class AppModel {
     }
 
     var pending: PendingFolder?
+
+    // MARK: Ready and the inspector
+
+    /// One ready bead and the project it lives in.
+    struct Row: Identifiable, Hashable {
+        var id: String { "\(projectID)|\(bead.id)" }
+        let projectID: String
+        let project: String
+        let bead: Bead
+    }
+
+    private(set) var readyRows: [Row] = []
+    var selectedRow: Row.ID?
+    private(set) var inspected: Bead?
+    private(set) var inspectedHistory: [AuditEvent] = []
+    private(set) var lastError: String?
+
+    /// The name every write carries (Settings › You); the account name until set.
+    var actor: String {
+        UserDefaults.standard.string(forKey: "actorName") ?? NSUserName()
+    }
+
+    func loadReady() async {
+        readyRows = await library.readyEverywhere().map {
+            Row(projectID: $0.project.id, project: $0.project.found.name, bead: $0.bead)
+        }
+    }
+
+    /// Ready rows for the current place: all of them, or one project's.
+    var visibleReady: [Row] {
+        var rows = readyRows
+        if case .project(let id) = selection { rows = rows.filter { $0.projectID == id } }
+        let q = search.trimmingCharacters(in: .whitespaces)
+        if !q.isEmpty {
+            rows = rows.filter { $0.bead.title.localizedCaseInsensitiveContains(q) || $0.bead.id.localizedCaseInsensitiveContains(q) }
+        }
+        return rows
+    }
+
+    func inspect(_ id: Row.ID?) async {
+        selectedRow = id
+        guard let id, let row = readyRows.first(where: { $0.id == id }),
+              let ws = await library.workspace(row.projectID) else {
+            inspected = nil
+            inspectedHistory = []
+            return
+        }
+        inspected = try? await ws.show(row.bead.id)
+        inspectedHistory = ((try? await ws.events(after: nil, about: row.bead.id))?.events ?? []).reversed()
+    }
+
+    /// One write on the inspected bead, then everything it touches is read again.
+    func write(_ change: @escaping (Workspace, String, String) async throws(BeadsError) -> Void) async {
+        guard let id = selectedRow, let row = readyRows.first(where: { $0.id == id }),
+              let ws = await library.workspace(row.projectID) else { return }
+        do {
+            try await change(ws, row.bead.id, actor)
+            lastError = nil
+        } catch {
+            lastError = "\(error)"
+        }
+        await library.refresh(row.projectID)
+        await publish()
+        await loadReady()
+        await inspect(readyRows.contains { $0.id == id } ? id : nil)
+    }
 
     /// Choose Folder…: the panel, then the projects found in it for the sheet.
     func chooseFolder() async {
@@ -97,7 +163,7 @@ final class AppModel {
         loading = true
         defer { loading = false }
         await library.add(folderKey: p.folder.key, access: access, projects: p.folder.included(p.found))
-        await publish()
+        await publishAll()
     }
 
     func cancelPending() {
@@ -110,9 +176,14 @@ final class AppModel {
         loading = true
         let start = Date()
         await library.add(folderKey: "rig", access: PlainFolder(root), projects: ProjectScanner.scan(root, maxDepth: 1))
-        await publish()
+        await publishAll()
         lastLoadSeconds = Date().timeIntervalSince(start)
         loading = false
+    }
+
+    func publishAll() async {
+        await publish()
+        await loadReady()
     }
 
     private func publish() async {

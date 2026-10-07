@@ -25,15 +25,12 @@ enum ShotMode {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appending(path: "shot-window.json")
     }
 
-    /// The scenes the rig can draw, and the window size each is captured at (points).
+    /// The scenes the rig can draw, and the window size each is captured at (points). The
+    /// boards they are read against are in docs/design/shots (scripts/render-design).
     static let sizes: [String: NSSize] = [
         "shell": NSSize(width: 1280, height: 760), "shell-empty": NSSize(width: 1100, height: 680),
         "found": NSSize(width: 520, height: 430), "found-none": NSSize(width: 520, height: 430),
-        "welcome": NSSize(width: 1100, height: 680), "needs-you": NSSize(width: 1100, height: 680),
-        "ready": NSSize(width: 1280, height: 760), "agents": NSSize(width: 1280, height: 680),
-        "workflows": NSSize(width: 1100, height: 680), "map": NSSize(width: 1100, height: 720),
-        "activity": NSSize(width: 1100, height: 600), "history": NSSize(width: 1280, height: 560),
-        "memories": NSSize(width: 1280, height: 600),
+        "ready": NSSize(width: 1280, height: 760),
     ]
 
     /// The bd fixtures scripts/mac-screenshots.sh copies into the rig's container.
@@ -45,6 +42,13 @@ enum ShotMode {
     static func view(for scene: String, model: AppModel) -> some View {
         switch scene {
         case "shell": MainWindow(model: model).task { await model.load(plainFolder: fixtures) }
+        case "ready":
+            MainWindow(model: model).task {
+                await model.load(plainFolder: fixtures)
+                // a bead with labels, a comment, an epic and work it holds up
+                let row = model.readyRows.first { $0.bead.title == "Conflicts lose a paragraph" }
+                await model.inspect(row?.id)
+            }
         case "shell-empty": MainWindow(model: model)
         case "found", "found-none":
             // .task on a view whose body starts empty never runs: hang it on a container
@@ -55,15 +59,7 @@ enum ShotMode {
                 if scene == "found" { found.append(FoundProject(name: "old-blog", relativePath: "old-blog/.beads", kind: .legacy)) }
                 await model.present(GrantedFolder(key: "rig", path: "/Users/you/Developer"), access: PlainFolder(root), found: found)
             }
-        case "welcome": WelcomeBoard()
-        case "needs-you": NeedsYouBoard()
-        case "agents": AgentsBoard()
-        case "workflows": WorkflowsBoard()
-        case "map": GraphBoard()
-        case "activity": ActivityBoard()
-        case "history": HistoryBoard()
-        case "memories": MemoriesBoard()
-        default: ReadyBoard()
+        default: MainWindow(model: model)
         }
     }
 
@@ -71,6 +67,7 @@ enum ShotMode {
     @MainActor
     static func stage(_ scene: String, model: AppModel) {
         NSApp.setActivationPolicy(.accessory)
+        NSApp.deactivate() // never the active app: anton's typing stays where it is
         NSApp.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         try? FileManager.default.removeItem(at: reportURL)
         Task { @MainActor in

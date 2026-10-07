@@ -37,6 +37,38 @@ public struct AuditEvent: Identifiable, Hashable, Sendable, Decodable {
     }
 }
 
+extension AuditEvent {
+    /// One line for a person: who did what. Status values read as words, not wire values.
+    public var summary: String {
+        func word(_ v: String?) -> String { (v ?? "").replacingOccurrences(of: "_", with: " ") }
+        switch kind {
+        case "created": return "\(actor) created it"
+        case "claimed": return "\(actor) claimed it"
+        case "closed": return "\(actor) closed it"
+        case "reopened": return "\(actor) reopened it"
+        case "commented": return "\(actor) commented"
+        case "status_changed": return "\(actor) set \(word(newValue))"
+        // beads writes a sentence ("Added dependency: a parent-child b") or nothing here, so the
+        // other end is named only when the value is a bare word
+        case "dependency_added": return "\(actor) added a link" + bare(newValue).map { " to \($0)" }.orEmpty
+        case "dependency_removed": return "\(actor) removed a link" + bare(oldValue).map { " to \($0)" }.orEmpty
+        case "label_added": return "\(actor) added " + (bare(newValue).map { "the label \($0)" } ?? "a label")
+        case "label_removed": return "\(actor) removed " + (bare(oldValue).map { "the label \($0)" } ?? "a label")
+        case "lease_reclaimed": return "the claim by \(actor) ran out"
+        default: return "\(actor) \(word(kind))"
+        }
+    }
+}
+
+private func bare(_ value: String?) -> String? {
+    guard let v = value?.trimmingCharacters(in: .whitespaces), !v.isEmpty, !v.contains(" ") else { return nil }
+    return v
+}
+
+private extension Optional where Wrapped == String {
+    var orEmpty: String { self ?? "" }
+}
+
 public struct EventPage: Sendable {
     public let events: [AuditEvent]
     public let next: EventCursor?
@@ -45,8 +77,8 @@ public struct EventPage: Sendable {
 
 extension Workspace {
     /// The audit log after `cursor` (nil: from the beginning), oldest first.
-    public func events(after cursor: EventCursor?, limit: Int? = nil) throws(BeadsError) -> EventPage {
-        let r = try send({ $0.after = cursor; $0.limit = limit }, op: "events")
+    public func events(after cursor: EventCursor?, about beadID: String? = nil, limit: Int? = nil) throws(BeadsError) -> EventPage {
+        let r = try send({ $0.after = cursor; $0.limit = limit; $0.id = beadID }, op: "events")
         return EventPage(events: r.events ?? [], next: r.next ?? cursor, hasMore: r.hasMore ?? false)
     }
 }

@@ -14,7 +14,7 @@ struct MainWindow: View {
         } detail: {
             PlaceView(model: model)
                 .inspector(isPresented: $model.showInspector) {
-                    ContentUnavailableView("No Selection", systemImage: "sidebar.right")
+                    BeadInspector(model: model)
                         .inspectorColumnWidth(min: 280, ideal: 320)
                 }
         }
@@ -134,7 +134,10 @@ struct PlaceView: View {
                     .controlSize(.large)
             }
         } else if let place = model.selection {
-            ContentUnavailableView(place.title, systemImage: place.symbol)
+            switch place {
+            case .ready, .project: ReadyView(model: model)
+            default: ContentUnavailableView(place.title, systemImage: place.symbol)
+            }
         } else {
             ContentUnavailableView("No Selection", systemImage: "sidebar.left")
         }

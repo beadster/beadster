@@ -70,3 +70,19 @@ private func page(_ ids: [String], more: Bool = false) -> String {
     #expect(json.contains("2026-10-07T10:00:02"))
     #expect(try BeadsJSON.decoder().decode(EventCursor.self, from: Data(json.utf8)) == c)
 }
+
+@Test func eventSummariesReadAsWords() throws {
+    func e(_ kind: String, old: String? = nil, new: String? = nil) throws -> AuditEvent {
+        var obj: [String: Any] = ["id": "1", "issue_id": "wa-1", "event_type": kind, "actor": "claude-1", "created_at": "2026-10-07T10:00:00Z"]
+        if let old { obj["old_value"] = old }
+        if let new { obj["new_value"] = new }
+        return try BeadsJSON.decoder().decode(AuditEvent.self, from: JSONSerialization.data(withJSONObject: obj))
+    }
+    #expect(try e("created").summary == "claude-1 created it")
+    #expect(try e("status_changed", old: "open", new: "in_progress").summary == "claude-1 set in progress")
+    #expect(try e("dependency_added", new: "wa-91aa").summary == "claude-1 added a link to wa-91aa")
+    #expect(try e("dependency_added", new: "Added dependency: a parent-child b").summary == "claude-1 added a link")
+    #expect(try e("label_added").summary == "claude-1 added a label")
+    #expect(try e("label_added", new: "sync").summary == "claude-1 added the label sync")
+    #expect(try e("something_new").summary == "claude-1 something new")
+}

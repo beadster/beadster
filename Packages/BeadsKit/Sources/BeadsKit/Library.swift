@@ -106,6 +106,8 @@ public actor ProjectLibrary {
         }
     }
 
+    public func workspace(_ id: String) -> Workspace? { entries.first { $0.id == id }?.workspace }
+
     public var totalReady: Int {
         entries.reduce(0) { sum, e in
             if case .ready(let n) = e.state { return sum + n }
