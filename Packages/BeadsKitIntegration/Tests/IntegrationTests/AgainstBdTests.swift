@@ -129,9 +129,33 @@ func readyMatchesBd(_ name: String) async throws {
     let all = await lib.activity(since: .distantPast)
     #expect(!all.isEmpty)
     #expect(zip(all, all.dropFirst()).allSatisfy { $0.event.at >= $1.event.at }, "newest first")
-    #expect(all.contains { $0.event.kind == "created" && $0.title == "Sync 2.0" })
+    // bd made the links project's beads within a minute: one row for the run (ActivityItem.grouped)
+    #expect(all.contains { $0.event.kind == "created" && $0.project == "links" && $0.count >= 5 })
     // beads records no audit event for a structured comment (docs: events journal); labels it does
     #expect(all.contains { $0.event.kind == "label_added" && $0.title == "Conflicts lose a paragraph" })
     let none = await lib.activity(since: Date().addingTimeInterval(3600))
     #expect(none.isEmpty)
+}
+
+@Test func historyShowsEachChangeAndRestoreWritesItBack() async throws {
+    let ws = try await open(try copy("one"))
+    let bead = try #require(try await ws.list(BeadFilter(limit: 0)).beads.first)
+    var edit = BeadEdit()
+    edit.title = "The only bead, renamed"
+    edit.priority = 3
+    try await ws.update(bead.id, edit, as: "anton")
+
+    let entries = try await ws.history(bead.id)
+    let changes = BeadHistory.changes(entries)
+    let title = try #require(changes.first { $0.field == "title" })
+    #expect(title.before == "The only bead")
+    #expect(title.after == "The only bead, renamed")
+    #expect(changes.contains { $0.field == "priority" && $0.before == "P1" && $0.after == "P3" })
+
+    let original = try #require(entries.sorted { $0.date < $1.date }.first?.bead)
+    try await ws.restore(bead.id, to: original, as: "anton")
+    let now = try await ws.show(bead.id)
+    #expect(now.title == "The only bead")
+    #expect(now.priority == 1)
+    #expect(try await ws.history(bead.id).count == entries.count + 1, "the restore is one more version")
 }

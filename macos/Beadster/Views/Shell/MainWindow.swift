@@ -15,7 +15,9 @@ struct MainWindow: View {
             PlaceView(model: model)
                 .inspector(isPresented: $model.showInspector) {
                     Group {
-                        if model.selection == .agents { LeaseInspector(model: model) } else { BeadInspector(model: model) }
+                        if model.historyTarget != nil { VersionInspector(model: model) }
+                        else if model.selection == .agents { LeaseInspector(model: model) }
+                        else { BeadInspector(model: model) }
                     }
                     .inspectorColumnWidth(min: 280, ideal: 320)
                 }
@@ -45,7 +47,10 @@ struct MainWindow: View {
         }
         .searchable(text: $model.search, placement: .toolbar, prompt: "Search beads")
         .sheet(item: $model.pending) { _ in FoundSheet(model: model) }
-        .onChange(of: model.selection) { _, place in Task { await model.opened(place) } }
+        .onChange(of: model.selection) { _, place in
+            model.historyTarget = nil
+            Task { await model.opened(place) }
+        }
     }
 
     private var subtitle: String {
@@ -142,7 +147,9 @@ struct PlaceView: View {
     @Bindable var model: AppModel
 
     var body: some View {
-        if model.loading && model.entries.isEmpty {
+        if let target = model.historyTarget {
+            HistoryView(model: model, target: target)
+        } else if model.loading && model.entries.isEmpty {
             ProgressView("Opening projects…")
         } else if !model.hasFolders {
             ContentUnavailableView {

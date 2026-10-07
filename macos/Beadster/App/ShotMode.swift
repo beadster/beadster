@@ -34,6 +34,7 @@ enum ShotMode {
         "agents": NSSize(width: 1280, height: 680), "workflows": NSSize(width: 1100, height: 680),
         "map": NSSize(width: 1100, height: 720), "activity": NSSize(width: 1100, height: 640),
         "live": NSSize(width: 1100, height: 640),
+        "history": NSSize(width: 1280, height: 560),
     ]
 
     /// The bd fixtures scripts/mac-screenshots.sh copies into the rig's container.
@@ -69,6 +70,23 @@ enum ShotMode {
                 model.selection = .activity
                 model.showInspector = false
                 await model.load(plainFolder: fixtures)
+            }
+        case "history":
+            MainWindow(model: model).task {
+                model.sceneBusy = true
+                defer { model.sceneBusy = false }
+                await model.load(plainFolder: fixtures)
+                // a real change made through beads, so the history has something to show
+                if let row = model.readyRows.first(where: { $0.project == "one" }) {
+                    await model.inspect(row.id)
+                    await model.write { ws, id, actor throws(BeadsError) in
+                        var e = BeadEdit(); e.title = "The only bead, renamed"; e.priority = 3
+                        try await ws.update(id, e, as: actor)
+                    }
+                    if let bead = model.readyRows.first(where: { $0.project == "one" })?.bead {
+                        await model.showHistory(of: bead, in: row.projectID)
+                    }
+                }
             }
         case "agents":
             MainWindow(model: model).task {
@@ -126,7 +144,9 @@ enum ShotMode {
                     window.setFrame(NSRect(x: -6000, y: -6000, width: size.width, height: size.height), display: true)
                     window.orderFront(nil)
                     try? await Task.sleep(for: .seconds(1))
-                    for _ in 0..<1200 where model.loading || model.backgroundLoading { try? await Task.sleep(for: .milliseconds(100)) }
+                    for _ in 0..<1200 where model.loading || model.backgroundLoading || model.sceneBusy {
+                        try? await Task.sleep(for: .milliseconds(100))
+                    }
                     try? await Task.sleep(for: .milliseconds(300))
                     // SwiftUI may have resized or moved the window while it settled: off screen again
                     window.setFrame(NSRect(x: -6000, y: -6000, width: size.width, height: size.height), display: true)

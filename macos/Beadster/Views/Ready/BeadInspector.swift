@@ -59,6 +59,11 @@ struct BeadInspector: View {
                                 Text(e.at, format: .relative(presentation: .named)).monospacedDigit()
                             }
                         }
+                        Button("Show All Changes") {
+                            if let row = model.readyRows.first(where: { $0.id == model.selectedRow }) {
+                                Task { await model.showHistory(of: bead, in: row.projectID) }
+                            }
+                        }
                     }
                 }
                 Section {

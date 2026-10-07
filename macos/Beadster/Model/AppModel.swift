@@ -202,6 +202,9 @@ final class AppModel {
         await watch()
     }
 
+    /// The screenshot rig's scene is still setting itself up (ShotMode waits for it).
+    var sceneBusy = false
+
     /// Needs You and Agents counts still being read after the window showed.
     private(set) var backgroundLoading = false
 
@@ -267,6 +270,52 @@ final class AppModel {
 
     func loadWorkflows() async {
         workflows = await library.workflowsEverywhere().map { FlowRow(projectID: $0.projectID, project: $0.project, workflow: $0.workflow) }
+    }
+
+    // MARK: A bead's history
+
+    struct HistoryTarget: Equatable {
+        let projectID: String
+        let project: String
+        let bead: Bead
+    }
+
+    /// The bead whose Dolt history fills the detail, if one is open.
+    var historyTarget: HistoryTarget?
+    private(set) var historyEntries: [HistoryEntry] = []
+    private(set) var historyChanges: [FieldChange] = []
+    var selectedChange: FieldChange.ID?
+
+    func showHistory(of bead: Bead, in projectID: String) async {
+        historyTarget = HistoryTarget(projectID: projectID, project: entry(projectID)?.found.name ?? "", bead: bead)
+        guard let ws = await library.workspace(projectID) else { return }
+        historyEntries = (try? await ws.history(bead.id)) ?? []
+        let events = (try? await ws.events(after: nil, about: bead.id))?.events ?? []
+        historyChanges = BeadHistory.changes(historyEntries, events: events)
+        selectedChange = historyChanges.first?.id
+    }
+
+    /// The bead as it was just before the selected change.
+    var versionBeforeSelected: (bead: Bead, at: Date)? {
+        guard let id = selectedChange, let change = historyChanges.first(where: { $0.id == id }) else { return nil }
+        let earlier = historyEntries.filter { $0.date < change.at && $0.bead != nil }.max { $0.date < $1.date }
+        guard let e = earlier, let b = e.bead else { return nil }
+        return (b, e.date)
+    }
+
+    func restoreSelected() async {
+        guard let target = historyTarget, let version = versionBeforeSelected,
+              let ws = await library.workspace(target.projectID) else { return }
+        do {
+            try await ws.restore(target.bead.id, to: version.bead, as: actor)
+            lastError = nil
+        } catch {
+            lastError = "\(error)"
+        }
+        await showHistory(of: target.bead, in: target.projectID)
+        await library.refresh(target.projectID)
+        await publish()
+        await loadReady()
     }
 
     // MARK: Activity and live updates
