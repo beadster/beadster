@@ -18,6 +18,12 @@ public enum BeadsError: Error, Equatable, Sendable {
     case busy(String)
     case badRequest(String)
     case noHandle(String)
+    /// A compare-and-set guard did not hold: someone changed the bead first. Nothing was written.
+    case conflict(String)
+    /// The bead is claimed by someone else.
+    case claimed(String)
+    /// beads refused the change itself (closing a blocked bead, a cycle, a release with no claim).
+    case refused(String)
     /// The folder bookmark no longer gives access (moved, deleted, access revoked).
     case noAccess(String)
     case beads(String)
@@ -44,11 +50,27 @@ struct EngineRequest: Encodable {
     var filterAssignee: String?
     var label: String?
     var titleContains: String?
+    var design: String?
+    var acceptance: String?
+    var notes: String?
+    var addLabels: [String]?
+    var removeLabels: [String]?
+    var parent: String?
+    var target: String?
+    var linkType: String?
+    var text: String?
+    var key: String?
+    var force: Bool?
+    var expectedStatus: String?
+    var expectedAssignee: String?
 
     enum CodingKeys: String, CodingKey {
         case op, handle, id, status, limit, actor, title, description, priority, assignee, reason, label
+        case design, notes, parent, target, text, key, force
         case beadsDir = "beads_dir", issueType = "issue_type", newStatus = "new_status"
         case filterType = "filter_type", filterAssignee = "filter_assignee", titleContains = "title_contains"
+        case acceptance = "acceptance_criteria", addLabels = "add_labels", removeLabels = "remove_labels"
+        case linkType = "link_type", expectedStatus = "expected_status", expectedAssignee = "expected_assignee"
     }
 
     init(op: String, handle: Int64? = nil) {
@@ -109,6 +131,9 @@ extension BeadsError {
         case "busy": self = .busy(f.message)
         case "bad_request": self = .badRequest(f.message)
         case "no_handle": self = .noHandle(f.message)
+        case "conflict": self = .conflict(f.message)
+        case "claimed": self = .claimed(f.message)
+        case "refused": self = .refused(f.message)
         default: self = .beads(f.message)
         }
     }

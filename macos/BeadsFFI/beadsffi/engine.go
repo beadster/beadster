@@ -44,6 +44,20 @@ type Request struct {
 	Assignee    *string `json:"assignee,omitempty"`
 	NewStatus   *string `json:"new_status,omitempty"`
 	Reason      string  `json:"reason,omitempty"`
+	Design         *string  `json:"design,omitempty"`
+	Acceptance     *string  `json:"acceptance_criteria,omitempty"`
+	Notes          *string  `json:"notes,omitempty"`
+	AddLabels      []string `json:"add_labels,omitempty"`
+	RemoveLabels   []string `json:"remove_labels,omitempty"`
+	Parent         string   `json:"parent,omitempty"`
+	Target         string   `json:"target,omitempty"`
+	LinkType       string   `json:"link_type,omitempty"`
+	Text           string   `json:"text,omitempty"`
+	Key            string   `json:"key,omitempty"`
+	Force          bool     `json:"force,omitempty"`
+	// compare-and-set guards: the write lands only if the bead still has these values
+	ExpectedStatus   *string `json:"expected_status,omitempty"`
+	ExpectedAssignee *string `json:"expected_assignee,omitempty"`
 	// list filters
 	FilterType     string `json:"filter_type,omitempty"`
 	FilterAssignee string `json:"filter_assignee,omitempty"`
@@ -150,7 +164,8 @@ func (e *Engine) dispatch(ctx context.Context, req Request) Response {
 	switch req.Op {
 	case "ready", "list", "show", "blocked", "history", "memories", "molecule_progress":
 		return e.read(ctx, ws, req)
-	case "create", "update", "close_issue":
+	case "create", "update", "close_issue", "reopen", "claim", "release", "link", "unlink",
+		"comment", "approve_gate", "reject_gate", "remember", "forget":
 		return e.write(ctx, ws, req)
 	default:
 		return fail(CodeBadRequest, fmt.Errorf("unknown op %q", req.Op))
@@ -312,59 +327,7 @@ func (e *Engine) write(ctx context.Context, ws *workspace, req Request) Response
 		return fail(CodeBeads, err)
 	}
 	defer st.Close()
-	lc, err := st.IssueLifecycle()
-	if err != nil {
-		return fail(CodeBeads, err)
-	}
-	switch req.Op {
-	case "create":
-		if req.Title == nil {
-			return fail(CodeBadRequest, errors.New("title is required"))
-		}
-		issue := &types.Issue{Title: *req.Title, Status: types.StatusOpen, Priority: 2, IssueType: types.TypeTask}
-		if req.Description != nil {
-			issue.Description = *req.Description
-		}
-		if req.Priority != nil {
-			issue.Priority = *req.Priority
-		}
-		if req.IssueType != nil {
-			issue.IssueType = types.IssueType(*req.IssueType)
-		}
-		res, err := lc.Create(ctx, issueops.CreateRequest{Actor: req.Actor, Issue: issue})
-		if err != nil {
-			return fail(CodeBeads, err)
-		}
-		return Response{Issue: res.Issue, Changed: true}
-	case "update":
-		patch := issueops.IssuePatch{}
-		if req.Title != nil {
-			patch.Title = issueops.Field[string]{Set: true, Value: *req.Title}
-		}
-		if req.Description != nil {
-			patch.Description = issueops.Field[string]{Set: true, Value: *req.Description}
-		}
-		if req.Priority != nil {
-			patch.Priority = issueops.Field[int]{Set: true, Value: *req.Priority}
-		}
-		if req.Assignee != nil {
-			patch.Assignee = issueops.Field[string]{Set: true, Value: *req.Assignee}
-		}
-		if req.NewStatus != nil {
-			patch.Status = issueops.Field[types.Status]{Set: true, Value: types.Status(*req.NewStatus)}
-		}
-		res, err := lc.Update(ctx, issueops.UpdateRequest{Actor: req.Actor, IssueID: req.ID, Patch: patch})
-		if err != nil {
-			return notFoundOr(err)
-		}
-		return Response{Issue: res.Issue, Changed: res.Changed}
-	default: // close_issue
-		res, err := lc.Close(ctx, issueops.CloseRequest{Actor: req.Actor, IssueID: req.ID, Reason: req.Reason})
-		if err != nil {
-			return notFoundOr(err)
-		}
-		return Response{Issue: res.Issue, Changed: res.Changed}
-	}
+	return writeOp(ctx, st, req)
 }
 
 func notFoundOr(err error) Response {
