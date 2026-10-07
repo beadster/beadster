@@ -30,8 +30,19 @@ case "${1:-test}" in
     (cd "$SRC" && BD="$OUT/bd" go test -count=1 ./beadsffi/)
     ;;
   archive)
+    # the c-archive, its header and a module map, wrapped as BeadsFFI.xcframework in build/
+    # (build/ is gitignored and marked ignored for Dropbox: the archive is ~100 MB)
     (cd "$SRC" && go build -trimpath -buildmode=c-archive -o "$OUT/libbeadsffi.a" ./beadsffi/)
-    ls -la "$OUT/libbeadsffi.a" "$OUT/libbeadsffi.h"
+    rm -rf "$OUT/headers" && mkdir -p "$OUT/headers"
+    cp "$OUT/libbeadsffi.h" "$OUT/headers/"
+    printf 'module BeadsFFI {\n  header "libbeadsffi.h"\n  link "resolv"\n  export *\n}\n' > "$OUT/headers/module.modulemap"
+    mkdir -p "$HERE/build"
+    xattr -w com.dropbox.ignored 1 "$HERE/build" 2>/dev/null || true
+    rm -rf "$HERE/build/BeadsFFI.xcframework"
+    xcodebuild -create-xcframework -library "$OUT/libbeadsffi.a" -headers "$OUT/headers" \
+      -output "$HERE/build/BeadsFFI.xcframework" >/dev/null
+    shasum -a 256 "$OUT/libbeadsffi.a" | tee "$HERE/build/libbeadsffi.sha256"
+    du -sh "$OUT/libbeadsffi.a" "$HERE/build/BeadsFFI.xcframework"
     ;;
   *) echo "usage: build.sh test|archive"; exit 2 ;;
 esac

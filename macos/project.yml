@@ -30,6 +30,9 @@ targets:
           - "**/.DS_Store"
     dependencies:
       - package: FSEventsWatcher
+      # beads 1.3.1 in-process; build it with: bash BeadsFFI/build.sh archive
+      - framework: BeadsFFI/build/BeadsFFI.xcframework
+        embed: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ai.beadster.mac
