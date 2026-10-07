@@ -106,3 +106,18 @@ func readyMatchesBd(_ name: String) async throws {
     #expect(gates.filter { !$0.needsAPerson }.map(\.title) == ["Ship after review"])
     await ws.close()
 }
+
+@Test func workflowFixtureHasItsSteps() async throws {
+    let ws = try await open(try copy("workflow"))
+    let flows = try await ws.workflows()
+    let mol = try #require(flows.first)
+    #expect(flows.count == 1)
+    #expect(mol.isMolecule)
+    #expect(mol.root.title == "quick-check")
+    #expect(Set(mol.steps.map(\.title)) == ["Run linter", "Run tests", "Build project", "Report results"])
+    #expect(mol.done == 0 && mol.total == 4)
+    let links = try await open(try copy("links"))
+    let epic = try #require(try await links.workflows().first)
+    #expect(epic.root.title == "Sync 2.0")
+    #expect(epic.total == 2)
+}

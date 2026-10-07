@@ -94,6 +94,10 @@ func TestMoleculeProgress(t *testing.T) {
 		t.Fatalf("molecules: %+v %d", list.Error, len(list.Issues))
 	}
 	mol := list.Issues[0].ID
+	steps := call(t, e, map[string]any{"op": "list", "handle": h, "parent": mol, "all": true, "include_gates": true})
+	if steps.Error != nil || len(steps.Issues) != 4 {
+		t.Fatalf("steps of the molecule: %+v %d", steps.Error, len(steps.Issues))
+	}
 	p := call(t, e, map[string]any{"op": "molecule_progress", "handle": h, "id": mol})
 	if p.Error != nil || p.Progress == nil || p.Progress.Total != 4 || p.Progress.Completed != 0 {
 		t.Fatalf("progress: %+v %+v", p.Error, p.Progress)

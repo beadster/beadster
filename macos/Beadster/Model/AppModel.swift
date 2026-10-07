@@ -186,6 +186,7 @@ final class AppModel {
         await loadReady()
         await loadNeedsYou()
         await loadWorking()
+        await loadWorkflows()
     }
 
     // MARK: Agents
@@ -227,6 +228,21 @@ final class AppModel {
         await library.refresh(row.projectID)
         await publishAll()
         await inspectWork(nil)
+    }
+
+    // MARK: Workflows
+
+    struct FlowRow: Identifiable {
+        var id: String { "\(projectID)|\(workflow.id)" }
+        let projectID: String
+        let project: String
+        let workflow: Workflow
+    }
+
+    private(set) var workflows: [FlowRow] = []
+
+    func loadWorkflows() async {
+        workflows = await library.workflowsEverywhere().map { FlowRow(projectID: $0.projectID, project: $0.project, workflow: $0.workflow) }
     }
 
     // MARK: Needs You

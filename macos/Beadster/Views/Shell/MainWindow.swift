@@ -58,6 +58,9 @@ struct MainWindow: View {
             let quiet = model.working.filter { ($0.bead.lease?.health(at: .now) ?? .active) != .active }.count
             let n = model.working.count
             return "\(n.formatted()) working" + (quiet > 0 ? ", \(quiet.formatted()) not answering" : "")
+        case .workflows:
+            let n = model.workflows.count
+            return "\(n.formatted()) \(n == 1 ? "workflow" : "workflows")"
         case .project(let id):
             if case .ready(let n) = model.entry(id)?.state { return "\(n.formatted()) ready" }
             return ""
@@ -153,6 +156,7 @@ struct PlaceView: View {
             case .ready, .project: ReadyView(model: model)
             case .needsYou: NeedsYouView(model: model)
             case .agents: AgentsView(model: model)
+            case .workflows: WorkflowsView(model: model)
             default: ContentUnavailableView(place.title, systemImage: place.symbol)
             }
         } else {
