@@ -4,6 +4,8 @@ import SwiftUI
 @main
 struct BeadsterApp: App {
     @State private var model = AppModel()
+    /// Settings › Show in the Menu Bar: the person decides (HIG), off until they do.
+    @AppStorage("menuBarExtra") private var showMenuBarExtra = false
 
     var body: some Scene {
         WindowGroup("Beadster", id: "main") {
@@ -31,6 +33,13 @@ struct BeadsterApp: App {
         Settings {
             SettingsView(model: model)
         }
+
+        MenuBarExtra(isInserted: $showMenuBarExtra) {
+            BeadsterMenu(model: model)
+        } label: {
+            BeadsterMenuLabel(model: model)
+        }
+        .menuBarExtraStyle(.menu)
     }
 
     @MainActor @ViewBuilder

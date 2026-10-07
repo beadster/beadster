@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage("notify.quiet") private var notifyQuiet = true
     @AppStorage("notify.assigned") private var notifyAssigned = true
     @AppStorage("notify.closed") private var notifyClosed = false
+    @AppStorage("menuBarExtra") private var menuBarExtra = false
 
     var body: some View {
         Form {
@@ -27,6 +28,11 @@ struct SettingsView: View {
                     Button("Add Folder…") { Task { await model.chooseFolder() } }
                     Spacer()
                 }
+            }
+            Section {
+                Toggle("Show in the menu bar", isOn: $menuBarExtra)
+            } footer: {
+                Text("Approvals and your agents, one click away.").foregroundStyle(.secondary)
             }
             Section("Tell Me When") {
                 Toggle("A gate needs my approval", isOn: $notifyGates)
