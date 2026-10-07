@@ -152,7 +152,19 @@ func (e *Engine) Call(raw []byte) []byte {
 	if err := json.Unmarshal(raw, &req); err != nil {
 		return encode(fail(CodeBadRequest, err))
 	}
-	return encode(e.dispatch(context.Background(), req))
+	return encode(guarded(func() Response { return e.dispatch(context.Background(), req) }))
+}
+
+// guarded turns a panic anywhere in beads into a failure: a Go panic that crosses into the
+// app would end the app, so every call answers instead. Locks held by the call are released
+// by their defers while the panic unwinds.
+func guarded(call func() Response) (resp Response) {
+	defer func() {
+		if r := recover(); r != nil {
+			resp = fail(CodeBeads, fmt.Errorf("beads stopped with an internal error: %v", r))
+		}
+	}()
+	return call()
 }
 
 func (e *Engine) dispatch(ctx context.Context, req Request) Response {

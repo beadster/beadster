@@ -3,7 +3,7 @@ import Foundation
 /// The beads this app carries, for the words that name it.
 public enum BeadsVersion {
     public static let carried = "1.3.1"
-    public static let upgradeGuide = URL(string: "https://github.com/gastownhall/beads/blob/main/docs/getting-started/upgrading.md")!
+    public static let upgradeGuide = URL(string: "https://github.com/gastownhall/beads/blob/main/docs/getting-started/upgrading.md")
 }
 
 /// Why a project (or a folder) shows no beads, in words, with the one thing to do about it.

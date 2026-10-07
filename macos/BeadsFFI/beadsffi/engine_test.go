@@ -115,3 +115,14 @@ func TestErrors(t *testing.T) {
 		t.Fatalf("write without actor: %+v", r.Error)
 	}
 }
+
+func TestPanicBecomesAFailure(t *testing.T) {
+	resp := guarded(func() Response { var m map[string]int; m["x"] = 1; return Response{} })
+	if resp.Error == nil || resp.Error.Code != CodeBeads {
+		t.Fatalf("a panic must come back as a beads failure, got %+v", resp)
+	}
+	// and the engine still answers afterwards
+	if out := NewEngine().Call([]byte(`{"op":"close","handle":1}`)); len(out) == 0 {
+		t.Fatal("no answer after a recovered panic")
+	}
+}

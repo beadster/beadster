@@ -151,7 +151,7 @@ final class AppModel {
         case (.updateApp, _):
             if let url = URL(string: "macappstore://apps.apple.com/app/id6754286462") { NSWorkspace.shared.open(url) }
         case (.openGuide, _):
-            NSWorkspace.shared.open(BeadsVersion.upgradeGuide)
+            if let url = BeadsVersion.upgradeGuide { NSWorkspace.shared.open(url) }
         case (.chooseFolderAgain, .folder(let key)?):
             // the old bookmark reaches nothing: the new folder replaces it
             guard let new = folders.pick(), let access = folders.access(for: new) else { return }
