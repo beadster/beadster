@@ -108,12 +108,16 @@ enum ShotMode {
             }
         case "agents":
             MainWindow(model: model).task {
+                model.sceneBusy = true
+                defer { model.sceneBusy = false }
                 model.selection = .agents
                 await model.load(plainFolder: fixtures)
                 await model.inspectWork(model.working.first?.id)
             }
         case "ready":
             MainWindow(model: model).task {
+                model.sceneBusy = true
+                defer { model.sceneBusy = false }
                 await model.load(plainFolder: fixtures)
                 // a bead with labels, a comment, an epic and work it holds up
                 let row = model.readyRows.first { $0.bead.title == "Conflicts lose a paragraph" }
