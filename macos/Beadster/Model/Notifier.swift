@@ -12,6 +12,15 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let approve = "approve"
     static let reject = "reject"
 
+    /// The screenshot rig never posts (ShotMode exists only in Debug).
+    private static var inRig: Bool {
+        #if DEBUG
+        ShotMode.scene != nil
+        #else
+        false
+        #endif
+    }
+
     private var state = NoticeState()
     private var asked = false
     /// Called for a banner's Approve or Reject, and for a click (opens the place).
@@ -19,7 +28,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     override init() {
         super.init()
-        guard ShotMode.scene == nil else { return }
+        guard !Self.inRig else { return }
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         center.setNotificationCategories([
@@ -34,7 +43,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let notices = state.update(needsYou: needsYou,
                                    working: working.map { ($0.projectID, $0.project, $0.bead) },
                                    closedEvents: closed, now: Date())
-        guard ShotMode.scene == nil else { return }
+        guard !Self.inRig else { return }
         let allowed = notices.filter { Self.allowed($0.kind) }
         guard !allowed.isEmpty else { return }
         let center = UNUserNotificationCenter.current()

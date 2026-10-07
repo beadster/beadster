@@ -2,6 +2,7 @@
 // HIG: sidebars.md (top-level collections, counts as badges), toolbars.md (title leading;
 // actions, inspector and search trailing), split-views.md.
 import BeadsKit
+import CoreSpotlight
 import SwiftUI
 
 struct MainWindow: View {
@@ -48,6 +49,10 @@ struct MainWindow: View {
         }
         .searchable(text: $model.search, placement: .toolbar, prompt: "Search beads")
         .sheet(item: $model.pending) { _ in FoundSheet(model: model) }
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            guard let id = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String else { return }
+            Task { await model.openSpotlightResult(id) }
+        }
         .onChange(of: model.selection) { _, place in
             model.historyTarget = nil
             Task { await model.opened(place) }

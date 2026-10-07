@@ -60,8 +60,8 @@ struct BeadInspector: View {
                             }
                         }
                         Button("Show All Changes") {
-                            if let row = model.readyRows.first(where: { $0.id == model.selectedRow }) {
-                                Task { await model.showHistory(of: bead, in: row.projectID) }
+                            if let ref = model.inspectedRef {
+                                Task { await model.showHistory(of: bead, in: ref.projectID) }
                             }
                         }
                     }
@@ -89,6 +89,6 @@ struct BeadInspector: View {
     }
 
     private var projectName: String {
-        model.readyRows.first { $0.id == model.selectedRow }?.project ?? ""
+        model.inspectedProject
     }
 }

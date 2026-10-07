@@ -108,6 +108,7 @@ final class AppModel {
 
     /// Settings › Folders › Remove: closes its projects and forgets its bookmark.
     func removeFolder(_ folder: GrantedFolder) async {
+        await SpotlightIndexer.remove(domains: entries.filter { $0.folderKey == folder.key }.map(\.id))
         await library.remove(folderKey: folder.key)
         folders.remove(folder)
         checkFolders()
@@ -189,32 +190,58 @@ final class AppModel {
         return rows
     }
 
+    /// The bead in the inspector, wherever it was picked: a Ready row or a Spotlight result.
+    struct BeadRef: Hashable {
+        let projectID: String
+        let beadID: String
+    }
+
+    private(set) var inspectedRef: BeadRef?
+
+    var inspectedProject: String { inspectedRef.flatMap { entry($0.projectID)?.found.name } ?? "" }
+
     func inspect(_ id: Row.ID?) async {
         selectedRow = id
-        guard let id, let row = readyRows.first(where: { $0.id == id }),
-              let ws = await library.workspace(row.projectID) else {
+        await load(id.flatMap { id in readyRows.first { $0.id == id } }.map { BeadRef(projectID: $0.projectID, beadID: $0.bead.id) })
+    }
+
+    /// A Spotlight result: its project, the bead in the inspector, ready or not.
+    func reveal(_ ref: BeadRef) async {
+        guard entry(ref.projectID) != nil else { return }
+        historyTarget = nil
+        selection = .project(ref.projectID)
+        showInspector = true
+        let rowID = "\(ref.projectID)|\(ref.beadID)"
+        selectedRow = readyRows.contains { $0.id == rowID } ? rowID : nil
+        await load(ref)
+    }
+
+    private func load(_ ref: BeadRef?) async {
+        inspectedRef = ref
+        guard let ref, let ws = await library.workspace(ref.projectID) else {
             inspected = nil
             inspectedHistory = []
             return
         }
-        inspected = try? await ws.show(row.bead.id)
-        inspectedHistory = ((try? await ws.events(after: nil, about: row.bead.id))?.events ?? []).reversed()
+        inspected = try? await ws.show(ref.beadID)
+        inspectedHistory = ((try? await ws.events(after: nil, about: ref.beadID))?.events ?? []).reversed()
     }
 
     /// One write on the inspected bead, then everything it touches is read again.
     func write(_ change: @escaping (Workspace, String, String) async throws(BeadsError) -> Void) async {
-        guard let id = selectedRow, let row = readyRows.first(where: { $0.id == id }),
-              let ws = await library.workspace(row.projectID) else { return }
+        guard let ref = inspectedRef, let ws = await library.workspace(ref.projectID) else { return }
         do {
-            try await change(ws, row.bead.id, actor)
+            try await change(ws, ref.beadID, actor)
             lastError = nil
         } catch {
             lastError = error.report
         }
-        await library.refresh(row.projectID)
+        await library.refresh(ref.projectID)
         await publish()
         await loadReady()
-        await inspect(readyRows.contains { $0.id == id } ? id : nil)
+        let rowID = "\(ref.projectID)|\(ref.beadID)"
+        selectedRow = readyRows.contains { $0.id == rowID } ? rowID : nil
+        await load(ref)
     }
 
     /// Choose Folder…: the panel, then the projects found in it for the sheet.
@@ -275,6 +302,7 @@ final class AppModel {
         backgroundLoading = false
         await notifier.update(needsYou: needsYou, working: working, closed: [])
         await watch()
+        Task { await indexForSpotlight() }
     }
 
     /// The screenshot rig's scene is still setting itself up (ShotMode waits for it).
@@ -488,6 +516,28 @@ final class AppModel {
                          title: (readyRows.map(\.bead) + working.map(\.bead)).first { $0.id == event.beadID }?.title)
         }
         await notifier.update(needsYou: needsYou, working: working, closed: closed)
+        await indexForSpotlight(projectID)
+    }
+
+    // MARK: Spotlight
+
+    /// Every open bead of each open project (or of one) into Spotlight. Never in the rig: its
+    /// fixtures would land in anton's ⌘Space.
+    func indexForSpotlight(_ only: String? = nil) async {
+        #if DEBUG
+        if ShotMode.scene != nil { return }
+        #endif
+        for entry in entries where only == nil || entry.id == only {
+            guard case .ready = entry.state else { continue }
+            let items = SpotlightItem.items(projectID: entry.id, project: entry.found.name, beads: await library.openBeads(entry.id))
+            await SpotlightIndexer.replace(domain: entry.id, with: items)
+        }
+    }
+
+    /// A Spotlight result was opened.
+    func openSpotlightResult(_ uniqueID: String) async {
+        guard let target = SpotlightItem.target(of: uniqueID) else { return }
+        await reveal(BeadRef(projectID: target.projectID, beadID: target.beadID))
     }
 
     // MARK: Notifications
