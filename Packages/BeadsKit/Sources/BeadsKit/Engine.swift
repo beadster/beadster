@@ -40,10 +40,15 @@ struct EngineRequest: Encodable {
     var assignee: String?
     var newStatus: String?
     var reason: String?
+    var filterType: String?
+    var filterAssignee: String?
+    var label: String?
+    var titleContains: String?
 
     enum CodingKeys: String, CodingKey {
-        case op, handle, id, status, limit, actor, title, description, priority, assignee, reason
+        case op, handle, id, status, limit, actor, title, description, priority, assignee, reason, label
         case beadsDir = "beads_dir", issueType = "issue_type", newStatus = "new_status"
+        case filterType = "filter_type", filterAssignee = "filter_assignee", titleContains = "title_contains"
     }
 
     init(op: String, handle: Int64? = nil) {
@@ -82,9 +87,13 @@ struct EngineResponse: Decodable {
     let details: Bead?
     let hasMore: Bool?
     let changed: Bool?
+    let blocked: [BlockedBead]?
+    let history: [HistoryEntry]?
+    let memories: [String: String]?
+    let progress: MoleculeProgress?
 
     enum CodingKeys: String, CodingKey {
-        case error, handle, project, issues, issue, details, changed
+        case error, handle, project, issues, issue, details, changed, blocked, history, memories, progress
         case hasMore = "has_more"
     }
 }

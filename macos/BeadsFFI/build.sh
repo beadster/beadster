@@ -27,7 +27,7 @@ export CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 MACOSX_DEPLOYMENT_TARGET=27.0 GOFL
 case "${1:-test}" in
   test)
     (cd "$SRC" && go build -o "$OUT/bd" ./cmd/bd)
-    (cd "$SRC" && BD="$OUT/bd" go test -count=1 ./beadsffi/)
+    (cd "$SRC" && BD="$OUT/bd" BEADS_SRC="$SRC" go test -count=1 ./beadsffi/)
     ;;
   archive)
     # the c-archive, its header and a module map, wrapped as BeadsFFI.xcframework in build/

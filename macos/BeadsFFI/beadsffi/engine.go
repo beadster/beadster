@@ -44,6 +44,11 @@ type Request struct {
 	Assignee    *string `json:"assignee,omitempty"`
 	NewStatus   *string `json:"new_status,omitempty"`
 	Reason      string  `json:"reason,omitempty"`
+	// list filters
+	FilterType     string `json:"filter_type,omitempty"`
+	FilterAssignee string `json:"filter_assignee,omitempty"`
+	Label          string `json:"label,omitempty"`
+	TitleContains  string `json:"title_contains,omitempty"`
 }
 
 // Response is one answer to Swift. Exactly one of Error or the payload fields is set.
@@ -55,6 +60,10 @@ type Response struct {
 	Issue   *types.Issue             `json:"issue,omitempty"`
 	Details *types.IssueDetails      `json:"details,omitempty"`
 	HasMore bool                     `json:"has_more,omitempty"`
+	Blocked  []*types.BlockedIssue        `json:"blocked,omitempty"`
+	History  []HistoryEntry               `json:"history,omitempty"`
+	Memories map[string]string            `json:"memories,omitempty"`
+	Progress *types.MoleculeProgressStats `json:"progress,omitempty"`
 	Changed bool                     `json:"changed,omitempty"`
 }
 
@@ -139,7 +148,7 @@ func (e *Engine) dispatch(ctx context.Context, req Request) Response {
 		return fail(CodeNoHandle, fmt.Errorf("no open workspace for handle %d", req.handle()))
 	}
 	switch req.Op {
-	case "ready", "list", "show":
+	case "ready", "list", "show", "blocked", "history", "memories", "molecule_progress":
 		return e.read(ctx, ws, req)
 	case "create", "update", "close_issue":
 		return e.write(ctx, ws, req)
@@ -253,6 +262,9 @@ func (e *Engine) read(ctx context.Context, ws *workspace, req Request) Response 
 		return classifyOpen(err)
 	}
 	defer st.Close()
+	if r, ok := extraRead(ctx, st, req); ok {
+		return r
+	}
 	rd, err := st.IssueReader()
 	if err != nil {
 		return fail(CodeBeads, err)
@@ -265,7 +277,7 @@ func (e *Engine) read(ctx context.Context, ws *workspace, req Request) Response 
 		}
 		return Response{Issues: page.Items, HasMore: page.HasMore}
 	case "list":
-		page, err := rd.List(ctx, issueops.ListRequest{Status: req.Status, Limit: req.Limit})
+		page, err := rd.List(ctx, listRequest(req))
 		if err != nil {
 			return fail(CodeBeads, err)
 		}
