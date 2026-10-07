@@ -60,7 +60,7 @@ struct NodeCard: View {
             Label {
                 Text(node.title).lineLimit(1)
             } icon: {
-                if gate { Image(systemName: "hand.raised.fill").foregroundStyle(.orange) } else { StatusSymbol(status: node.status) }
+                if gate { Image(systemName: "hand.raised.fill").foregroundStyle(Color.warningInk) } else { StatusSymbol(status: node.status) }
             }
             Text("\(node.id) · \(node.status.rawValue.replacingOccurrences(of: "_", with: " "))")
                 .font(.callout).foregroundStyle(.secondary)

@@ -8,7 +8,7 @@ struct BeadsterApp: App {
     @AppStorage("menuBarExtra") private var showMenuBarExtra = false
 
     var body: some Scene {
-        WindowGroup("Beadster", id: "main") {
+        WindowGroup("beadster", id: "main") {
             root
         }
         .defaultSize(width: 1280, height: 760)

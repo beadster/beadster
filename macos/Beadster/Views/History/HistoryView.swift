@@ -56,7 +56,7 @@ struct VersionInspector: View {
                 Section {
                     Button("Restore This Version") { Task { await model.restoreSelected() } }
                     if let error = model.lastError {
-                        Text(error).foregroundStyle(.red).textSelection(.enabled)
+                        Text(error).foregroundStyle(Color.dangerInk).textSelection(.enabled)
                     }
                 }
             }

@@ -52,7 +52,7 @@ struct PriorityText: View {
     let priority: Int
     var body: some View {
         Text("P\(priority)").monospacedDigit().fontWeight(priority <= 1 ? .semibold : .regular)
-            .foregroundStyle(priority == 0 ? Color.red : priority == 1 ? Color.orange : Color.primary)
+            .foregroundStyle(priority == 0 ? Color.dangerInk : priority == 1 ? Color.warningInk : Color.primary)
     }
 }
 
@@ -78,8 +78,8 @@ struct StatusText: View {
     private var tint: Color {
         switch status {
         case .inProgress: .blue
-        case .blocked: .orange
-        case .closed: .green
+        case .blocked: .warningInk
+        case .closed: .successInk
         default: .secondary
         }
     }

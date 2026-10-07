@@ -23,7 +23,7 @@ public struct Problem: Equatable, Sendable {
         public var title: String {
             switch self {
             case .upgradeProject: "Update Project…"
-            case .updateApp: "Update Beadster"
+            case .updateApp: "Update beadster"
             case .openGuide: "Open Upgrade Guide"
             case .chooseFolderAgain: "Choose Folder…"
             case .tryAgain: "Try Again"

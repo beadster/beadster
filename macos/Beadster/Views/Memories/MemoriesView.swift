@@ -43,7 +43,7 @@ struct MemoryInspector: View {
                         Button("Forget") { Task { await model.forgetMemory(row) } }
                     }
                     if let error = model.lastError {
-                        Text(error).foregroundStyle(.red).textSelection(.enabled)
+                        Text(error).foregroundStyle(Color.dangerInk).textSelection(.enabled)
                     }
                 }
             }

@@ -24,7 +24,7 @@ struct AgentsView: View {
                     TableColumn("Last Heard") { r in
                         if let beat = r.bead.lease?.heartbeatAt {
                             Text(beat, format: .relative(presentation: .named)).monospacedDigit()
-                                .foregroundStyle(r.bead.lease?.health(at: context.date) == .active ? Color.primary : Color.orange)
+                                .foregroundStyle(r.bead.lease?.health(at: context.date) == .active ? Color.primary : Color.warningInk)
                         } else {
                             Text("—").foregroundStyle(.secondary)
                         }
@@ -44,7 +44,7 @@ struct HolderLabel: View {
     var body: some View {
         let health = bead.lease?.health(at: now)
         Label(bead.assignee ?? "Someone", systemImage: symbol(health))
-            .foregroundStyle(health == .active || health == nil ? Color.primary : Color.orange)
+            .foregroundStyle(health == .active || health == nil ? Color.primary : Color.warningInk)
             .accessibilityLabel("\(bead.assignee ?? "Someone"), \(word(health))")
     }
 
@@ -79,7 +79,7 @@ struct LeaseInspector: View {
                     Section {
                         VStack(alignment: .leading, spacing: 6) {
                             Label(headline(row.bead, health), systemImage: health == .active || health == nil ? "circle.fill" : "exclamationmark.triangle.fill")
-                                .foregroundStyle(health == .active || health == nil ? Color.primary : Color.orange)
+                                .foregroundStyle(health == .active || health == nil ? Color.primary : Color.warningInk)
                                 .font(.headline)
                             if let lease, health != .active {
                                 Text(explain(lease, health, now: context.date))
@@ -109,7 +109,7 @@ struct LeaseInspector: View {
                     Section {
                         Button("Release Now") { Task { await model.release(row) } }
                         if let error = model.lastError {
-                            Text(error).foregroundStyle(.red).textSelection(.enabled)
+                            Text(error).foregroundStyle(Color.dangerInk).textSelection(.enabled)
                         }
                     }
                 }

@@ -11,7 +11,7 @@ struct FoundSheet: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text(title(pending)).font(.title2.weight(.semibold))
                 if !pending.found.isEmpty {
-                    Text("Beadster reads each one in place. Nothing is copied or uploaded.")
+                    Text("beadster reads each one in place. Nothing is copied or uploaded.")
                         .foregroundStyle(.secondary)
                 }
                 if pending.found.isEmpty {
@@ -79,11 +79,11 @@ struct FoundSheet: View {
     @ViewBuilder private func detail(_ state: ProjectLibrary.State?) -> some View {
         switch state {
         case .ready(let n): Text("\(n.formatted()) ready").monospacedDigit().foregroundStyle(.secondary)
-        case .legacy: Text("Needs beads 1.0").foregroundStyle(.orange)
+        case .legacy: Text("Needs beads 1.0").foregroundStyle(Color.warningInk)
         case .server: Text("Uses a Dolt server").foregroundStyle(.secondary)
-        case .needsMigration: Text("Made with an older beads").foregroundStyle(.orange)
-        case .needsNewerApp: Text("Needs a newer Beadster").foregroundStyle(.orange)
-        case .failed: Text("Can't be opened").foregroundStyle(.orange)
+        case .needsMigration: Text("Made with an older beads").foregroundStyle(Color.warningInk)
+        case .needsNewerApp: Text("Needs a newer beadster").foregroundStyle(Color.warningInk)
+        case .failed: Text("Can't be opened").foregroundStyle(Color.warningInk)
         case .opening, nil: ProgressView().controlSize(.small)
         }
     }

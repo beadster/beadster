@@ -35,7 +35,7 @@ struct BeadsterMenu: View {
         }
         Divider()
         Button("\(model.totalReady.formatted()) Ready") { open(.ready) }
-        Button("Open Beadster") { open(model.selection ?? .ready) }
+        Button("Open beadster") { open(model.selection ?? .ready) }
             .keyboardShortcut("o")
     }
 
@@ -54,7 +54,7 @@ struct BeadsterMenuLabel: View {
         if count > 0 {
             Label("\(count) waiting", systemImage: "hand.raised.fill")
         } else {
-            Label("Beadster", systemImage: "circle.hexagongrid")
+            Label("beadster", systemImage: "circle.hexagongrid")
         }
     }
 }

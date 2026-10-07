@@ -18,7 +18,7 @@ struct NeedsYouView: View {
                     Section("Approvals") {
                         ForEach(n.approvals, id: \.gate.id) { item in
                             HStack(spacing: 12) {
-                                Image(systemName: "hand.raised.fill").foregroundStyle(.orange).font(.title3)
+                                Image(systemName: "hand.raised.fill").foregroundStyle(Color.warningInk).font(.title3)
                                     .accessibilityLabel("Approval")
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(item.gate.title).fontWeight(.medium)
@@ -69,7 +69,7 @@ struct NeedsYouView: View {
                     }
                 }
                 if let error = model.lastError {
-                    Text(error).foregroundStyle(.red).textSelection(.enabled)
+                    Text(error).foregroundStyle(Color.dangerInk).textSelection(.enabled)
                 }
             }
         }

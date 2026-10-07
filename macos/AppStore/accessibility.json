@@ -1,0 +1,74 @@
+{
+  "$comment": [
+    "What beadster CLAIMS on its App Store product page (Distribution, App Accessibility),",
+    "and the accessibility gate its build runs. The standard: common/lib/a11y/README.md.",
+    "Claim only what a pass has confirmed; false with a whyNot is an honest answer.",
+    "Push: ASC_APP_ID=6754286462 ASC_A11Y_FILE=$PWD/<this file> node common/lib/appstore/asc.mjs accessibility:push"
+  ],
+  "deviceFamilies": [
+    "MAC"
+  ],
+  "claims": {
+    "supportsDarkInterface": {
+      "value": true,
+      "why": "system and semantic colours throughout; the three inks (warning, danger, success) have a dark variant; appearance is forced only in the screenshot rig, every rig scene is shot light and dark"
+    },
+    "supportsSufficientContrast": {
+      "value": true,
+      "why": "words and status symbols in colour use BeadsKit Ink, held to 4.5:1 on every light and dark surface by InkTests (swift test); everything else is system text colours"
+    },
+    "supportsReducedMotion": {
+      "value": false,
+      "whyNot": "gate motion is 0 (no app animation of its own) but no one has watched it with Reduce Motion on",
+      "readyAfter": "T1: Reduce Motion on, open every place, nothing slides beyond the system's own"
+    },
+    "supportsDifferentiateWithoutColorAlone": {
+      "value": true,
+      "why": "priority is the word P0-P4, status a symbol plus its word, a quiet agent a different symbol and the words not answering / ran out, a gate the hand symbol and Approve; reviewed 2026-10-07"
+    },
+    "supportsVoiceover": {
+      "value": false,
+      "whyNot": "gate icon-buttons and tap-targets are 0; the VoiceOver walk has not been done",
+      "readyAfter": "T1: a VoiceOver walk through every place, the inspector, the menu bar extra and Settings"
+    },
+    "supportsVoiceControl": {
+      "value": false,
+      "whyNot": "not walked yet",
+      "readyAfter": "T1: Voice Control show numbers through every place"
+    },
+    "supportsLargerText": {
+      "value": false,
+      "whyNot": "not yet checked",
+      "readyAfter": "gate fixed-fonts at 0 and every screen seen at AX5 in the simulator"
+    },
+    "supportsCaptions": {
+      "value": false,
+      "whyNot": "no first-party video"
+    },
+    "supportsAudioDescriptions": {
+      "value": false,
+      "whyNot": "no first-party video"
+    }
+  },
+  "perFamily": {
+    "MAC": {
+      "supportsLargerText": {
+        "value": false,
+        "whyNot": "macOS has no Dynamic Type; asc.mjs omits it for MAC"
+      }
+    }
+  },
+  "gate": {
+    "roots": [
+      "beadster/macos/Beadster"
+    ],
+    "iosRoots": [],
+    "motionFiles": [],
+    "baseline": {
+      "icon-buttons": 0,
+      "motion": 0,
+      "tap-targets": 0,
+      "fixed-fonts": 0
+    }
+  }
+}

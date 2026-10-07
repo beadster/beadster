@@ -77,7 +77,7 @@ struct BeadInspector: View {
                         }
                     }
                     if let error = model.lastError {
-                        Text(error).foregroundStyle(.red).textSelection(.enabled)
+                        Text(error).foregroundStyle(Color.dangerInk).textSelection(.enabled)
                     }
                 }
             }

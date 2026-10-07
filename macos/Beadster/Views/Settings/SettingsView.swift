@@ -69,9 +69,9 @@ struct FolderRow: View {
                     Text("\(projects.formatted()) \(projects == 1 ? "project" : "projects")").foregroundStyle(.secondary)
                 case .moved(let to):
                     Label("Moved to \(URL(fileURLWithPath: to).lastPathComponent)", systemImage: "arrow.turn.up.right")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Color.warningInk)
                 case .missing:
-                    Label("Can't be found", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    Label("Can't be found", systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color.warningInk)
                 }
                 Button("Remove", action: remove)
             }

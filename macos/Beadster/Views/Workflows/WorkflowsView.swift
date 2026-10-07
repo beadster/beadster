@@ -59,13 +59,13 @@ struct StepRow: View {
     var body: some View {
         HStack(spacing: 10) {
             if step.type == .gate && step.status != .closed {
-                Image(systemName: "hand.raised.fill").foregroundStyle(.orange).accessibilityLabel("Gate")
+                Image(systemName: "hand.raised.fill").foregroundStyle(Color.warningInk).accessibilityLabel("Gate")
             } else {
                 StatusSymbol(status: step.status)
             }
             Text(step.title)
             Spacer()
-            Text(who).foregroundStyle(isYours ? Color.orange : Color.secondary)
+            Text(who).foregroundStyle(isYours ? Color.warningInk : Color.secondary)
         }
         .padding(.vertical, 2)
     }
