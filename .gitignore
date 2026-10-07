@@ -4,6 +4,7 @@ docs/
 design/
 .beads/
 scripts/
+tasks/
 CLAUDE.md
 NATIVE_INTEGRATIONS.md
 PLANETSCALE_MIGRATION.md
