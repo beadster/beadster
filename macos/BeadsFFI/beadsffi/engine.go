@@ -122,10 +122,14 @@ const (
 type workspace struct {
 	beadsDir string
 	database string
+	// one call at a time per project, like the CLI's one command per process; different
+	// projects run side by side
+	mu sync.Mutex
 }
 
-// Engine owns open workspaces. Calls are serialized: embedded Dolt has one writer, and the
-// CLI it mirrors runs one command per process.
+// Engine owns open workspaces. Calls on one project are serialized (embedded Dolt has one
+// writer, and the CLI it mirrors runs one command per process); different projects run in
+// parallel. mu guards only the handle table.
 type Engine struct {
 	mu     sync.Mutex
 	next   int64
@@ -148,8 +152,6 @@ func (e *Engine) Call(raw []byte) []byte {
 	if err := json.Unmarshal(raw, &req); err != nil {
 		return encode(fail(CodeBadRequest, err))
 	}
-	e.mu.Lock()
-	defer e.mu.Unlock()
 	return encode(e.dispatch(context.Background(), req))
 }
 
@@ -158,15 +160,21 @@ func (e *Engine) dispatch(ctx context.Context, req Request) Response {
 	case "open":
 		return e.open(ctx, req)
 	case "close":
+		e.mu.Lock()
 		delete(e.opened, req.handle())
+		e.mu.Unlock()
 		return Response{}
 	case "migrate":
 		return e.migrate(ctx, req)
 	}
+	e.mu.Lock()
 	ws, ok := e.opened[req.handle()]
+	e.mu.Unlock()
 	if !ok {
 		return fail(CodeNoHandle, fmt.Errorf("no open workspace for handle %d", req.handle()))
 	}
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
 	switch req.Op {
 	case "ready", "list", "show", "blocked", "history", "memories", "molecule_progress", "events":
 		return e.read(ctx, ws, req)
@@ -222,9 +230,12 @@ func (e *Engine) open(ctx context.Context, req Request) Response {
 	if err := st.Close(); err != nil {
 		return fail(CodeBeads, err)
 	}
+	e.mu.Lock()
 	e.next++
-	e.opened[e.next] = &workspace{beadsDir: dir, database: database}
-	return Response{Handle: e.next, Project: &ProjectInfo{BeadsDir: dir, Database: database, Mode: "embedded"}}
+	h := e.next
+	e.opened[h] = &workspace{beadsDir: dir, database: database}
+	e.mu.Unlock()
+	return Response{Handle: h, Project: &ProjectInfo{BeadsDir: dir, Database: database, Mode: "embedded"}}
 }
 
 func classifyOpen(err error) Response {

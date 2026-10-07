@@ -39,10 +39,8 @@ extension Workspace {
 
 extension ProjectLibrary {
     public func workflowsEverywhere() async -> [(projectID: String, project: String, workflow: Workflow)] {
-        var out: [(String, String, Workflow)] = []
-        for entry in all {
-            guard case .ready = entry.state, let ws = entry.workspace else { continue }
-            out += ((try? await ws.workflows()) ?? []).map { (entry.id, entry.found.name, $0) }
+        let out: [(String, String, Workflow)] = await eachOpen { entry, ws in
+            ((try? await ws.workflows()) ?? []).map { (entry.id, entry.found.name, $0) }
         }
         return out.sorted { $0.2.root.updatedAt > $1.2.root.updatedAt }
     }

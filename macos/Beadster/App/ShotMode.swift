@@ -119,13 +119,14 @@ enum ShotMode {
                     window.setFrame(NSRect(x: -6000, y: -6000, width: size.width, height: size.height), display: true)
                     window.orderFront(nil)
                     try? await Task.sleep(for: .seconds(1))
-                    for _ in 0..<1200 where model.loading { try? await Task.sleep(for: .milliseconds(100)) }
+                    for _ in 0..<1200 where model.loading || model.backgroundLoading { try? await Task.sleep(for: .milliseconds(100)) }
                     try? await Task.sleep(for: .milliseconds(300))
                     // SwiftUI may have resized or moved the window while it settled: off screen again
                     window.setFrame(NSRect(x: -6000, y: -6000, width: size.width, height: size.height), display: true)
                     try? await Task.sleep(for: .milliseconds(200))
                     var report: [String: Any] = ["window": window.windowNumber, "pid": Int(getpid())]
                     if let s = model.lastLoadSeconds { report["load_seconds"] = s }
+                    if let s = model.firstPaintSeconds { report["ready_seconds"] = s }
                     report["windows"] = NSApp.windows.map { "\($0.windowNumber) \(type(of: $0)) main=\($0.canBecomeMain) visible=\($0.isVisible) \(Int($0.frame.width))x\(Int($0.frame.height))" }
                     if let data = try? JSONSerialization.data(withJSONObject: report) {
                         try? data.write(to: reportURL)

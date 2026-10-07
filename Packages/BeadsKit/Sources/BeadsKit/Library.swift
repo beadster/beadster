@@ -8,6 +8,8 @@ public actor ProjectLibrary {
         public let found: FoundProject
         public var state: State
         public var workspace: Workspace?
+        /// The ready beads read when the project was counted: Ready shows these without asking again.
+        public var ready: [Bead] = []
     }
 
     public enum State: Equatable, Sendable {
@@ -32,22 +34,49 @@ public actor ProjectLibrary {
     /// Opens every embedded project under one granted folder. Old and server projects are
     /// listed with their state and never opened.
     public func add(folderKey: String, access: any FolderAccess, projects: [FoundProject]) async {
-        for found in projects {
-            var entry = Entry(folderKey: folderKey, found: found, state: .opening, workspace: nil)
-            switch found.kind {
-            case .legacy: entry.state = .legacy
-            case .server: entry.state = .server
-            case .embedded:
-                do {
-                    let ws = try Workspace(grantedFolder: access, relativePath: found.relativePath, engine: engine)
-                    entry.workspace = ws
-                    entry.state = try await Self.state(of: ws)
-                } catch {
-                    entry.state = .failed(error)
+        // projects open side by side: the engine serializes calls per project, not across them
+        let engine = self.engine
+        let opened = await withTaskGroup(of: (Int, Entry).self) { group in
+            for (i, found) in projects.enumerated() {
+                group.addTask {
+                    var entry = Entry(folderKey: folderKey, found: found, state: .opening, workspace: nil)
+                    switch found.kind {
+                    case .legacy: entry.state = .legacy
+                    case .server: entry.state = .server
+                    case .embedded:
+                        do {
+                            let ws = try Workspace(grantedFolder: access, relativePath: found.relativePath, engine: engine)
+                            entry.workspace = ws
+                            (entry.state, entry.ready) = try await Self.stateAndReady(of: ws)
+                        } catch let error as BeadsError {
+                            entry.state = .failed(error)
+                        } catch {
+                            entry.state = .failed(.beads("\(error)"))
+                        }
+                    }
+                    return (i, entry)
                 }
             }
-            entries.append(entry)
+            var out: [(Int, Entry)] = []
+            for await e in group { out.append(e) }
+            return out.sorted { $0.0 < $1.0 }.map(\.1)
         }
+        entries += opened
+    }
+
+    /// Runs `read` on every open project at once and gathers the answers in project order.
+    func eachOpen<T: Sendable>(_ read: @escaping @Sendable (Entry, Workspace) async -> [T]) async -> [T] {
+        let open = entries.compactMap { e -> (Int, Entry, Workspace)? in
+            guard case .ready = e.state, let ws = e.workspace else { return nil }
+            return (entries.firstIndex { $0.id == e.id } ?? 0, e, ws)
+        }
+        let parts = await withTaskGroup(of: (Int, [T]).self) { group in
+            for (i, e, ws) in open { group.addTask { (i, await read(e, ws)) } }
+            var out: [(Int, [T])] = []
+            for await p in group { out.append(p) }
+            return out
+        }
+        return parts.sorted { $0.0 < $1.0 }.flatMap(\.1)
     }
 
     /// What each found project would show, without keeping anything open: for the sheet that
@@ -73,8 +102,10 @@ public actor ProjectLibrary {
 
     /// Re-counts one project (after a change signal or a write).
     public func refresh(_ id: String) async {
-        guard let i = entries.firstIndex(where: { $0.id == id }), let ws = entries[i].workspace else { return }
-        entries[i].state = (try? await Self.state(of: ws)) ?? entries[i].state
+        guard let i = entries.firstIndex(where: { $0.id == id }), let ws = entries[i].workspace,
+              let (state, ready) = try? await Self.stateAndReady(of: ws) else { return }
+        entries[i].state = state
+        entries[i].ready = ready
     }
 
     public func remove(folderKey: String) async {
@@ -82,13 +113,13 @@ public actor ProjectLibrary {
         entries.removeAll { $0.folderKey == folderKey }
     }
 
-    /// Ready beads across every open project, each with its project, in priority order.
-    public func readyEverywhere() async -> [(project: Entry, bead: Bead)] {
+    /// Ready beads across every open project, each with its project, in priority order. Reads
+    /// nothing: these are the beads each project's last count returned.
+    public func readyEverywhere() -> [(project: Entry, bead: Bead)] {
         var out: [(Entry, Bead)] = []
         for entry in entries {
-            guard case .ready = entry.state, let ws = entry.workspace,
-                  let page = try? await ws.ready(limit: 0) else { continue }
-            out += page.beads.map { (entry, $0) }
+            guard case .ready = entry.state else { continue }
+            out += entry.ready.map { (entry, $0) }
         }
         return out.sorted { a, b in
             a.1.priority != b.1.priority ? a.1.priority < b.1.priority : a.1.createdAt < b.1.createdAt
@@ -96,22 +127,27 @@ public actor ProjectLibrary {
     }
 
     static func state(of ws: Workspace) async throws(BeadsError) -> State {
+        try await stateAndReady(of: ws).0
+    }
+
+    /// Opens (read-only) and, when ready, reads the ready work once: its count for the sidebar,
+    /// its rows for Ready.
+    static func stateAndReady(of ws: Workspace) async throws(BeadsError) -> (State, [Bead]) {
         switch try await ws.open() {
         case .ready:
-            return .ready(readyCount: try await ws.ready(limit: 0).beads.count)
+            let beads = try await ws.ready(limit: 0).beads
+            return (.ready(readyCount: beads.count), beads)
         case .needsMigration(let db, let app):
-            return .needsMigration(dbVersion: db, appVersion: app)
+            return (.needsMigration(dbVersion: db, appVersion: app), [])
         case .needsNewerApp(let db, let app):
-            return .needsNewerApp(dbVersion: db, appVersion: app)
+            return (.needsNewerApp(dbVersion: db, appVersion: app), [])
         }
     }
 
     /// Beads in progress in every open project, with their claims.
     public func workingEverywhere() async -> [(projectID: String, project: String, bead: Bead)] {
-        var out: [(String, String, Bead)] = []
-        for entry in entries {
-            guard case .ready = entry.state, let ws = entry.workspace else { continue }
-            out += ((try? await ws.working()) ?? []).map { (entry.id, entry.found.name, $0) }
+        let out: [(String, String, Bead)] = await eachOpen { entry, ws in
+            ((try? await ws.working()) ?? []).map { (entry.id, entry.found.name, $0) }
         }
         return out.sorted { ($0.2.startedAt ?? $0.2.updatedAt) > ($1.2.startedAt ?? $1.2.updatedAt) }
     }

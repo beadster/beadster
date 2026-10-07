@@ -45,6 +45,7 @@ struct MainWindow: View {
         }
         .searchable(text: $model.search, placement: .toolbar, prompt: "Search beads")
         .sheet(item: $model.pending) { _ in FoundSheet(model: model) }
+        .onChange(of: model.selection) { _, place in Task { await model.opened(place) } }
     }
 
     private var subtitle: String {

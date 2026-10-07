@@ -72,14 +72,18 @@ extension ProjectLibrary {
     /// waiting on something else (for context), and open beads assigned to them.
     public func needsYou(_ person: String) async -> NeedsYou {
         var out = NeedsYou()
-        for entry in all {
-            guard case .ready = entry.state, let ws = entry.workspace else { continue }
-            for gate in (try? await ws.gates()) ?? [] {
-                if gate.needsAPerson { out.approvals.append((entry.id, entry.found.name, gate)) }
-                else { out.waiting.append((entry.id, entry.found.name, gate)) }
-            }
-            for bead in (try? await ws.assigned(to: person)) ?? [] {
-                out.assigned.append((entry.id, entry.found.name, bead))
+        enum Item: Sendable { case gate(String, String, Gate), assigned(String, String, Bead) }
+        let items: [Item] = await eachOpen { entry, ws in
+            let gates = ((try? await ws.gates()) ?? []).map { Item.gate(entry.id, entry.found.name, $0) }
+            let mine = ((try? await ws.assigned(to: person)) ?? []).map { Item.assigned(entry.id, entry.found.name, $0) }
+            return gates + mine
+        }
+        for item in items {
+            switch item {
+            case .gate(let id, let name, let gate):
+                if gate.needsAPerson { out.approvals.append((id, name, gate)) } else { out.waiting.append((id, name, gate)) }
+            case .assigned(let id, let name, let bead):
+                out.assigned.append((id, name, bead))
             }
         }
         out.approvals.sort { $0.gate.bead.createdAt < $1.gate.bead.createdAt }

@@ -44,8 +44,11 @@ final class AppModel {
     private(set) var entries: [ProjectLibrary.Entry] = []
     private(set) var totalReady = 0
     private(set) var loading = false
-    /// How long the last load took, for the rig's report.
+    /// How long the last load took, for the rig's report: until Ready showed, and until every
+    /// count was in.
     private(set) var lastLoadSeconds: Double?
+    private(set) var firstPaintSeconds: Double?
+    private var loadStart: Date?
 
     let folders = FolderList()
     private let library = ProjectLibrary(engine: FFIEngine())
@@ -175,18 +178,33 @@ final class AppModel {
     func load(plainFolder root: URL) async {
         loading = true
         let start = Date()
+        loadStart = start
         await library.add(folderKey: "rig", access: PlainFolder(root), projects: ProjectScanner.scan(root, maxDepth: 1))
         await publishAll()
         lastLoadSeconds = Date().timeIntervalSince(start)
         loading = false
     }
 
+    /// The window shows as soon as projects and Ready are in; the other places' counts fill in
+    /// after, and Workflows reads only when it is opened.
     func publishAll() async {
         await publish()
         await loadReady()
+        loading = false
+        if let loadStart { firstPaintSeconds = Date().timeIntervalSince(loadStart) }
+        backgroundLoading = true
         await loadNeedsYou()
         await loadWorking()
-        await loadWorkflows()
+        if selection == .workflows { await loadWorkflows() }
+        backgroundLoading = false
+    }
+
+    /// Needs You and Agents counts still being read after the window showed.
+    private(set) var backgroundLoading = false
+
+    /// A place was opened: read what only it needs.
+    func opened(_ place: Place?) async {
+        if place == .workflows && workflows.isEmpty { await loadWorkflows() }
     }
 
     // MARK: Agents

@@ -85,3 +85,31 @@ func TestTwoWriters(t *testing.T) {
 		t.Fatalf("app writes came back busy %d times: the engine should wait for the lock", len(appBusy))
 	}
 }
+
+// Different projects are read side by side; every answer stays right.
+func TestParallelProjects(t *testing.T) {
+	e := NewEngine()
+	var handles []int64
+	for i := 0; i < 4; i++ {
+		handles = append(handles, call(t, e, map[string]any{"op": "open", "beads_dir": newWorkspace(t)}).Handle)
+	}
+	var wg sync.WaitGroup
+	errs := make(chan string, 40)
+	for _, h := range handles {
+		for j := 0; j < 5; j++ {
+			wg.Add(1)
+			go func(h int64) {
+				defer wg.Done()
+				r := call(t, e, map[string]any{"op": "ready", "handle": h})
+				if r.Error != nil || len(r.Issues) != 2 {
+					errs <- fmt.Sprintf("handle %d: %+v %d", h, r.Error, len(r.Issues))
+				}
+			}(h)
+		}
+	}
+	wg.Wait()
+	close(errs)
+	for e := range errs {
+		t.Error(e)
+	}
+}
