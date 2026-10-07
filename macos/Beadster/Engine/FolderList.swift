@@ -19,15 +19,23 @@ final class FolderList {
         }
     }
 
-    /// The open panel: one folder (usually the one that holds every project).
-    func add() -> GrantedFolder? {
+    /// The open panel: one folder (usually the one that holds every project). The bookmark is
+    /// saved now; the folder joins the list only when the person confirms its projects (keep).
+    func pick() -> GrantedFolder? {
         let key = "folder.\(UUID().uuidString)"
         guard let url = bookmarks.pickDirectory(forKey: key, message: "Choose the folder that holds your projects.", prompt: "Choose"),
               bookmarks.has(key: key) else { return nil }
-        let folder = GrantedFolder(key: key, path: url.path)
+        return GrantedFolder(key: key, path: url.path)
+    }
+
+    func keep(_ folder: GrantedFolder) {
         folders.append(folder)
         persist()
-        return folder
+    }
+
+    /// The sheet was cancelled: forget the bookmark the panel saved.
+    func discard(_ folder: GrantedFolder) {
+        bookmarks.remove(forKey: folder.key)
     }
 
     func remove(_ folder: GrantedFolder) {

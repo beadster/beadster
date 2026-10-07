@@ -42,6 +42,7 @@ struct MainWindow: View {
             }
         }
         .searchable(text: $model.search, placement: .toolbar, prompt: "Search beads")
+        .sheet(item: $model.pending) { _ in FoundSheet(model: model) }
     }
 
     private var subtitle: String {
@@ -128,7 +129,7 @@ struct PlaceView: View {
             } description: {
                 Text("Choose the folder that holds your projects. Beadster finds every project with beads inside it and keeps access, so you choose once.")
             } actions: {
-                Button("Choose Folder…") { Task { await model.addFolder() } }
+                Button("Choose Folder…") { Task { await model.chooseFolder() } }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
             }

@@ -18,7 +18,7 @@ struct WelcomeBoard: View {
 }
 
 // "Which of these do I want to see?" — the sheet after the folder is chosen.
-struct FoundSheet: View {
+struct FoundBoard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("6 Projects in Developer").font(.title2.weight(.semibold))

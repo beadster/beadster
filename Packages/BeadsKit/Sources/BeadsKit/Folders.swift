@@ -8,6 +8,12 @@ public struct FoundProject: Identifiable, Hashable, Sendable {
     public let relativePath: String
     public let kind: Kind
 
+    public init(name: String, relativePath: String, kind: Kind) {
+        self.name = name
+        self.relativePath = relativePath
+        self.kind = kind
+    }
+
     public enum Kind: Hashable, Sendable {
         /// beads 1.x, embedded Dolt in the repo: beadster opens it.
         case embedded
@@ -78,10 +84,19 @@ public struct GrantedFolder: Identifiable, Hashable, Sendable, Codable {
     public var id: String { key }
     public let key: String
     public var path: String
+    /// Projects (their .beads relative paths) the person unticked: never opened.
+    public var excluded: [String]
 
-    public init(key: String, path: String) {
+    public init(key: String, path: String, excluded: [String] = []) {
         self.key = key
         self.path = path
+        self.excluded = excluded
+    }
+
+
+    /// The projects under this folder the person chose to see.
+    public func included(_ found: [FoundProject]) -> [FoundProject] {
+        found.filter { !excluded.contains($0.relativePath) }
     }
 
     public enum Health: Hashable, Sendable {

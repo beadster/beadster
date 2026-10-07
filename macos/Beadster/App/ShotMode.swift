@@ -8,6 +8,7 @@
 //   only reports its window number into its container
 #if DEBUG
 import AppKit
+import BeadsKit
 import SwiftUI
 
 enum ShotMode {
@@ -27,6 +28,7 @@ enum ShotMode {
     /// The scenes the rig can draw, and the window size each is captured at (points).
     static let sizes: [String: NSSize] = [
         "shell": NSSize(width: 1280, height: 760), "shell-empty": NSSize(width: 1100, height: 680),
+        "found": NSSize(width: 520, height: 430), "found-none": NSSize(width: 520, height: 430),
         "welcome": NSSize(width: 1100, height: 680), "needs-you": NSSize(width: 1100, height: 680),
         "ready": NSSize(width: 1280, height: 760), "agents": NSSize(width: 1280, height: 680),
         "workflows": NSSize(width: 1100, height: 680), "map": NSSize(width: 1100, height: 720),
@@ -44,6 +46,15 @@ enum ShotMode {
         switch scene {
         case "shell": MainWindow(model: model).task { await model.load(plainFolder: fixtures) }
         case "shell-empty": MainWindow(model: model)
+        case "found", "found-none":
+            // .task on a view whose body starts empty never runs: hang it on a container
+            ZStack { Color.clear; FoundSheet(model: model) }.task {
+                // the bd fixtures plus one old-format project, as a chosen folder would show them
+                let root = scene == "found" ? fixtures : fixtures.appending(path: "empty/.beads")
+                var found = ProjectScanner.scan(root, maxDepth: 1)
+                if scene == "found" { found.append(FoundProject(name: "old-blog", relativePath: "old-blog/.beads", kind: .legacy)) }
+                await model.present(GrantedFolder(key: "rig", path: "/Users/you/Developer"), access: PlainFolder(root), found: found)
+            }
         case "welcome": WelcomeBoard()
         case "needs-you": NeedsYouBoard()
         case "agents": AgentsBoard()
@@ -64,16 +75,34 @@ enum ShotMode {
         try? FileManager.default.removeItem(at: reportURL)
         Task { @MainActor in
             for _ in 0..<50 {
-                if let window = NSApp.windows.first(where: { $0.isVisible || $0.contentView != nil }) {
+                if let window = NSApp.windows.first(where: { $0.canBecomeMain && $0.contentView != nil }) {
                     let size = sizes[scene] ?? NSSize(width: 1280, height: 760)
                     window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+                    // the window server pulls a window at -6000,-6000 back until a corner is on
+                    // the display (found 2026-10-07): keep it BELOW the desktop so even that
+                    // corner sits behind the wallpaper, and let clicks pass through
+                    window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) - 1)
+                    window.ignoresMouseEvents = true
+                    if scene.hasPrefix("found") {
+                        // in the app this is a sheet: no title bar of its own
+                        window.styleMask.insert(.fullSizeContentView)
+                        window.titlebarAppearsTransparent = true
+                        window.titleVisibility = .hidden
+                        for b in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+                            window.standardWindowButton(b)?.isHidden = true
+                        }
+                    }
                     window.setFrame(NSRect(x: -6000, y: -6000, width: size.width, height: size.height), display: true)
                     window.orderFront(nil)
                     try? await Task.sleep(for: .seconds(1))
                     for _ in 0..<1200 where model.loading { try? await Task.sleep(for: .milliseconds(100)) }
                     try? await Task.sleep(for: .milliseconds(300))
+                    // SwiftUI may have resized or moved the window while it settled: off screen again
+                    window.setFrame(NSRect(x: -6000, y: -6000, width: size.width, height: size.height), display: true)
+                    try? await Task.sleep(for: .milliseconds(200))
                     var report: [String: Any] = ["window": window.windowNumber, "pid": Int(getpid())]
                     if let s = model.lastLoadSeconds { report["load_seconds"] = s }
+                    report["windows"] = NSApp.windows.map { "\($0.windowNumber) \(type(of: $0)) main=\($0.canBecomeMain) visible=\($0.isVisible) \(Int($0.frame.width))x\(Int($0.frame.height))" }
                     if let data = try? JSONSerialization.data(withJSONObject: report) {
                         try? data.write(to: reportURL)
                     }

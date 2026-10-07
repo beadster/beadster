@@ -50,6 +50,27 @@ public actor ProjectLibrary {
         }
     }
 
+    /// What each found project would show, without keeping anything open: for the sheet that
+    /// lists a new folder's projects before the person picks them.
+    public func preview(access: any FolderAccess, projects: [FoundProject]) async -> [String: State] {
+        var out: [String: State] = [:]
+        for found in projects {
+            switch found.kind {
+            case .legacy: out[found.relativePath] = .legacy
+            case .server: out[found.relativePath] = .server
+            case .embedded:
+                do {
+                    let ws = try Workspace(grantedFolder: access, relativePath: found.relativePath, engine: engine)
+                    out[found.relativePath] = try await Self.state(of: ws)
+                    await ws.close()
+                } catch {
+                    out[found.relativePath] = .failed(error)
+                }
+            }
+        }
+        return out
+    }
+
     /// Re-counts one project (after a change signal or a write).
     public func refresh(_ id: String) async {
         guard let i = entries.firstIndex(where: { $0.id == id }), let ws = entries[i].workspace else { return }

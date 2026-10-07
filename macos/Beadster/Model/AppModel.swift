@@ -58,17 +58,51 @@ final class AppModel {
         defer { loading = false }
         for folder in folders.folders {
             guard let access = folders.access(for: folder) else { continue }
-            await library.add(folderKey: folder.key, access: access, projects: folders.projects(in: folder))
+            await library.add(folderKey: folder.key, access: access, projects: folder.included(folders.projects(in: folder)))
         }
         await publish()
     }
 
-    func addFolder() async {
-        guard let folder = folders.add(), let access = folders.access(for: folder) else { return }
+    /// A folder the person just chose, waiting for them to pick its projects in the sheet.
+    struct PendingFolder: Identifiable {
+        var id: String { folder.key }
+        var folder: GrantedFolder
+        let found: [FoundProject]
+        var states: [String: ProjectLibrary.State]
+        var chosen: Set<String>
+    }
+
+    var pending: PendingFolder?
+
+    /// Choose Folder…: the panel, then the projects found in it for the sheet.
+    func chooseFolder() async {
+        guard let folder = folders.pick(), let access = folders.access(for: folder) else { return }
+        await present(folder, access: access, found: folders.projects(in: folder))
+    }
+
+    func present(_ folder: GrantedFolder, access: any FolderAccess, found: [FoundProject]) async {
         loading = true
         defer { loading = false }
-        await library.add(folderKey: folder.key, access: access, projects: folders.projects(in: folder))
+        let states = await library.preview(access: access, projects: found)
+        let openable = found.filter { $0.kind == .embedded }.map(\.relativePath)
+        pending = PendingFolder(folder: folder, found: found, states: states, chosen: Set(openable))
+    }
+
+    /// Add N Projects: keep the folder with what was unticked, open the rest.
+    func confirmPending() async {
+        guard var p = pending, let access = folders.access(for: p.folder) else { pending = nil; return }
+        p.folder.excluded = p.found.map(\.relativePath).filter { !p.chosen.contains($0) }
+        pending = nil
+        folders.keep(p.folder)
+        loading = true
+        defer { loading = false }
+        await library.add(folderKey: p.folder.key, access: access, projects: p.folder.included(p.found))
         await publish()
+    }
+
+    func cancelPending() {
+        if let p = pending { folders.discard(p.folder) }
+        pending = nil
     }
 
     /// The rig: projects from a folder inside the app's own container, no bookmark needed.

@@ -59,3 +59,23 @@ private func readyPage(_ items: [(String, Int, String)]) -> String {
     #expect(await lib.all.isEmpty)
     #expect(engine.ops.last == "close")
 }
+
+@Test func previewCountsWithoutKeepingAnythingOpen() async throws {
+    let engine = FakeEngine(["open": [opened], "ready": [readyPage([("wa-1", 1, "2026-10-07T10:00:00Z")])], "close": ["{}"]])
+    let lib = ProjectLibrary(engine: engine)
+    let states = await lib.preview(access: PlainFolder(URL(fileURLWithPath: "/d")), projects: [
+        FoundProject(name: "wander", relativePath: "wander/.beads", kind: .embedded),
+        FoundProject(name: "old", relativePath: "old/.beads", kind: .legacy),
+    ])
+    #expect(states["wander/.beads"] == .ready(readyCount: 1))
+    #expect(states["old/.beads"] == .legacy)
+    #expect(await lib.all.isEmpty)
+    #expect(engine.ops == ["open", "ready", "close"])
+}
+
+@Test func excludedProjectsStayOut() throws {
+    let found = [FoundProject(name: "a", relativePath: "a/.beads", kind: .embedded),
+                 FoundProject(name: "b", relativePath: "b/.beads", kind: .embedded)]
+    let folder = GrantedFolder(key: "k", path: "/d", excluded: ["b/.beads"])
+    #expect(folder.included(found).map(\.name) == ["a"])
+}

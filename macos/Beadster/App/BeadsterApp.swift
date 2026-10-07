@@ -8,7 +8,6 @@ struct BeadsterApp: App {
     var body: some Scene {
         WindowGroup("Beadster", id: "main") {
             root
-                .frame(minWidth: 900, minHeight: 560)
         }
         .defaultSize(width: 1280, height: 760)
         .commands {
@@ -38,12 +37,14 @@ struct BeadsterApp: App {
     private var root: some View {
         #if DEBUG
         if let scene = ShotMode.scene {
-            ShotMode.view(for: scene, model: model).onAppear { ShotMode.stage(scene, model: model) }
+            // a container that always appears: a scene whose view starts empty never fires onAppear
+            ZStack { Color.clear; ShotMode.view(for: scene, model: model) }
+                .onAppear { ShotMode.stage(scene, model: model) }
         } else {
-            MainWindow(model: model).task { await model.load() }
+            MainWindow(model: model).frame(minWidth: 900, minHeight: 560).task { await model.load() }
         }
         #else
-        MainWindow(model: model).task { await model.load() }
+        MainWindow(model: model).frame(minWidth: 900, minHeight: 560).task { await model.load() }
         #endif
     }
 }
