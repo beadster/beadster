@@ -20,6 +20,11 @@ enum ShotMode {
 
     static var dark: Bool { ProcessInfo.processInfo.environment["BEADSTER_SHOT_APPEARANCE"] == "dark" }
 
+    /// The App Store set: a near-square window with the inspector closed, so frames-side has
+    /// room for the words beside it (a 1280-wide window filled the whole 2560 slot).
+    static var store: Bool { ProcessInfo.processInfo.environment["BEADSTER_SHOT_STORE"] == "1" }
+    static let storeSize = NSSize(width: 1000, height: 900)
+
     /// Where the window number goes: inside the container, because the app is sandboxed.
     static var reportURL: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appending(path: "shot-window.json")
@@ -67,7 +72,7 @@ enum ShotMode {
                 model.selection = .workflows
                 model.showInspector = false
                 await model.load(plainFolder: fixtures)
-                model.mapped = model.workflows.first { $0.workflow.root.title == "quick-check" }?.id
+                model.mapped = (model.workflows.first { $0.workflow.root.title == "quick-check" } ?? model.workflows.first)?.id
             }
         case "activity", "live":
             MainWindow(model: model).task {
@@ -121,7 +126,8 @@ enum ShotMode {
                 defer { model.sceneBusy = false }
                 await model.load(plainFolder: fixtures)
                 // a bead with labels, a comment, an epic and work it holds up
-                let row = model.readyRows.first { $0.bead.title == "Conflicts lose a paragraph" }
+                // (the store fixtures have no such bead: their first row, a P0 with labels, instead)
+                let row = model.readyRows.first { $0.bead.title == "Conflicts lose a paragraph" } ?? model.readyRows.first
                 await model.inspect(row?.id)
             }
         case "problems":
@@ -187,7 +193,7 @@ enum ShotMode {
         Task { @MainActor in
             for _ in 0..<50 {
                 if let window = NSApp.windows.first(where: { $0.canBecomeMain && $0.contentView != nil }) {
-                    let size = sizes[scene] ?? NSSize(width: 1280, height: 760)
+                    let size = store ? storeSize : (sizes[scene] ?? NSSize(width: 1280, height: 760))
                     window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
                     // the window server pulls a window at -6000,-6000 back until a corner is on
                     // the display (found 2026-10-07): keep it BELOW the desktop so even that
@@ -209,6 +215,7 @@ enum ShotMode {
                     for _ in 0..<1200 where model.loading || model.backgroundLoading || model.sceneBusy {
                         try? await Task.sleep(for: .milliseconds(100))
                     }
+                    if store { model.showInspector = false }
                     try? await Task.sleep(for: .milliseconds(300))
                     // SwiftUI may have resized or moved the window while it settled: off screen again
                     window.setFrame(NSRect(x: -6000, y: -6000, width: size.width, height: size.height), display: true)

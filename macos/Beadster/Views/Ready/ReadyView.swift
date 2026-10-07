@@ -18,11 +18,12 @@ struct ReadyView: View {
             Table(rows, selection: Binding(get: { model.selectedRow }, set: { id in Task { await model.inspect(id) } })) {
                 TableColumn("") { r in KindSymbol(type: r.bead.type) }.width(24)
                 TableColumn("Priority") { r in PriorityText(priority: r.bead.priority) }.width(56)
-                TableColumn("Title") { r in Text(r.bead.title) }.width(min: 200, ideal: 420)
-                TableColumn("Project") { r in Text(r.project) }.width(min: 70, ideal: 100, max: 160)
+                TableColumn("Title") { r in Text(r.bead.title) }.width(min: 200, ideal: 380)
+                TableColumn("Project") { r in Text(r.project) }.width(min: 80, ideal: 110, max: 160)
                 TableColumn("ID") { r in Text(r.bead.id).foregroundStyle(.secondary) }.width(min: 60, ideal: 80, max: 110)
                 TableColumn("Created") { r in Text(r.bead.createdAt, format: .relative(presentation: .named)).monospacedDigit() }
-                    .width(min: 70, ideal: 100, max: 130)
+                    // "58 seconds ago" is the longest the column shows: it fits whole (the store shots cut it to "1 minute…")
+                    .width(min: 110, ideal: 120, max: 150)
             }
         }
     }

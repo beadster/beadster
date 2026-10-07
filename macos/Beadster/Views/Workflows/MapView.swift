@@ -58,7 +58,8 @@ struct NodeCard: View {
         let gate = node.type == .gate && node.status != .closed
         VStack(alignment: .leading, spacing: 3) {
             Label {
-                Text(node.title).lineLimit(1)
+                // two lines before a step's title is cut ("Check the database migra…" in the store shots)
+                Text(node.title).lineLimit(2)
             } icon: {
                 if gate { Image(systemName: "hand.raised.fill").foregroundStyle(Color.warningInk) } else { StatusSymbol(status: node.status) }
             }
@@ -66,7 +67,7 @@ struct NodeCard: View {
                 .font(.callout).foregroundStyle(.secondary)
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
-        .frame(maxWidth: 220, alignment: .leading)
+        .frame(maxWidth: 240, alignment: .leading)
         .background(.background, in: .rect(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(.secondary.opacity(0.3), lineWidth: 1))
         .accessibilityElement(children: .combine)
