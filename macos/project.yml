@@ -49,7 +49,7 @@ targets:
     # the build (the ratchet in AppStore/accessibility.json only goes down)
     preBuildScripts:
       - name: accessibility gate
-        script: python3 "$SRCROOT/../../common/lib/a11y/check-a11y.py" "$SRCROOT/AppStore/accessibility.json"
+        script: python3 "$SRCROOT/../../common/lib/a11y/check-a11y.py" "$SRCROOT/../apps/AppStore/accessibility.json"
         basedOnDependencyAnalysis: false
     settings:
       base:
