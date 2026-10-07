@@ -59,7 +59,7 @@ func extraRead(ctx context.Context, st *embeddeddolt.EmbeddedDoltStore, req Requ
 // listRequest maps the app's list filters onto beads' own request; beads normalizes the rest.
 func listRequest(req Request) issueops.ListRequest {
 	lr := issueops.ListRequest{Status: req.Status, Limit: req.Limit, Assignee: req.FilterAssignee,
-		IssueType: req.FilterType, TitleContains: req.TitleContains, AllFlag: req.All}
+		IssueType: req.FilterType, TitleContains: req.TitleContains, AllFlag: req.All, IncludeGates: req.IncludeGates}
 	if req.Label != "" {
 		lr.Labels = []string{req.Label}
 	}

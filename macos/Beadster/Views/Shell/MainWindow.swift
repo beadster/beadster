@@ -48,8 +48,17 @@ struct MainWindow: View {
     private var subtitle: String {
         if model.loading { return "Opening projects…" }
         if model.entries.isEmpty { return "No folders yet" }
-        let n = model.entries.count
-        return "\(model.totalReady.formatted()) ready across \(n.formatted()) \(n == 1 ? "project" : "projects")"
+        switch model.selection {
+        case .needsYou:
+            let a = model.needsYou.approvals.count, b = model.needsYou.assigned.count
+            return "\(a.formatted()) \(a == 1 ? "approval" : "approvals"), \(b.formatted()) assigned"
+        case .project(let id):
+            if case .ready(let n) = model.entry(id)?.state { return "\(n.formatted()) ready" }
+            return ""
+        default:
+            let n = model.entries.count
+            return "\(model.totalReady.formatted()) ready across \(n.formatted()) \(n == 1 ? "project" : "projects")"
+        }
     }
 
     private func title(for place: Place) -> String {
@@ -64,7 +73,7 @@ struct SidebarView: View {
     var body: some View {
         List(selection: $model.selection) {
             Section {
-                row(.needsYou)
+                row(.needsYou, count: model.needsYou.count == 0 ? nil : model.needsYou.count)
                 row(.ready, count: model.entries.isEmpty ? nil : model.totalReady)
                 row(.agents)
                 row(.blocked)
@@ -136,6 +145,7 @@ struct PlaceView: View {
         } else if let place = model.selection {
             switch place {
             case .ready, .project: ReadyView(model: model)
+            case .needsYou: NeedsYouView(model: model)
             default: ContentUnavailableView(place.title, systemImage: place.symbol)
             }
         } else {

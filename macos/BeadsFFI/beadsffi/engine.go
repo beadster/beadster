@@ -66,6 +66,7 @@ type Request struct {
 	Label          string `json:"label,omitempty"`
 	TitleContains  string `json:"title_contains,omitempty"`
 	All            bool   `json:"all,omitempty"` // closed beads too, like bd list --all
+	IncludeGates   bool   `json:"include_gates,omitempty"` // bd list hides gate beads unless asked
 }
 
 // Response is one answer to Swift. Exactly one of Error or the payload fields is set.

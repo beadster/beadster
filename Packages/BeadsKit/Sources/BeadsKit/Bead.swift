@@ -147,6 +147,15 @@ public struct LinkedBead: Identifiable, Hashable, Sendable, Codable {
         case id, title, status, priority
         case type = "issue_type", kind = "dependency_type"
     }
+
+    public init(id: String, title: String, status: BeadStatus, priority: Int, type: BeadType, kind: LinkKind) {
+        self.id = id
+        self.title = title
+        self.status = status
+        self.priority = priority
+        self.type = type
+        self.kind = kind
+    }
 }
 
 public struct Comment: Identifiable, Hashable, Sendable, Codable {

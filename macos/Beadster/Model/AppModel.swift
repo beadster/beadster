@@ -184,6 +184,30 @@ final class AppModel {
     func publishAll() async {
         await publish()
         await loadReady()
+        await loadNeedsYou()
+    }
+
+    // MARK: Needs You
+
+    private(set) var needsYou = ProjectLibrary.NeedsYou()
+
+    func loadNeedsYou() async {
+        needsYou = await library.needsYou(actor)
+    }
+
+    /// Approve or reject a gate: approve releases the work it holds, reject leaves it shut with
+    /// the reason as a comment (beads has no reject).
+    func decide(gate: Gate, in projectID: String, approve: Bool) async {
+        guard let ws = await library.workspace(projectID) else { return }
+        do {
+            if approve { try await ws.approve(gate: gate.id, as: actor) }
+            else { try await ws.reject(gate: gate.id, as: actor) }
+            lastError = nil
+        } catch {
+            lastError = "\(error)"
+        }
+        await library.refresh(projectID)
+        await publishAll()
     }
 
     private func publish() async {

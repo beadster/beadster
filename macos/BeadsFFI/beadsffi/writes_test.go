@@ -111,6 +111,16 @@ func TestGates(t *testing.T) {
 	work := call(t, e, map[string]any{"op": "ready", "handle": h}).Issues[0].ID
 	bdIn(t, dir, "gate", "create", "--type=human", "--blocks", work, "--reason", "Approve the deploy")
 
+	gates := call(t, e, map[string]any{"op": "list", "handle": h, "filter_type": "gate", "include_gates": true})
+	if gates.Error != nil || len(gates.Issues) != 1 || gates.Issues[0].AwaitType != "human" {
+		t.Fatalf("list gates: %+v %d", gates.Error, len(gates.Issues))
+	}
+	// a plain list hides gate beads, like bd list; asking for the gate type returns them
+	for _, is := range call(t, e, map[string]any{"op": "list", "handle": h}).Issues {
+		if string(is.IssueType) == "gate" {
+			t.Fatal("a plain list returned a gate")
+		}
+	}
 	blocked := call(t, e, map[string]any{"op": "blocked", "handle": h})
 	if len(blocked.Blocked) != 1 || blocked.Blocked[0].ID != work {
 		t.Fatalf("work should wait on the gate: %+v", blocked.Blocked)

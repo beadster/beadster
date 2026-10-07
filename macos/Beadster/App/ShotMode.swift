@@ -30,7 +30,7 @@ enum ShotMode {
     static let sizes: [String: NSSize] = [
         "shell": NSSize(width: 1280, height: 760), "shell-empty": NSSize(width: 1100, height: 680),
         "found": NSSize(width: 520, height: 430), "found-none": NSSize(width: 520, height: 430),
-        "ready": NSSize(width: 1280, height: 760),
+        "ready": NSSize(width: 1280, height: 760), "needs-you": NSSize(width: 1100, height: 680),
     ]
 
     /// The bd fixtures scripts/mac-screenshots.sh copies into the rig's container.
@@ -42,6 +42,12 @@ enum ShotMode {
     static func view(for scene: String, model: AppModel) -> some View {
         switch scene {
         case "shell": MainWindow(model: model).task { await model.load(plainFolder: fixtures) }
+        case "needs-you":
+            MainWindow(model: model).task {
+                model.selection = .needsYou
+                model.showInspector = false
+                await model.load(plainFolder: fixtures)
+            }
         case "ready":
             MainWindow(model: model).task {
                 await model.load(plainFolder: fixtures)

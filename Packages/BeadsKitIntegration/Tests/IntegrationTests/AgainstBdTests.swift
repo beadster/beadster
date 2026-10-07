@@ -96,3 +96,13 @@ func readyMatchesBd(_ name: String) async throws {
     let bd = try Memory.decodeList(Data(contentsOf: fixtures.appending(path: "memories/expected/memories.json")))
     #expect(try await ws.memories() == bd)
 }
+
+@Test func gatesFixtureNeedsYou() async throws {
+    let ws = try await open(try copy("gates"))
+    let gates = try await ws.gates()
+    let human = try #require(gates.first { $0.needsAPerson })
+    #expect(human.title == "Deploy to production")
+    #expect(human.reason == "Approve the deploy")
+    #expect(gates.filter { !$0.needsAPerson }.map(\.title) == ["Ship after review"])
+    await ws.close()
+}
