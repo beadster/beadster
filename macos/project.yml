@@ -6,6 +6,10 @@ options:
   xcodeVersion: "16.4"
   developmentLanguage: en
 
+packages:
+  FSEventsWatcher:
+    path: ../../common/swift-packages/FSEventsWatcher
+
 settings:
   base:
     DEVELOPMENT_TEAM: 6TW2DVT32T
@@ -25,11 +29,14 @@ targets:
       - path: Shared
         excludes:
           - "**/.DS_Store"
+          - FileWatcher.swift
+    dependencies:
+      - package: FSEventsWatcher
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ai.beadster.mac
-        CURRENT_PROJECT_VERSION: 9
-        MARKETING_VERSION: 1.4
+        CURRENT_PROJECT_VERSION: 15
+        MARKETING_VERSION: 1.6
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: Beadster/Beadster.entitlements
         ENABLE_HARDENED_RUNTIME: YES

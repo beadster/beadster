@@ -1,11 +1,12 @@
 import Foundation
 import Shared
+import FSEventsWatcher
 
 /// CLI-specific sync daemon
 /// Reads config from file and syncs sources
 class CLISyncDaemon {
     private let config: Config
-    private var watchers: [FileWatcher] = []
+    private var watchers: [FSEventsWatcher] = []
     private var lastSync: [String: Int] = [:] // source path -> timestamp
 
     init(configPath: String) throws {
@@ -148,11 +149,15 @@ class CLISyncDaemon {
     }
 
     func watchSource(_ source: SourceConfig) {
-        let watcher = FileWatcher(path: source.path) { [weak self] in
-            guard let self = self else { return }
-            print("📝 Change detected in \(source.name)")
-            Task {
-                await self.syncSource(source)
+        let watcher = FSEventsWatcher(
+            paths: [source.path],
+            latency: 1.0
+        ) { [weak self] events in
+            let fileEvents = events.filter { !$0.isHistoryDone }
+            guard !fileEvents.isEmpty else { return }
+            print("📝 Change detected in \(source.name) (\(fileEvents.count) events)")
+            Task { [weak self] in
+                await self?.syncSource(source)
             }
         }
         watcher.start()
