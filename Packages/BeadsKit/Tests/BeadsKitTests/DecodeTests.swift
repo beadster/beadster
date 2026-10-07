@@ -78,7 +78,7 @@ private func beads(_ name: String) throws -> [Bead] {
         .split(separator: "\n")
     var gates: [Bead] = []
     for line in lines {
-        var object = try #require(try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
+        let object = try #require(try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
         let bead = try BeadsJSON.decoder().decode(Bead.self, from: JSONSerialization.data(withJSONObject: object))
         if bead.type == .gate { gates.append(bead) }
     }

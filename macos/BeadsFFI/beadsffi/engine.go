@@ -20,6 +20,7 @@ import (
 	"github.com/steveyegge/beads/internal/configfile"
 	"github.com/steveyegge/beads/internal/storage"
 	"github.com/steveyegge/beads/internal/storage/embeddeddolt"
+	"github.com/steveyegge/beads/internal/storage/schema"
 	"github.com/steveyegge/beads/internal/types"
 	"github.com/steveyegge/beads/issueops"
 )
@@ -61,6 +62,9 @@ type Response struct {
 type Failure struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	// schema_ahead / schema_behind: the database's schema version and this build's
+	DBVersion     int `json:"db_version,omitempty"`
+	BinaryVersion int `json:"binary_version,omitempty"`
 }
 
 // ProjectInfo describes an opened workspace.
@@ -75,7 +79,11 @@ const (
 	CodeBadRequest  = "bad_request"
 	CodeNoBeads     = "no_beads"
 	CodeServerMode  = "server_mode"
-	CodeSchemaDrift = "schema_drift"
+	// the database was written by a NEWER beads: read nothing, ask for an app update
+	CodeSchemaAhead = "schema_ahead"
+	// the database is OLDER than this beads: reading needs a migration, which only the
+	// person can allow (op "migrate"); bd on their machine may still be the old one
+	CodeSchemaBehind = "schema_behind"
 	CodeNotFound    = "not_found"
 	CodeNoHandle    = "no_handle"
 	CodeBeads       = "beads"
@@ -123,6 +131,8 @@ func (e *Engine) dispatch(ctx context.Context, req Request) Response {
 	case "close":
 		delete(e.opened, req.handle())
 		return Response{}
+	case "migrate":
+		return e.migrate(ctx, req)
 	}
 	ws, ok := e.opened[req.handle()]
 	if !ok {
@@ -140,7 +150,6 @@ func (e *Engine) dispatch(ctx context.Context, req Request) Response {
 
 func (r Request) handle() int64 { return r.Handle }
 
-func containsFold(s, sub string) bool { return strings.Contains(strings.ToLower(s), strings.ToLower(sub)) }
 
 func encode(r Response) []byte {
 	b, err := json.Marshal(r)
@@ -175,10 +184,7 @@ func (e *Engine) open(ctx context.Context, req Request) Response {
 		}
 		return fail(CodeNoBeads, fmt.Errorf("no embedded beads database in %s", dir))
 	}
-	database := "beads"
-	if cfg, err := configfile.Load(dir); err == nil && cfg != nil {
-		database = cfg.GetDoltDatabase()
-	}
+	database := databaseName(dir)
 	st, err := embeddeddolt.OpenReadOnly(ctx, dir, database, "main")
 	if err != nil {
 		return classifyOpen(err)
@@ -192,13 +198,53 @@ func (e *Engine) open(ctx context.Context, req Request) Response {
 }
 
 func classifyOpen(err error) Response {
-	msg := err.Error()
-	for _, s := range []string{"schema", "migration", "newer", "older"} {
-		if containsFold(msg, s) {
-			return fail(CodeSchemaDrift, err)
-		}
+	var ahead *schema.SchemaSkewError
+	if errors.As(err, &ahead) {
+		r := fail(CodeSchemaAhead, err)
+		r.Error.DBVersion, r.Error.BinaryVersion = ahead.DBVersion, ahead.BinaryVersion
+		return r
+	}
+	var behind *schema.SchemaBehindError
+	if errors.As(err, &behind) {
+		r := fail(CodeSchemaBehind, err)
+		r.Error.DBVersion, r.Error.BinaryVersion = behind.DBVersion, behind.BinaryVersion
+		return r
 	}
 	return fail(CodeBeads, err)
+}
+
+// migrate brings an OLDER database up to this build's schema. Only on the person's
+// explicit yes: after it, a bd older than this build refuses the project.
+func (e *Engine) migrate(ctx context.Context, req Request) Response {
+	dir := filepath.Clean(req.BeadsDir)
+	database := databaseName(dir)
+	if _, err := os.Stat(filepath.Join(dir, "embeddeddolt")); err != nil {
+		return fail(CodeNoBeads, fmt.Errorf("no embedded beads database in %s", dir))
+	}
+	ro, err := embeddeddolt.OpenReadOnly(ctx, dir, database, "main")
+	if err == nil {
+		_ = ro.Close()
+		return Response{} // already current
+	}
+	var behind *schema.SchemaBehindError
+	if !errors.As(err, &behind) {
+		return classifyOpen(err) // ahead or broken: never written to
+	}
+	st, err := embeddeddolt.Open(ctx, dir, database, "main")
+	if err != nil {
+		return fail(CodeBeads, err)
+	}
+	if err := st.Close(); err != nil {
+		return fail(CodeBeads, err)
+	}
+	return Response{Changed: true}
+}
+
+func databaseName(dir string) string {
+	if cfg, err := configfile.Load(dir); err == nil && cfg != nil && cfg.GetDoltDatabase() != "" {
+		return cfg.GetDoltDatabase()
+	}
+	return "beads"
 }
 
 func (e *Engine) read(ctx context.Context, ws *workspace, req Request) Response {
