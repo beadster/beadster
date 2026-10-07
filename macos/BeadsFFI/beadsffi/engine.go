@@ -96,6 +96,14 @@ type Engine struct {
 
 func NewEngine() *Engine { return &Engine{opened: map[int64]*workspace{}} }
 
+// The app sends nothing: beads' usage metrics and their flush are off before any beads code
+// runs (internal/metrics reads these at init time).
+func init() {
+	for _, k := range []string{"DO_NOT_TRACK", "BD_DISABLE_METRICS", "BD_DISABLE_EVENT_FLUSH"} {
+		_ = os.Setenv(k, "1")
+	}
+}
+
 // Call runs one request and always answers with JSON.
 func (e *Engine) Call(raw []byte) []byte {
 	var req Request

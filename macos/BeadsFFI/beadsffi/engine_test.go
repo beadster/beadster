@@ -26,7 +26,8 @@ func newWorkspace(t *testing.T) string {
 	run := func(args ...string) string {
 		cmd := exec.Command(bd, args...)
 		cmd.Dir = dir
-		cmd.Env = append(os.Environ(), "HOME="+dir, "BD_ACTOR=fixture")
+		cmd.Env = append(os.Environ(), "HOME="+dir, "BEADS_DIR="+filepath.Join(dir, ".beads"), "BD_ACTOR=fixture",
+			"DO_NOT_TRACK=1", "BD_DISABLE_METRICS=1", "BD_DISABLE_EVENT_FLUSH=1")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("bd %v: %v\n%s", args, err, out)
