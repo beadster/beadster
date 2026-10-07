@@ -240,6 +240,8 @@ final class AppModel {
     }
 
     private(set) var workflows: [FlowRow] = []
+    /// The workflow drawn as a map, if one is open.
+    var mapped: FlowRow.ID?
 
     func loadWorkflows() async {
         workflows = await library.workflowsEverywhere().map { FlowRow(projectID: $0.projectID, project: $0.project, workflow: $0.workflow) }

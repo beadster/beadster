@@ -11,6 +11,12 @@ public struct Workflow: Identifiable, Hashable, Sendable {
     public var done: Int { steps.filter { $0.status == .closed }.count }
     public var total: Int { steps.count }
     public var fraction: Double { total == 0 ? 0 : Double(done) / Double(total) }
+    /// Steps of this workflow that `step` waits on and that are not closed yet.
+    public func openBlockers(of step: Bead) -> [Bead] {
+        let blocking = Set(step.edges.filter { $0.kind.isBlocking }.map(\.dependsOnID))
+        return steps.filter { blocking.contains($0.id) && $0.status != .closed }
+    }
+
     /// The open gate among the steps, if the workflow is waiting on one.
     public var waitingGate: Bead? { steps.first { $0.type == .gate && $0.status != .closed } }
 }

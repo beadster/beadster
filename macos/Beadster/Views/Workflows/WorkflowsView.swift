@@ -8,7 +8,9 @@ struct WorkflowsView: View {
     @State private var collapsed: Set<String> = []
 
     var body: some View {
-        if model.workflows.isEmpty {
+        if let id = model.mapped, let row = model.workflows.first(where: { $0.id == id }) {
+            MapView(row: row) { model.mapped = nil }
+        } else if model.workflows.isEmpty {
             // U15 draws this empty state
             ContentUnavailableView("No Workflows", systemImage: "point.3.connected.trianglepath.dotted",
                                    description: Text("Epics and workflows poured from formulas show up here with their steps."))
@@ -17,7 +19,9 @@ struct WorkflowsView: View {
                 ForEach(model.workflows) { row in
                     DisclosureGroup(isExpanded: Binding(get: { !collapsed.contains(row.id) },
                                                         set: { open in if open { collapsed.remove(row.id) } else { collapsed.insert(row.id) } })) {
-                        ForEach(row.workflow.steps) { step in StepRow(step: step, actor: model.actor) }
+                        ForEach(row.workflow.steps) { step in
+                            StepRow(step: step, waitsOn: row.workflow.openBlockers(of: step).count)
+                        }
                     } label: {
                         HStack(spacing: 10) {
                             StatusSymbol(status: row.workflow.root.status)
@@ -30,6 +34,13 @@ struct WorkflowsView: View {
                             }
                             Text("\(row.workflow.done) of \(row.workflow.total)").monospacedDigit().foregroundStyle(.secondary)
                                 .frame(width: 70, alignment: .trailing)
+                            Button { model.mapped = row.id } label: {
+                                Label("Show Map", systemImage: "point.3.filled.connected.trianglepath.dotted")
+                            }
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.borderless)
+                            .help("Show Map")
+                            .accessibilityLabel("Show map of \(row.workflow.root.title)")
                         }
                         .padding(.vertical, 3)
                     }
@@ -42,7 +53,8 @@ struct WorkflowsView: View {
 /// One step: its status (or the hand for a gate), its title, and who holds it.
 struct StepRow: View {
     let step: Bead
-    let actor: String
+    /// Open steps of the same workflow this one waits on.
+    let waitsOn: Int
 
     var body: some View {
         HStack(spacing: 10) {
@@ -63,11 +75,9 @@ struct StepRow: View {
     private var who: String {
         if isYours { return "you" }
         if let a = step.assignee, !a.isEmpty { return a }
-        switch step.status {
-        case .closed: return "done"
-        case .blocked: return "waiting"
-        default: return "ready"
-        }
+        if step.status == .closed { return "done" }
+        if waitsOn > 0 { return "waits on \(waitsOn)" }
+        return step.status == .blocked ? "waiting" : "ready"
     }
 }
 
