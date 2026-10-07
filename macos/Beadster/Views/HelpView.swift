@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct HelpView: View {
     let onClose: () -> Void
@@ -28,56 +29,223 @@ struct HelpView: View {
             Divider()
 
             // Content
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Please reach out with any questions or feedback:")
-                    .foregroundColor(.bdSecondary)
+            ScrollView {
+                VStack(spacing: BDSpacing.lg) {
+                    // Contact section
+                    BDSettingsSection("CONTACT") {
+                        Button {
+                            if let url = URL(string: "mailto:hi@beadster.ai") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "envelope.fill",
+                                iconColor: BDColors.iconBlue,
+                                title: "email",
+                                subtitle: "hi@beadster.ai",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
 
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Email:")
-                            .foregroundColor(.bdSecondary)
-                        Link("hi@beadster.ai", destination: URL(string: "mailto:hi@beadster.ai")!)
-                            .foregroundColor(.blue)
+                        Divider()
+
+                        Button {
+                            if let url = URL(string: "imessage://+14159108321") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "message.fill",
+                                iconColor: BDColors.iconGreen,
+                                title: "imessage",
+                                subtitle: "+1 415-910-8321",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+
+                        Button {
+                            if let url = URL(string: "https://github.com/beadster/beadster") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "curlybraces",
+                                iconColor: BDColors.iconIndigo,
+                                title: "source code",
+                                subtitle: "github.com/beadster/beadster",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
                     }
 
-                    HStack {
-                        Text("iMessage:")
-                            .foregroundColor(.bdSecondary)
-                        Link("+1 415-910-8321", destination: URL(string: "imessage://+14159108321")!)
-                            .foregroundColor(.blue)
+                    // Support section
+                    BDSettingsSection("SUPPORT") {
+                        Button {
+                            if let url = URL(string: "https://patronat.com/anton+") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "heart.fill",
+                                iconColor: BDColors.iconRed,
+                                title: "support development",
+                                subtitle: "one time or recurring donations",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    HStack {
-                        Text("Support development:")
-                            .foregroundColor(.bdSecondary)
-                        Link("one time or recurring donations", destination: URL(string: "https://patronat.com/anton+")!)
-                            .foregroundColor(.blue)
-                    }
-                    HStack {
-                        Text("Source code:")
-                            .foregroundColor(.bdSecondary)
-                        Link("github.com/beadster/beadster", destination: URL(string: "https://github.com/beadster/beadster")!)
-                            .foregroundColor(.blue)
+
+                    // Other Products section
+                    BDSettingsSection("OTHER PRODUCTS") {
+                        Button {
+                            if let url = URL(string: "https://tinydot.com") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "globe",
+                                iconColor: BDColors.iconPurple,
+                                title: "tinydot",
+                                subtitle: "website builder",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+
+                        Button {
+                            if let url = URL(string: "https://original.me") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "globe",
+                                iconColor: BDColors.iconOrange,
+                                title: "original",
+                                subtitle: "tool for podcast power listeners",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+
+                        Button {
+                            if let url = URL(string: "https://sublimated.com") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "globe",
+                                iconColor: BDColors.iconCyan,
+                                title: "sublimated",
+                                subtitle: "native SQL IDE",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+
+                        Button {
+                            if let url = URL(string: "https://capncap.com") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "globe",
+                                iconColor: BDColors.iconPink,
+                                title: "capncap",
+                                subtitle: "multi-stream screen recorder",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+
+                        Button {
+                            if let url = URL(string: "https://patronat.com") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "globe",
+                                iconColor: BDColors.iconRed,
+                                title: "patronat",
+                                subtitle: "support creators you love",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+
+                        Button {
+                            if let url = URL(string: "https://tinysend.com") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "globe",
+                                iconColor: BDColors.iconGreen,
+                                title: "tinysend",
+                                subtitle: "simple file sharing",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+
+                        Button {
+                            if let url = URL(string: "https://ultrathink.com") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            BDSettingsRow(
+                                icon: "globe",
+                                iconColor: BDColors.iconBlue,
+                                title: "ultrathink",
+                                subtitle: "AI search engine",
+                                showExternalArrow: true
+                            )
+                            .padding(.horizontal, BDSpacing.lg)
+                            .padding(.vertical, BDSpacing.sm)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Other Products")
-                        .font(.headline)
-                    Link("patronat.com", destination: URL(string: "https://patronat.com")!)
-                        .foregroundColor(.blue)
-                    Link("tinydot.com", destination: URL(string: "https://tinydot.com")!)
-                        .foregroundColor(.blue)
-                    Link("tinysend.com", destination: URL(string: "https://tinysend.com")!)
-                        .foregroundColor(.blue)
-                    Link("original.me", destination: URL(string: "https://original.me")!)
-                        .foregroundColor(.blue)
-                }
-
-                Spacer()
+                .padding(.vertical, BDSpacing.md)
             }
-            .padding()
+            .background(BDColors.background)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

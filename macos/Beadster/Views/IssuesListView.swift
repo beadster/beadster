@@ -16,18 +16,18 @@ struct IssuesListView: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
+        let filtered = issueStore.filteredIssues()
         ScrollView {
             LazyVStack(spacing: 0) {
                 if issueStore.isLoading {
                     ProgressView()
                         .padding()
-                } else if issueStore.filteredIssues().isEmpty {
+                } else if filtered.isEmpty {
                     emptyIssuesView
                 } else {
-                    issuesList
+                    issuesList(filtered)
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: issueStore.issues)
         }
         .focusable()
         .focused($isFocused)
@@ -42,14 +42,14 @@ struct IssuesListView: View {
         }
         .onKeyPress(.downArrow) {
             let issues = issueStore.filteredIssues()
-            if selectedIssueIndex < issues.count - 1 {
+            if !issues.isEmpty && selectedIssueIndex < issues.count - 1 {
                 selectedIssueIndex += 1
             }
             return .handled
         }
         .onKeyPress(.return) {
             let issues = issueStore.filteredIssues()
-            if selectedIssueIndex < issues.count {
+            if selectedIssueIndex >= 0 && selectedIssueIndex < issues.count {
                 contentMode = .issueDetail(issues[selectedIssueIndex])
             }
             return .handled
@@ -84,11 +84,11 @@ struct IssuesListView: View {
     }
 
     @ViewBuilder
-    var issuesList: some View {
+    func issuesList(_ filtered: [Issue]) -> some View {
         if viewMode == .tree {
             // Tree view: show issues in dependency hierarchy
             let treeNodes = buildIssueTree(
-                issues: issueStore.filteredIssues(),
+                issues: filtered,
                 dependencies: issueStore.dependencies
             )
             ForEach(Array(treeNodes.enumerated()), id: \.element.id) { index, node in
@@ -96,8 +96,7 @@ struct IssuesListView: View {
             }
         } else {
             // List view: show flat list
-            let issues = issueStore.filteredIssues()
-            ForEach(Array(issues.enumerated()), id: \.element.id) { index, issue in
+            ForEach(Array(filtered.enumerated()), id: \.element.id) { index, issue in
                 IssueRowCompact(issue: issue, issueStore: issueStore, viewMode: viewMode, depth: 0)
                     .environmentObject(projectStore)
                     .contentShape(Rectangle())
@@ -133,8 +132,13 @@ struct IssuesListView: View {
     }
 
     func buildIssueTree(issues: [Issue], dependencies: [IssueDependency]) -> [IssueTreeNode] {
-        // Build lookup maps
-        let issueMap = Dictionary(uniqueKeysWithValues: issues.map { ($0.id, $0) })
+        // Build lookup maps (use reduce to handle duplicate IDs safely - last one wins)
+        let issueMap = issues.reduce(into: [String: Issue]()) { result, issue in
+            if result[issue.id] != nil {
+                print("IssuesListView: WARNING - duplicate issue ID: \(issue.id)")
+            }
+            result[issue.id] = issue
+        }
 
         // Build children map: issueId depends_on dependsOnId means:
         // issueId is BLOCKED BY dependsOnId
