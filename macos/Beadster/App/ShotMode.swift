@@ -38,6 +38,7 @@ enum ShotMode {
         "settings": NSSize(width: 520, height: 560),
         "problems": NSSize(width: 1500, height: 760), "folder-lost": NSSize(width: 1100, height: 640),
         "no-beads": NSSize(width: 1100, height: 640),
+        "about": NSSize(width: 400, height: 330), "apps": NSSize(width: 460, height: 560),
     ]
 
     /// The bd fixtures scripts/mac-screenshots.sh copies into the rig's container.
@@ -160,6 +161,8 @@ enum ShotMode {
                 await model.load(plainFolder: fixtures)
                 model.selection = model.entries.first { $0.found.name == "empty" }.map { .project($0.id) }
             }
+        case "about": AboutWindow()
+        case "apps": MoreAppsWindow()
         case "shell-empty": MainWindow(model: model)
         case "found", "found-none":
             // .task on a view whose body starts empty never runs: hang it on a container

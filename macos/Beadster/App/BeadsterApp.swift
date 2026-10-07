@@ -1,4 +1,5 @@
 // beadster 2.0: the window on BeadsKit; each place's view lands in its own step.
+import AppKit
 import SwiftUI
 
 @main
@@ -6,6 +7,7 @@ struct BeadsterApp: App {
     @State private var model = AppModel()
     /// Settings › Show in the Menu Bar: the person decides (HIG), off until they do.
     @AppStorage("menuBarExtra") private var showMenuBarExtra = false
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         WindowGroup("beadster", id: "main") {
@@ -13,6 +15,17 @@ struct BeadsterApp: App {
         }
         .defaultSize(width: 1280, height: 760)
         .commands {
+            // About opens the family's card (AppCatalog), not AppKit's standard panel
+            CommandGroup(replacing: .appInfo) {
+                Button("About beadster") { openWindow(id: "about") }
+            }
+            // the stock Help item asks for a Help Book beadster does not ship
+            CommandGroup(replacing: .help) {
+                Button("beadster Website") { if let url = BeadsterAbout.site { NSWorkspace.shared.open(url) } }
+                Button("Send Feedback") { BeadsterAbout.mail("beadster feedback") }
+                Divider()
+                Button("More Apps") { openWindow(id: "apps") }
+            }
             CommandGroup(replacing: .newItem) {
                 Button("New Bead") {}
                     .keyboardShortcut("n", modifiers: .command)
@@ -29,6 +42,14 @@ struct BeadsterApp: App {
                     .keyboardShortcut("i", modifiers: [.command, .option])
             }
         }
+
+        Window("About beadster", id: "about") { AboutWindow() }
+            .windowResizability(.contentSize)
+            .restorationBehavior(.disabled)
+
+        Window("More Apps", id: "apps") { MoreAppsWindow() }
+            .defaultSize(width: 460, height: 560)
+            .restorationBehavior(.disabled)
 
         Settings {
             SettingsView(model: model)

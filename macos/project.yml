@@ -13,6 +13,8 @@ packages:
     path: ../../common/swift-packages/BookmarkManager
   BeadsKit:
     path: ../Packages/BeadsKit
+  AppCatalog:
+    path: ../../common/swift-packages/AppCatalog
 
 settings:
   base:
@@ -36,6 +38,7 @@ targets:
       - package: FSEventsWatcher
       - package: BookmarkManager
       - package: BeadsKit
+      - package: AppCatalog
       # beads 1.3.1 in-process; build it with: bash BeadsFFI/build.sh archive
       - framework: BeadsFFI/build/BeadsFFI.xcframework
         embed: false
