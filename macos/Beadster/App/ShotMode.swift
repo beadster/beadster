@@ -35,6 +35,7 @@ enum ShotMode {
         "map": NSSize(width: 1100, height: 720), "activity": NSSize(width: 1100, height: 640),
         "live": NSSize(width: 1100, height: 640),
         "history": NSSize(width: 1280, height: 560), "memories": NSSize(width: 1280, height: 600),
+        "settings": NSSize(width: 520, height: 560),
     ]
 
     /// The bd fixtures scripts/mac-screenshots.sh copies into the rig's container.
@@ -96,6 +97,13 @@ enum ShotMode {
                 await model.load(plainFolder: fixtures)
                 model.selectedMemory = model.memories.first?.id
             }
+        case "settings":
+            ZStack { Color.clear; SettingsView(model: model) }.task {
+                model.sceneBusy = true
+                defer { model.sceneBusy = false }
+                model.folders.addRigFolders(fixtures)
+                await model.load(plainFolder: fixtures, key: "rig.fixtures")
+            }
         case "agents":
             MainWindow(model: model).task {
                 model.selection = .agents
@@ -140,7 +148,7 @@ enum ShotMode {
                     // corner sits behind the wallpaper, and let clicks pass through
                     window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) - 1)
                     window.ignoresMouseEvents = true
-                    if scene.hasPrefix("found") {
+                    if scene.hasPrefix("found") || scene == "settings" {
                         // in the app this is a sheet: no title bar of its own
                         window.styleMask.insert(.fullSizeContentView)
                         window.titlebarAppearsTransparent = true

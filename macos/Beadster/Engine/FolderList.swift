@@ -58,6 +58,15 @@ final class FolderList {
         return BookmarkAccess(bookmark: data)
     }
 
+    #if DEBUG
+    /// The rig: a folder inside its own container (a real bookmark) and one that is gone.
+    func addRigFolders(_ url: URL) {
+        try? bookmarks.save(url: url, forKey: "rig.fixtures")
+        folders = [GrantedFolder(key: "rig.fixtures", path: url.path),
+                   GrantedFolder(key: "rig.gone", path: "/Users/you/old-work")]
+    }
+    #endif
+
     private func persist() {
         if let data = try? JSONEncoder().encode(folders) {
             UserDefaults.standard.set(data, forKey: defaultsKey)

@@ -96,7 +96,20 @@ final class AppModel {
 
     /// The name every write carries (Settings › You); the account name until set.
     var actor: String {
-        UserDefaults.standard.string(forKey: "actorName") ?? NSUserName()
+        let saved = UserDefaults.standard.string(forKey: "actorName")?.trimmingCharacters(in: .whitespaces) ?? ""
+        return saved.isEmpty ? NSUserName() : saved
+    }
+
+    /// Settings › Folders › Remove: closes its projects and forgets its bookmark.
+    func removeFolder(_ folder: GrantedFolder) async {
+        await library.remove(folderKey: folder.key)
+        folders.remove(folder)
+        await publishAll()
+    }
+
+    /// How many projects beadster opened from a folder.
+    func projectCount(in folder: GrantedFolder) -> Int {
+        entries.filter { $0.folderKey == folder.key }.count
     }
 
     func loadReady() async {
@@ -176,11 +189,11 @@ final class AppModel {
     }
 
     /// The rig: projects from a folder inside the app's own container, no bookmark needed.
-    func load(plainFolder root: URL) async {
+    func load(plainFolder root: URL, key: String = "rig") async {
         loading = true
         let start = Date()
         loadStart = start
-        await library.add(folderKey: "rig", access: PlainFolder(root), projects: ProjectScanner.scan(root, maxDepth: 1))
+        await library.add(folderKey: key, access: PlainFolder(root), projects: ProjectScanner.scan(root, maxDepth: 1))
         await publishAll()
         loading = false
     }
