@@ -6,7 +6,7 @@ import SwiftUI
 struct BeadsterApp: App {
     var body: some Scene {
         WindowGroup("Beadster", id: "main") {
-            ReadyBoard()
+            root
                 .frame(minWidth: 900, minHeight: 560)
         }
         .defaultSize(width: 1280, height: 760)
@@ -20,5 +20,18 @@ struct BeadsterApp: App {
         Settings {
             SettingsBoard()
         }
+    }
+
+    @MainActor @ViewBuilder
+    private var root: some View {
+        #if DEBUG
+        if let scene = ShotMode.scene {
+            ShotMode.view(for: scene).onAppear { ShotMode.stage(scene) }
+        } else {
+            ReadyBoard()
+        }
+        #else
+        ReadyBoard()
+        #endif
     }
 }
