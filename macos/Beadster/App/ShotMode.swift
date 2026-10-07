@@ -32,7 +32,8 @@ enum ShotMode {
         "found": NSSize(width: 520, height: 430), "found-none": NSSize(width: 520, height: 430),
         "ready": NSSize(width: 1280, height: 760), "needs-you": NSSize(width: 1100, height: 680),
         "agents": NSSize(width: 1280, height: 680), "workflows": NSSize(width: 1100, height: 680),
-        "map": NSSize(width: 1100, height: 720),
+        "map": NSSize(width: 1100, height: 720), "activity": NSSize(width: 1100, height: 640),
+        "live": NSSize(width: 1100, height: 640),
     ]
 
     /// The bd fixtures scripts/mac-screenshots.sh copies into the rig's container.
@@ -62,6 +63,12 @@ enum ShotMode {
                 model.showInspector = false
                 await model.load(plainFolder: fixtures)
                 model.mapped = model.workflows.first { $0.workflow.root.title == "quick-check" }?.id
+            }
+        case "activity", "live":
+            MainWindow(model: model).task {
+                model.selection = .activity
+                model.showInspector = false
+                await model.load(plainFolder: fixtures)
             }
         case "agents":
             MainWindow(model: model).task {

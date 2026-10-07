@@ -121,3 +121,17 @@ func readyMatchesBd(_ name: String) async throws {
     #expect(epic.root.title == "Sync 2.0")
     #expect(epic.total == 2)
 }
+
+@Test func activityReadsTheAuditLogWithTitles() async throws {
+    let lib = ProjectLibrary(engine: BeadsFFIEngine())
+    let root = try copy("links").deletingLastPathComponent()
+    await lib.add(folderKey: "k", access: PlainFolder(root), projects: ProjectScanner.scan(root, maxDepth: 1))
+    let all = await lib.activity(since: .distantPast)
+    #expect(!all.isEmpty)
+    #expect(zip(all, all.dropFirst()).allSatisfy { $0.event.at >= $1.event.at }, "newest first")
+    #expect(all.contains { $0.event.kind == "created" && $0.title == "Sync 2.0" })
+    // beads records no audit event for a structured comment (docs: events journal); labels it does
+    #expect(all.contains { $0.event.kind == "label_added" && $0.title == "Conflicts lose a paragraph" })
+    let none = await lib.activity(since: Date().addingTimeInterval(3600))
+    #expect(none.isEmpty)
+}

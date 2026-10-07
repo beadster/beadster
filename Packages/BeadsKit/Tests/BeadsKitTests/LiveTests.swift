@@ -86,3 +86,22 @@ private func page(_ ids: [String], more: Bool = false) -> String {
     #expect(try e("label_added", new: "sync").summary == "claude-1 added the label sync")
     #expect(try e("something_new").summary == "claude-1 something new")
 }
+
+@Test func runsOfTheSameChangeCollapse() throws {
+    func item(_ id: String, _ kind: String, _ at: String, actor: String = "fixture", project: String = "many") throws -> ActivityItem {
+        let obj: [String: Any] = ["id": id, "issue_id": "b-\(id)", "event_type": kind, "actor": actor, "created_at": at]
+        let e = try BeadsJSON.decoder().decode(AuditEvent.self, from: JSONSerialization.data(withJSONObject: obj))
+        return ActivityItem(projectID: project, project: project, event: e, title: nil)
+    }
+    let rows = ActivityItem.grouped([
+        try item("1", "closed", "2026-10-07T12:00:00Z", actor: "claude-1"),
+        try item("2", "created", "2026-10-07T11:00:50Z"),
+        try item("3", "created", "2026-10-07T11:00:20Z"),
+        try item("4", "created", "2026-10-07T10:59:40Z"),
+        try item("5", "created", "2026-10-07T09:00:00Z"),
+        try item("6", "created", "2026-10-07T08:59:59Z", project: "links"),
+    ])
+    #expect(rows.map(\.count) == [1, 3, 1, 1])
+    #expect(rows[1].summary == "fixture created 3 beads")
+    #expect(rows[0].summary == "claude-1 closed it")
+}

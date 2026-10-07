@@ -59,6 +59,8 @@ struct MainWindow: View {
             let quiet = model.working.filter { ($0.bead.lease?.health(at: .now) ?? .active) != .active }.count
             let n = model.working.count
             return "\(n.formatted()) working" + (quiet > 0 ? ", \(quiet.formatted()) not answering" : "")
+        case .activity:
+            return "The last 7 days"
         case .workflows:
             let n = model.workflows.count
             return "\(n.formatted()) \(n == 1 ? "workflow" : "workflows")"
@@ -158,6 +160,7 @@ struct PlaceView: View {
             case .needsYou: NeedsYouView(model: model)
             case .agents: AgentsView(model: model)
             case .workflows: WorkflowsView(model: model)
+            case .activity: ActivityView(model: model)
             default: ContentUnavailableView(place.title, systemImage: place.symbol)
             }
         } else {
