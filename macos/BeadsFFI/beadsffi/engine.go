@@ -58,6 +58,8 @@ type Request struct {
 	// compare-and-set guards: the write lands only if the bead still has these values
 	ExpectedStatus   *string `json:"expected_status,omitempty"`
 	ExpectedAssignee *string `json:"expected_assignee,omitempty"`
+	// events: read the audit log after this cursor (nil: from the start)
+	After *Cursor `json:"after,omitempty"`
 	// list filters
 	FilterType     string `json:"filter_type,omitempty"`
 	FilterAssignee string `json:"filter_assignee,omitempty"`
@@ -78,6 +80,8 @@ type Response struct {
 	History  []HistoryEntry               `json:"history,omitempty"`
 	Memories map[string]string            `json:"memories,omitempty"`
 	Progress *types.MoleculeProgressStats `json:"progress,omitempty"`
+	Events   []*types.Event               `json:"events,omitempty"`
+	Next     *Cursor                      `json:"next,omitempty"`
 	Changed bool                     `json:"changed,omitempty"`
 }
 
@@ -162,7 +166,7 @@ func (e *Engine) dispatch(ctx context.Context, req Request) Response {
 		return fail(CodeNoHandle, fmt.Errorf("no open workspace for handle %d", req.handle()))
 	}
 	switch req.Op {
-	case "ready", "list", "show", "blocked", "history", "memories", "molecule_progress":
+	case "ready", "list", "show", "blocked", "history", "memories", "molecule_progress", "events":
 		return e.read(ctx, ws, req)
 	case "create", "update", "close_issue", "reopen", "claim", "release", "link", "unlink",
 		"comment", "approve_gate", "reject_gate", "remember", "forget":

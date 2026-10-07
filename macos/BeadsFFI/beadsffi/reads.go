@@ -44,6 +44,8 @@ func extraRead(ctx context.Context, st *embeddeddolt.EmbeddedDoltStore, req Requ
 			return fail(CodeBeads, err), true
 		}
 		return Response{Memories: memoryops.MemoriesFromConfig(all)}, true
+	case "events":
+		return events(ctx, st, req), true
 	case "molecule_progress":
 		p, err := st.GetMoleculeProgress(ctx, req.ID)
 		if err != nil {

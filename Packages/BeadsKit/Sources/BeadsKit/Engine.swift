@@ -63,10 +63,11 @@ struct EngineRequest: Encodable {
     var force: Bool?
     var expectedStatus: String?
     var expectedAssignee: String?
+    var after: EventCursor?
 
     enum CodingKeys: String, CodingKey {
         case op, handle, id, status, limit, actor, title, description, priority, assignee, reason, label
-        case design, notes, parent, target, text, key, force
+        case design, notes, parent, target, text, key, force, after
         case beadsDir = "beads_dir", issueType = "issue_type", newStatus = "new_status"
         case filterType = "filter_type", filterAssignee = "filter_assignee", titleContains = "title_contains"
         case acceptance = "acceptance_criteria", addLabels = "add_labels", removeLabels = "remove_labels"
@@ -113,9 +114,11 @@ struct EngineResponse: Decodable {
     let history: [HistoryEntry]?
     let memories: [String: String]?
     let progress: MoleculeProgress?
+    let events: [AuditEvent]?
+    let next: EventCursor?
 
     enum CodingKeys: String, CodingKey {
-        case error, handle, project, issues, issue, details, changed, blocked, history, memories, progress
+        case error, handle, project, issues, issue, details, changed, blocked, history, memories, progress, events, next
         case hasMore = "has_more"
     }
 }
