@@ -54,9 +54,12 @@ public struct BeadFilter: Hashable, Sendable {
     public var label: String?
     public var titleContains: String?
     public var limit: Int?
+    /// Closed beads too (bd list --all).
+    public var includeClosed: Bool
 
     public init(status: BeadStatus? = nil, type: BeadType? = nil, assignee: String? = nil,
-                label: String? = nil, titleContains: String? = nil, limit: Int? = nil) {
+                label: String? = nil, titleContains: String? = nil, limit: Int? = nil, includeClosed: Bool = false) {
+        self.includeClosed = includeClosed
         self.status = status
         self.type = type
         self.assignee = assignee
@@ -87,6 +90,7 @@ extension Workspace {
             $0.label = filter.label
             $0.titleContains = filter.titleContains
             $0.limit = filter.limit
+            $0.all = filter.includeClosed ? true : nil
         }, op: "list")
         return BeadPage(beads: r.issues ?? [], hasMore: r.hasMore ?? false)
     }

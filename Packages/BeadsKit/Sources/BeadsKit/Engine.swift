@@ -64,10 +64,11 @@ struct EngineRequest: Encodable {
     var expectedStatus: String?
     var expectedAssignee: String?
     var after: EventCursor?
+    var all: Bool?
 
     enum CodingKeys: String, CodingKey {
         case op, handle, id, status, limit, actor, title, description, priority, assignee, reason, label
-        case design, notes, parent, target, text, key, force, after
+        case design, notes, parent, target, text, key, force, after, all
         case beadsDir = "beads_dir", issueType = "issue_type", newStatus = "new_status"
         case filterType = "filter_type", filterAssignee = "filter_assignee", titleContains = "title_contains"
         case acceptance = "acceptance_criteria", addLabels = "add_labels", removeLabels = "remove_labels"

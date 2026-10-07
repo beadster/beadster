@@ -65,6 +65,7 @@ type Request struct {
 	FilterAssignee string `json:"filter_assignee,omitempty"`
 	Label          string `json:"label,omitempty"`
 	TitleContains  string `json:"title_contains,omitempty"`
+	All            bool   `json:"all,omitempty"` // closed beads too, like bd list --all
 }
 
 // Response is one answer to Swift. Exactly one of Error or the payload fields is set.
@@ -290,7 +291,8 @@ func (e *Engine) read(ctx context.Context, ws *workspace, req Request) Response 
 	}
 	switch req.Op {
 	case "ready":
-		page, err := rd.Ready(ctx, issueops.ReadyRequest{Limit: req.Limit})
+		// bd ready's own default is priority order; the library's empty Sort means "hybrid"
+		page, err := rd.Ready(ctx, issueops.ReadyRequest{Limit: req.Limit, Sort: string(types.SortPolicyPriority)})
 		if err != nil {
 			return fail(CodeBeads, err)
 		}
