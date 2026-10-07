@@ -9,6 +9,10 @@ options:
 packages:
   FSEventsWatcher:
     path: ../../common/swift-packages/FSEventsWatcher
+  BookmarkManager:
+    path: ../../common/swift-packages/BookmarkManager
+  BeadsKit:
+    path: ../Packages/BeadsKit
 
 settings:
   base:
@@ -30,6 +34,8 @@ targets:
           - "**/.DS_Store"
     dependencies:
       - package: FSEventsWatcher
+      - package: BookmarkManager
+      - package: BeadsKit
       # beads 1.3.1 in-process; build it with: bash BeadsFFI/build.sh archive
       - framework: BeadsFFI/build/BeadsFFI.xcframework
         embed: false
