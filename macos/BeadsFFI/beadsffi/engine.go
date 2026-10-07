@@ -79,6 +79,7 @@ const (
 	CodeNotFound    = "not_found"
 	CodeNoHandle    = "no_handle"
 	CodeBeads       = "beads"
+	CodeBusy        = "busy"
 )
 
 type workspace struct {
@@ -150,7 +151,18 @@ func encode(r Response) []byte {
 }
 
 func fail(code string, err error) Response {
+	if code == CodeBeads && isLockError(err) {
+		code = CodeBusy
+	}
 	return Response{Error: &Failure{Code: code, Message: err.Error()}}
+}
+
+// isLockError: another writer still holds the embedded database after beads' own wait.
+// TestTwoWriters saw beads wait it out every time; this keeps a timeout typed if it ever shows.
+func isLockError(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "exclusive lock") || strings.Contains(msg, "database is locked") ||
+		strings.Contains(msg, "lock held")
 }
 
 // open checks the workspace with a read-only open, which writes nothing and refuses a schema
