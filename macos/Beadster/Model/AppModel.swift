@@ -213,6 +213,7 @@ final class AppModel {
         if selection == .memories { await loadMemories() }
         if let loadStart { lastLoadSeconds = Date().timeIntervalSince(loadStart) }
         backgroundLoading = false
+        await notifier.update(needsYou: needsYou, working: working, closed: [])
         await watch()
     }
 
@@ -421,6 +422,38 @@ final class AppModel {
         await loadNeedsYou()
         await loadWorking()
         if selection == .workflows { await loadWorkflows() }
+        let name = entry(projectID)?.found.name ?? ""
+        let closed = batch.filter { $0.kind == "closed" }.map { event in
+            ActivityItem(projectID: projectID, project: name, event: event,
+                         title: (readyRows.map(\.bead) + working.map(\.bead)).first { $0.id == event.beadID }?.title)
+        }
+        await notifier.update(needsYou: needsYou, working: working, closed: closed)
+    }
+
+    // MARK: Notifications
+
+    @ObservationIgnored private lazy var notifier: Notifier = {
+        let n = Notifier()
+        n.onAction = { [weak self] notice, action in await self?.answer(notice, action) }
+        return n
+    }()
+
+    /// A banner was answered: Approve or Reject decide the gate right there; a click opens
+    /// the place it is about.
+    private func answer(_ notice: (kind: String, projectID: String, beadID: String), _ action: String) async {
+        if notice.kind == Notice.Kind.gate.rawValue,
+           let gate = needsYou.approvals.first(where: { $0.projectID == notice.projectID && $0.gate.id == notice.beadID })?.gate,
+           action == Notifier.approve || action == Notifier.reject {
+            await decide(gate: gate, in: notice.projectID, approve: action == Notifier.approve)
+            return
+        }
+        switch notice.kind {
+        case Notice.Kind.gate.rawValue, Notice.Kind.assigned.rawValue: selection = .needsYou
+        case Notice.Kind.quiet.rawValue:
+            selection = .agents
+            await inspectWork("\(notice.projectID)|\(notice.beadID)")
+        default: selection = .activity
+        }
     }
 
     // MARK: Needs You
