@@ -185,6 +185,48 @@ final class AppModel {
         await publish()
         await loadReady()
         await loadNeedsYou()
+        await loadWorking()
+    }
+
+    // MARK: Agents
+
+    struct WorkRow: Identifiable, Hashable {
+        var id: String { "\(projectID)|\(bead.id)" }
+        let projectID: String
+        let project: String
+        let bead: Bead
+    }
+
+    private(set) var working: [WorkRow] = []
+    var selectedWork: WorkRow.ID?
+    private(set) var workHistory: [AuditEvent] = []
+
+    func loadWorking() async {
+        working = await library.workingEverywhere().map { WorkRow(projectID: $0.projectID, project: $0.project, bead: $0.bead) }
+    }
+
+    func inspectWork(_ id: WorkRow.ID?) async {
+        selectedWork = id
+        guard let id, let row = working.first(where: { $0.id == id }), let ws = await library.workspace(row.projectID) else {
+            workHistory = []
+            return
+        }
+        workHistory = ((try? await ws.events(after: nil, about: row.bead.id))?.events ?? []).reversed()
+    }
+
+    /// Release Now: hands the bead back to Ready. Naming the holder authorizes it; if the
+    /// agent changed hands since, beads refuses and nothing is written.
+    func release(_ row: WorkRow) async {
+        guard let ws = await library.workspace(row.projectID) else { return }
+        do {
+            try await ws.release(row.bead.id, heldBy: row.bead.assignee, as: actor)
+            lastError = nil
+        } catch {
+            lastError = "\(error)"
+        }
+        await library.refresh(row.projectID)
+        await publishAll()
+        await inspectWork(nil)
     }
 
     // MARK: Needs You

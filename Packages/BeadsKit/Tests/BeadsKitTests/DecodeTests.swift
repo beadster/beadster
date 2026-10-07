@@ -107,3 +107,13 @@ private func beads(_ name: String) throws -> [Bead] {
     let p = Project(beadsDir: URL(fileURLWithPath: "/Users/x/Developer/wander/.beads"))
     #expect(p.name == "wander")
 }
+
+@Test func leaseHealthFollowsTheHeartbeat() throws {
+    let beat = try Date("2026-10-07T10:00:00Z", strategy: .iso8601)
+    let lease = Lease(beadID: "x", holder: "claude-1", expiresAt: beat.addingTimeInterval(300), heartbeatAt: beat)
+    #expect(lease.health(at: beat.addingTimeInterval(60)) == .active)
+    #expect(lease.health(at: beat.addingTimeInterval(151)) == .quiet)
+    #expect(lease.health(at: beat.addingTimeInterval(300)) == .expired)
+    let noBeat = Lease(beadID: "x", holder: "a", expiresAt: beat.addingTimeInterval(300), heartbeatAt: nil)
+    #expect(noBeat.health(at: beat) == .active)
+}

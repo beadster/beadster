@@ -178,6 +178,24 @@ public struct Lease: Hashable, Sendable {
     public let heartbeatAt: Date?
 
     public func isExpired(at now: Date) -> Bool { expiresAt <= now }
+
+    public enum Health: Hashable, Sendable {
+        /// Heard from recently.
+        case active
+        /// Silent for more than half its claim time: still holding the bead, maybe stuck.
+        case quiet
+        /// The claim ran out: beads hands the bead back on the next reclaim.
+        case expired
+    }
+
+    /// Active while the holder keeps sending heartbeats; quiet once it has been silent for more
+    /// than half of the time its last heartbeat bought (5 min by default, so 2.5 min).
+    public func health(at now: Date) -> Health {
+        if isExpired(at: now) { return .expired }
+        guard let heartbeatAt else { return .active }
+        let bought = expiresAt.timeIntervalSince(heartbeatAt)
+        return now.timeIntervalSince(heartbeatAt) > bought / 2 ? .quiet : .active
+    }
     /// Seconds since the holder was last heard from.
     public func silence(at now: Date) -> TimeInterval? { heartbeatAt.map { now.timeIntervalSince($0) } }
 }

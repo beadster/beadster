@@ -14,8 +14,10 @@ struct MainWindow: View {
         } detail: {
             PlaceView(model: model)
                 .inspector(isPresented: $model.showInspector) {
-                    BeadInspector(model: model)
-                        .inspectorColumnWidth(min: 280, ideal: 320)
+                    Group {
+                        if model.selection == .agents { LeaseInspector(model: model) } else { BeadInspector(model: model) }
+                    }
+                    .inspectorColumnWidth(min: 280, ideal: 320)
                 }
         }
         .navigationTitle(model.selection.map { title(for: $0) } ?? "Beadster")
@@ -52,6 +54,10 @@ struct MainWindow: View {
         case .needsYou:
             let a = model.needsYou.approvals.count, b = model.needsYou.assigned.count
             return "\(a.formatted()) \(a == 1 ? "approval" : "approvals"), \(b.formatted()) assigned"
+        case .agents:
+            let quiet = model.working.filter { ($0.bead.lease?.health(at: .now) ?? .active) != .active }.count
+            let n = model.working.count
+            return "\(n.formatted()) working" + (quiet > 0 ? ", \(quiet.formatted()) not answering" : "")
         case .project(let id):
             if case .ready(let n) = model.entry(id)?.state { return "\(n.formatted()) ready" }
             return ""
@@ -75,7 +81,7 @@ struct SidebarView: View {
             Section {
                 row(.needsYou, count: model.needsYou.count == 0 ? nil : model.needsYou.count)
                 row(.ready, count: model.entries.isEmpty ? nil : model.totalReady)
-                row(.agents)
+                row(.agents, count: model.working.isEmpty ? nil : model.working.count)
                 row(.blocked)
                 row(.activity)
             }
@@ -146,6 +152,7 @@ struct PlaceView: View {
             switch place {
             case .ready, .project: ReadyView(model: model)
             case .needsYou: NeedsYouView(model: model)
+            case .agents: AgentsView(model: model)
             default: ContentUnavailableView(place.title, systemImage: place.symbol)
             }
         } else {

@@ -106,6 +106,16 @@ public actor ProjectLibrary {
         }
     }
 
+    /// Beads in progress in every open project, with their claims.
+    public func workingEverywhere() async -> [(projectID: String, project: String, bead: Bead)] {
+        var out: [(String, String, Bead)] = []
+        for entry in entries {
+            guard case .ready = entry.state, let ws = entry.workspace else { continue }
+            out += ((try? await ws.working()) ?? []).map { (entry.id, entry.found.name, $0) }
+        }
+        return out.sorted { ($0.2.startedAt ?? $0.2.updatedAt) > ($1.2.startedAt ?? $1.2.updatedAt) }
+    }
+
     public func workspace(_ id: String) -> Workspace? { entries.first { $0.id == id }?.workspace }
 
     public var totalReady: Int {

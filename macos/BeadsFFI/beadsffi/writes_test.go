@@ -149,3 +149,23 @@ func TestGates(t *testing.T) {
 		t.Fatal("approved work is not ready")
 	}
 }
+
+// A person releases an agent's claim: naming the holder authorizes it (ReleaseRequest.ExpectedAssignee).
+func TestReleaseSomeoneElsesClaim(t *testing.T) {
+	dir := newWorkspace(t)
+	e := NewEngine()
+	h := call(t, e, map[string]any{"op": "open", "beads_dir": dir}).Handle
+	id := call(t, e, map[string]any{"op": "ready", "handle": h}).Issues[0].ID
+	if r := call(t, e, map[string]any{"op": "claim", "handle": h, "actor": "claude-1", "id": id}); r.Error != nil {
+		t.Fatalf("agent claim: %+v", r.Error)
+	}
+	if r := call(t, e, map[string]any{"op": "release", "handle": h, "actor": "anton", "id": id}); r.Error == nil {
+		t.Fatal("a release without naming the holder must be refused")
+	}
+	if r := call(t, e, map[string]any{"op": "release", "handle": h, "actor": "anton", "id": id, "expected_assignee": "claude-1"}); r.Error != nil {
+		t.Fatalf("release naming the holder: %+v", r.Error)
+	}
+	if s := bdShow(t, dir, id); s["status"] != "open" || (s["assignee"] != nil && s["assignee"] != "") {
+		t.Fatalf("after release: %v %v", s["status"], s["assignee"])
+	}
+}
