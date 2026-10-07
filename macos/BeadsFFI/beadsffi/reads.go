@@ -7,6 +7,7 @@ import (
 	"github.com/steveyegge/beads/internal/storage/embeddeddolt"
 	"github.com/steveyegge/beads/internal/storage/memoryops"
 	"github.com/steveyegge/beads/internal/types"
+	"github.com/steveyegge/beads/internal/workapi"
 	"github.com/steveyegge/beads/issueops"
 )
 
@@ -65,4 +66,27 @@ func listRequest(req Request) issueops.ListRequest {
 		lr.Labels = []string{req.Label}
 	}
 	return lr
+}
+
+// list is beads' own List (internal/workapi/storereader.List), step for step, with the list
+// config loaded once per workspace instead of on every call.
+func list(ctx context.Context, st *embeddeddolt.EmbeddedDoltStore, ws *workspace, req issueops.ListRequest) (issueops.IssuePage, error) {
+	if ws.listConfig == nil {
+		cfg, err := workapi.LoadStoreListConfig(ctx, st)
+		if err != nil {
+			return issueops.IssuePage{}, err
+		}
+		ws.listConfig = &cfg
+	}
+	filter, err := workapi.BuildListFilter(req, *ws.listConfig)
+	if err != nil {
+		return issueops.IssuePage{}, err
+	}
+	filter = workapi.WithFetchOneExtra(workapi.WithRowsBeforeThePage(filter, req.Offset))
+	items, err := st.SearchIssuesWithCounts(ctx, "", filter)
+	if err != nil {
+		return issueops.IssuePage{}, err
+	}
+	items, hasMore := workapi.FinishPageAt(items, req.SortBy, req.Reverse, req.Offset, workapi.PageLimit(req), false)
+	return issueops.IssuePage{Items: items, HasMore: hasMore}, nil
 }

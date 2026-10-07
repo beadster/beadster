@@ -103,3 +103,25 @@ func TestMoleculeProgress(t *testing.T) {
 		t.Fatalf("progress: %+v %+v", p.Error, p.Progress)
 	}
 }
+
+// The list config is read once and reused; a ready (the app's re-count after a change) or a
+// write reads it fresh. Only the config is kept: a bead bd adds shows on the next list.
+func TestListConfigIsReadOncePerRefresh(t *testing.T) {
+	dir := newWorkspace(t)
+	e := NewEngine()
+	h := call(t, e, map[string]any{"op": "open", "beads_dir": dir}).Handle
+	first := call(t, e, map[string]any{"op": "list", "handle": h, "limit": 0})
+	ws := e.opened[h]
+	if ws.listConfig == nil {
+		t.Fatal("the first list should keep its config")
+	}
+	bdIn(t, dir, "create", "Added by bd while the config was kept", "-p", "2")
+	again := call(t, e, map[string]any{"op": "list", "handle": h, "limit": 0})
+	if len(again.Issues) != len(first.Issues)+1 {
+		t.Fatalf("a bead bd added must show: %d then %d", len(first.Issues), len(again.Issues))
+	}
+	call(t, e, map[string]any{"op": "ready", "handle": h})
+	if ws.listConfig != nil {
+		t.Fatal("ready must drop the kept config")
+	}
+}

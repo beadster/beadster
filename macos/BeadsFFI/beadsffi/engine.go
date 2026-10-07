@@ -22,6 +22,7 @@ import (
 	"github.com/steveyegge/beads/internal/storage/embeddeddolt"
 	"github.com/steveyegge/beads/internal/storage/schema"
 	"github.com/steveyegge/beads/internal/types"
+	"github.com/steveyegge/beads/internal/workapi"
 	"github.com/steveyegge/beads/issueops"
 )
 
@@ -125,6 +126,10 @@ type workspace struct {
 	// one call at a time per project, like the CLI's one command per process; different
 	// projects run side by side
 	mu sync.Mutex
+	// beads' list loads its config (custom statuses, types, infra types) on every call, each
+	// query a fresh embedded engine (~30 ms): three of a list's four. Loaded once and kept
+	// until the app refreshes the project (ready) or writes to it. Guarded by mu.
+	listConfig *workapi.ListConfig
 }
 
 // Engine owns open workspaces. Calls on one project are serialized (embedded Dolt has one
@@ -189,9 +194,13 @@ func (e *Engine) dispatch(ctx context.Context, req Request) Response {
 	defer ws.mu.Unlock()
 	switch req.Op {
 	case "ready", "list", "show", "blocked", "history", "memories", "molecule_progress", "events":
+		if req.Op == "ready" {
+			ws.listConfig = nil // the app re-counts after every change: config read fresh
+		}
 		return e.read(ctx, ws, req)
 	case "create", "update", "close_issue", "reopen", "claim", "release", "link", "unlink",
 		"comment", "approve_gate", "reject_gate", "remember", "forget":
+		ws.listConfig = nil
 		return e.write(ctx, ws, req)
 	default:
 		return fail(CodeBadRequest, fmt.Errorf("unknown op %q", req.Op))
@@ -322,7 +331,7 @@ func (e *Engine) read(ctx context.Context, ws *workspace, req Request) Response 
 		}
 		return Response{Issues: page.Items, HasMore: page.HasMore}
 	case "list":
-		page, err := rd.List(ctx, listRequest(req))
+		page, err := list(ctx, st, ws, listRequest(req))
 		if err != nil {
 			return fail(CodeBeads, err)
 		}
