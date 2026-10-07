@@ -116,3 +116,21 @@ private let readPageEmpty = #"{"issues":[]}"#
     #expect(await lib.hasBeads(id) == false)
     #expect(engine.ops.last == "list")
 }
+
+@Test func needsYouAgentsAndSpotlightShareOneListPerProject() async throws {
+    let open = #"{"issues":[{"id":"a-1","title":"Mine","status":"open","priority":1,"issue_type":"task","assignee":"you","created_at":"2026-10-07T10:00:00Z","updated_at":"2026-10-07T10:00:00Z"},{"id":"a-2","title":"Theirs","status":"in_progress","priority":1,"issue_type":"task","assignee":"claude-1","created_at":"2026-10-07T10:00:00Z","updated_at":"2026-10-07T10:00:00Z"}]}"#
+    let engine = FakeEngine(["open": [opened], "ready": [readyPage([])], "list": [open]])
+    let lib = ProjectLibrary(engine: engine)
+    await lib.add(folderKey: "dev", access: PlainFolder(URL(fileURLWithPath: "/d")), projects: [
+        FoundProject(name: "a", relativePath: "a/.beads", kind: .embedded),
+    ])
+    let id = try #require(await lib.all.first?.id)
+    #expect(await lib.needsYou("you").assigned.map(\.bead.id) == ["a-1"])
+    #expect(await lib.workingEverywhere().map(\.bead.id) == ["a-2"])
+    #expect(await lib.openBeads(id).count == 2)
+    #expect(engine.ops.filter { $0 == "list" }.count == 1)
+    // a change drops the snapshot: the next read lists again
+    await lib.refresh(id)
+    _ = await lib.workingEverywhere()
+    #expect(engine.ops.filter { $0 == "list" }.count == 2)
+}

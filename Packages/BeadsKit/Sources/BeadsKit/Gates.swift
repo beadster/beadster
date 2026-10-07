@@ -45,8 +45,13 @@ extension Workspace {
     /// Open gates with the work each holds: one list, then one show per gate.
     public func gates() throws(BeadsError) -> [Gate] {
         let page = try send({ $0.filterType = "gate"; $0.includeGates = true; $0.limit = 0 }, op: "list")
+        return try gates(among: page.issues ?? [])
+    }
+
+    /// The open gates among beads already read (a snapshot), each shown for the work it holds.
+    public func gates(among beads: [Bead]) throws(BeadsError) -> [Gate] {
         var out: [Gate] = []
-        for g in (page.issues ?? []) where g.status != .closed {
+        for g in beads where g.type == .gate && g.status != .closed {
             let full = try show(g.id)
             out.append(Gate(bead: full, holds: full.holdsUp))
         }
@@ -73,9 +78,12 @@ extension ProjectLibrary {
     public func needsYou(_ person: String) async -> NeedsYou {
         var out = NeedsYou()
         enum Item: Sendable { case gate(String, String, Gate), assigned(String, String, Bead) }
+        await loadSnapshots()
         let items: [Item] = await eachOpen { entry, ws in
-            let gates = ((try? await ws.gates()) ?? []).map { Item.gate(entry.id, entry.found.name, $0) }
-            let mine = ((try? await ws.assigned(to: person)) ?? []).map { Item.assigned(entry.id, entry.found.name, $0) }
+            let open = entry.snapshot ?? []
+            // one show per open gate; everything else comes from the snapshot, no list call
+            let gates = ((try? await ws.gates(among: open)) ?? []).map { Item.gate(entry.id, entry.found.name, $0) }
+            let mine = open.filter { $0.assignee == person }.map { Item.assigned(entry.id, entry.found.name, $0) }
             return gates + mine
         }
         for item in items {

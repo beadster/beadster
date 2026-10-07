@@ -10,6 +10,10 @@ public actor ProjectLibrary {
         public var workspace: Workspace?
         /// The ready beads read when the project was counted: Ready shows these without asking again.
         public var ready: [Bead] = []
+        /// Every bead that isn't closed, gates included, read once and kept until the project
+        /// changes: Needs You, Agents and Spotlight read it instead of each listing again
+        /// (beads' list costs about 125 ms a call however small the project, Q3).
+        public var snapshot: [Bead]?
     }
 
     public enum State: Equatable, Sendable {
@@ -103,6 +107,7 @@ public actor ProjectLibrary {
     /// Re-counts one project (after a change signal or a write).
     public func refresh(_ id: String) async {
         guard let i = entries.firstIndex(where: { $0.id == id }), let ws = entries[i].workspace else { return }
+        entries[i].snapshot = nil
         do {
             (entries[i].state, entries[i].ready) = try await Self.stateAndReady(of: ws)
         } catch {
@@ -115,6 +120,7 @@ public actor ProjectLibrary {
     /// Brings an older project up to this app's beads. Only after the person said yes.
     public func upgrade(_ id: String) async {
         guard let i = entries.firstIndex(where: { $0.id == id }), let ws = entries[i].workspace else { return }
+        entries[i].snapshot = nil
         do {
             _ = try await ws.migrate()
             (entries[i].state, entries[i].ready) = try await Self.stateAndReady(of: ws)
@@ -167,12 +173,29 @@ public actor ProjectLibrary {
         }
     }
 
+    /// Reads the snapshot of every open project that has none, side by side.
+    public func loadSnapshots() async {
+        let missing = entries.compactMap { e -> (String, Workspace)? in
+            guard case .ready = e.state, e.snapshot == nil, let ws = e.workspace else { return nil }
+            return (e.id, ws)
+        }
+        guard !missing.isEmpty else { return }
+        let read = await withTaskGroup(of: (String, [Bead]?).self) { group in
+            for (id, ws) in missing { group.addTask { (id, try? await ws.openSnapshot()) } }
+            var out: [String: [Bead]] = [:]
+            for await (id, beads) in group { if let beads { out[id] = beads } }
+            return out
+        }
+        for i in entries.indices { if let beads = read[entries[i].id] { entries[i].snapshot = beads } }
+    }
+
     /// Beads in progress in every open project, with their claims.
     public func workingEverywhere() async -> [(projectID: String, project: String, bead: Bead)] {
-        let out: [(String, String, Bead)] = await eachOpen { entry, ws in
-            ((try? await ws.working()) ?? []).map { (entry.id, entry.found.name, $0) }
+        await loadSnapshots()
+        let out = entries.flatMap { e in
+            (e.snapshot ?? []).filter { $0.status == .inProgress }.map { (projectID: e.id, project: e.found.name, bead: $0) }
         }
-        return out.sorted { ($0.2.startedAt ?? $0.2.updatedAt) > ($1.2.startedAt ?? $1.2.updatedAt) }
+        return out.sorted { ($0.bead.startedAt ?? $0.bead.updatedAt) > ($1.bead.startedAt ?? $1.bead.updatedAt) }
     }
 
     public func workspace(_ id: String) -> Workspace? { entries.first { $0.id == id }?.workspace }

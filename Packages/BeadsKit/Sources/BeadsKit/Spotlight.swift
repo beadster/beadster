@@ -32,7 +32,7 @@ public struct SpotlightItem: Hashable, Sendable {
 extension ProjectLibrary {
     /// Every open bead of one project, for Spotlight.
     public func openBeads(_ id: String) async -> [Bead] {
-        guard let ws = workspace(id) else { return [] }
-        return (try? await ws.list(BeadFilter(limit: 0)).beads) ?? []
+        await loadSnapshots()
+        return entries.first { $0.id == id }?.snapshot ?? []
     }
 }

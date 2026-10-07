@@ -122,6 +122,11 @@ extension Workspace {
     }
 
     /// Beads an agent (or person) is working on right now, with their claims.
+    /// Every bead that isn't closed, gates included, in one list call.
+    public func openSnapshot() throws(BeadsError) -> [Bead] {
+        try send({ $0.includeGates = true; $0.limit = 0 }, op: "list").issues ?? []
+    }
+
     public func working() throws(BeadsError) -> [Bead] {
         try list(BeadFilter(status: .inProgress)).beads
     }
