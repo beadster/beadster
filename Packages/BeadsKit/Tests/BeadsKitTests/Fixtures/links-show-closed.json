@@ -1,0 +1,43 @@
+[
+  {
+    "id": "ln-87m",
+    "title": "Merge by block id",
+    "status": "closed",
+    "priority": 2,
+    "issue_type": "task",
+    "created_at": "2026-10-07T15:54:57Z",
+    "created_by": "fixture",
+    "updated_at": "2026-10-07T15:55:02Z",
+    "closed_at": "2026-10-07T15:55:02Z",
+    "close_reason": "done",
+    "dependencies": [
+      {
+        "id": "ln-ore",
+        "title": "Found while fixing",
+        "status": "open",
+        "priority": 3,
+        "issue_type": "task",
+        "created_at": "2026-10-07T15:54:57Z",
+        "created_by": "fixture",
+        "updated_at": "2026-10-07T15:54:57Z",
+        "dependency_type": "relates-to"
+      }
+    ],
+    "dependents": [
+      {
+        "id": "ln-ore",
+        "title": "Found while fixing",
+        "status": "open",
+        "priority": 3,
+        "issue_type": "task",
+        "created_at": "0001-01-01T00:00:00Z",
+        "updated_at": "0001-01-01T00:00:00Z",
+        "dependency_type": "relates-to"
+      }
+    ],
+    "dependent_count": 1,
+    "dependency_count": 1,
+    "comment_count": 0,
+    "revision": "-3138001745697080828"
+  }
+]

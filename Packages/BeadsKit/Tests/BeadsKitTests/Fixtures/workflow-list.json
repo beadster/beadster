@@ -1,0 +1,135 @@
+[
+  {
+    "id": "wf-mol-1hx",
+    "title": "Run tests",
+    "description": "Run the project test suite. Record pass/fail count.",
+    "status": "open",
+    "priority": 2,
+    "issue_type": "task",
+    "created_at": "2026-10-07T15:55:28Z",
+    "updated_at": "2026-10-07T15:55:28Z",
+    "dependencies": [
+      {
+        "issue_id": "wf-mol-1hx",
+        "depends_on_id": "wf-mol-nrb",
+        "type": "parent-child",
+        "created_at": "2026-10-07T15:55:28Z",
+        "created_by": "fixture",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 1,
+    "comment_count": 0,
+    "parent": "wf-mol-nrb"
+  },
+  {
+    "id": "wf-mol-aty",
+    "title": "Build project",
+    "description": "Run the build step. Verify output artifacts are created.",
+    "status": "open",
+    "priority": 2,
+    "issue_type": "task",
+    "created_at": "2026-10-07T15:55:28Z",
+    "updated_at": "2026-10-07T15:55:28Z",
+    "dependencies": [
+      {
+        "issue_id": "wf-mol-aty",
+        "depends_on_id": "wf-mol-nrb",
+        "type": "parent-child",
+        "created_at": "2026-10-07T15:55:28Z",
+        "created_by": "fixture",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 1,
+    "comment_count": 0,
+    "parent": "wf-mol-nrb"
+  },
+  {
+    "id": "wf-mol-df2",
+    "title": "Run linter",
+    "description": "Run project linter. Note warnings vs errors - errors block, warnings are informational.",
+    "status": "open",
+    "priority": 2,
+    "issue_type": "task",
+    "created_at": "2026-10-07T15:55:28Z",
+    "updated_at": "2026-10-07T15:55:28Z",
+    "dependencies": [
+      {
+        "issue_id": "wf-mol-df2",
+        "depends_on_id": "wf-mol-nrb",
+        "type": "parent-child",
+        "created_at": "2026-10-07T15:55:28Z",
+        "created_by": "fixture",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 1,
+    "comment_count": 0,
+    "parent": "wf-mol-nrb"
+  },
+  {
+    "id": "wf-mol-nrb",
+    "title": "quick-check",
+    "description": "Fast lint-test-build sanity check. Designed for use as a wisp.",
+    "status": "open",
+    "priority": 2,
+    "issue_type": "molecule",
+    "created_at": "2026-10-07T15:55:28Z",
+    "updated_at": "2026-10-07T15:55:28Z",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0
+  },
+  {
+    "id": "wf-mol-to4",
+    "title": "Report results",
+    "description": "Summarize: lint status, test pass rate, build success. Flag any issues found.",
+    "status": "open",
+    "priority": 2,
+    "issue_type": "task",
+    "created_at": "2026-10-07T15:55:28Z",
+    "updated_at": "2026-10-07T15:55:28Z",
+    "dependencies": [
+      {
+        "issue_id": "wf-mol-to4",
+        "depends_on_id": "wf-mol-aty",
+        "type": "blocks",
+        "created_at": "2026-10-07T15:55:28Z",
+        "created_by": "fixture",
+        "metadata": "{}"
+      },
+      {
+        "issue_id": "wf-mol-to4",
+        "depends_on_id": "wf-mol-1hx",
+        "type": "blocks",
+        "created_at": "2026-10-07T15:55:28Z",
+        "created_by": "fixture",
+        "metadata": "{}"
+      },
+      {
+        "issue_id": "wf-mol-to4",
+        "depends_on_id": "wf-mol-df2",
+        "type": "blocks",
+        "created_at": "2026-10-07T15:55:28Z",
+        "created_by": "fixture",
+        "metadata": "{}"
+      },
+      {
+        "issue_id": "wf-mol-to4",
+        "depends_on_id": "wf-mol-nrb",
+        "type": "parent-child",
+        "created_at": "2026-10-07T15:55:28Z",
+        "created_by": "fixture",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 3,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "wf-mol-nrb"
+  }
+]

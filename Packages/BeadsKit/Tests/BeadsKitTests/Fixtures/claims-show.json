@@ -1,0 +1,20 @@
+[
+  {
+    "id": "cl-bkb",
+    "title": "Branch mode",
+    "status": "in_progress",
+    "priority": 1,
+    "issue_type": "task",
+    "assignee": "claude-1",
+    "created_at": "2026-10-07T15:55:46Z",
+    "created_by": "fixture",
+    "updated_at": "2026-10-07T15:55:46Z",
+    "started_at": "2026-10-07T15:55:46Z",
+    "lease_expires_at": "2026-10-07T16:00:46Z",
+    "heartbeat_at": "2026-10-07T15:55:46Z",
+    "dependent_count": 0,
+    "dependency_count": 0,
+    "comment_count": 0,
+    "revision": "-7228271611593850184"
+  }
+]

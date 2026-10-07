@@ -1,0 +1,65 @@
+[
+  {
+    "id": "ln-tvl",
+    "title": "Conflicts lose a paragraph",
+    "status": "open",
+    "priority": 0,
+    "issue_type": "bug",
+    "created_at": "2026-10-07T15:54:55Z",
+    "created_by": "fixture",
+    "updated_at": "2026-10-07T15:54:55Z",
+    "labels": [
+      "data-loss",
+      "sync"
+    ],
+    "dependencies": [
+      {
+        "id": "ln-6wi",
+        "title": "Sync 2.0",
+        "status": "open",
+        "priority": 1,
+        "issue_type": "epic",
+        "created_at": "2026-10-07T15:54:54Z",
+        "created_by": "fixture",
+        "updated_at": "2026-10-07T15:54:54Z",
+        "dependency_type": "parent-child"
+      }
+    ],
+    "dependents": [
+      {
+        "id": "ln-a42",
+        "title": "Conflict banner copy",
+        "status": "open",
+        "priority": 2,
+        "issue_type": "task",
+        "created_at": "0001-01-01T00:00:00Z",
+        "updated_at": "0001-01-01T00:00:00Z",
+        "dependency_type": "blocks"
+      },
+      {
+        "id": "ln-ore",
+        "title": "Found while fixing",
+        "status": "open",
+        "priority": 3,
+        "issue_type": "task",
+        "created_at": "0001-01-01T00:00:00Z",
+        "updated_at": "0001-01-01T00:00:00Z",
+        "dependency_type": "discovered-from"
+      }
+    ],
+    "comments": [
+      {
+        "id": "fac300c7-1b0e-597d-8c24-bf93f8ee6e95",
+        "issue_id": "ln-tvl",
+        "author": "fixture",
+        "text": "Repro: two devices, offline edits.",
+        "created_at": "2026-10-07T15:55:01Z"
+      }
+    ],
+    "parent": "ln-6wi",
+    "dependent_count": 2,
+    "dependency_count": 1,
+    "comment_count": 1,
+    "revision": "-3285499457960992841"
+  }
+]

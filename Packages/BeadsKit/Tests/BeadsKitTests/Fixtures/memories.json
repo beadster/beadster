@@ -1,0 +1,5 @@
+{
+  "deploy-rule": "Never run wrangler deploy; use npm run deploy.",
+  "schema_version": 1,
+  "vault-history": "History lives in .wander inside the vault."
+}
