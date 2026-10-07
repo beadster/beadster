@@ -26,6 +26,7 @@ enum ShotMode {
 
     /// The scenes the rig can draw, and the window size each is captured at (points).
     static let sizes: [String: NSSize] = [
+        "shell": NSSize(width: 1280, height: 760), "shell-empty": NSSize(width: 1100, height: 680),
         "welcome": NSSize(width: 1100, height: 680), "needs-you": NSSize(width: 1100, height: 680),
         "ready": NSSize(width: 1280, height: 760), "agents": NSSize(width: 1280, height: 680),
         "workflows": NSSize(width: 1100, height: 680), "map": NSSize(width: 1100, height: 720),
@@ -33,9 +34,16 @@ enum ShotMode {
         "memories": NSSize(width: 1280, height: 600),
     ]
 
+    /// The bd fixtures scripts/mac-screenshots.sh copies into the rig's container.
+    static var fixtures: URL {
+        FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0].appending(path: "Fixtures")
+    }
+
     @MainActor @ViewBuilder
-    static func view(for scene: String) -> some View {
+    static func view(for scene: String, model: AppModel) -> some View {
         switch scene {
+        case "shell": MainWindow(model: model).task { await model.load(plainFolder: fixtures) }
+        case "shell-empty": MainWindow(model: model)
         case "welcome": WelcomeBoard()
         case "needs-you": NeedsYouBoard()
         case "agents": AgentsBoard()
@@ -48,9 +56,9 @@ enum ShotMode {
         }
     }
 
-    /// Called once the app is up: hide, size, settle, report.
+    /// Called once the app is up: hide, size, settle (the model done loading), report.
     @MainActor
-    static func stage(_ scene: String) {
+    static func stage(_ scene: String, model: AppModel) {
         NSApp.setActivationPolicy(.accessory)
         NSApp.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         try? FileManager.default.removeItem(at: reportURL)
@@ -62,7 +70,10 @@ enum ShotMode {
                     window.setFrame(NSRect(x: -6000, y: -6000, width: size.width, height: size.height), display: true)
                     window.orderFront(nil)
                     try? await Task.sleep(for: .seconds(1))
-                    let report = ["window": window.windowNumber, "pid": Int(getpid())]
+                    for _ in 0..<1200 where model.loading { try? await Task.sleep(for: .milliseconds(100)) }
+                    try? await Task.sleep(for: .milliseconds(300))
+                    var report: [String: Any] = ["window": window.windowNumber, "pid": Int(getpid())]
+                    if let s = model.lastLoadSeconds { report["load_seconds"] = s }
                     if let data = try? JSONSerialization.data(withJSONObject: report) {
                         try? data.write(to: reportURL)
                     }

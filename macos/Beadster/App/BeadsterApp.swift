@@ -1,9 +1,10 @@
-// beadster 2.0. The window is the boards' shell on sample data until BeadsKit lands;
-// U1 builds the real navigation.
+// beadster 2.0: the window on BeadsKit; each place's view lands in its own step.
 import SwiftUI
 
 @main
 struct BeadsterApp: App {
+    @State private var model = AppModel()
+
     var body: some Scene {
         WindowGroup("Beadster", id: "main") {
             root
@@ -14,6 +15,17 @@ struct BeadsterApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("New Bead") {}
                     .keyboardShortcut("n", modifiers: .command)
+                    .disabled(model.entries.isEmpty)
+            }
+            CommandGroup(after: .sidebar) {
+                Divider()
+                ForEach(Array([Place.needsYou, .ready, .agents, .blocked, .activity].enumerated()), id: \.offset) { i, place in
+                    Button(place.title) { model.selection = place }
+                        .keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: .command)
+                }
+                Divider()
+                Button(model.showInspector ? "Hide Inspector" : "Show Inspector") { model.showInspector.toggle() }
+                    .keyboardShortcut("i", modifiers: [.command, .option])
             }
         }
 
@@ -26,12 +38,12 @@ struct BeadsterApp: App {
     private var root: some View {
         #if DEBUG
         if let scene = ShotMode.scene {
-            ShotMode.view(for: scene).onAppear { ShotMode.stage(scene) }
+            ShotMode.view(for: scene, model: model).onAppear { ShotMode.stage(scene, model: model) }
         } else {
-            ReadyBoard()
+            MainWindow(model: model).task { await model.load() }
         }
         #else
-        ReadyBoard()
+        MainWindow(model: model).task { await model.load() }
         #endif
     }
 }

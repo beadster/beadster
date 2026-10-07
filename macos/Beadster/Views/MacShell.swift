@@ -3,11 +3,6 @@
 // toolbars.md (title leading, actions and search trailing), split-views.md.
 import SwiftUI
 
-enum Place: String, Hashable {
-    case needs = "Needs You", ready = "Ready", agents = "Agents", blocked = "Blocked", activity = "Activity"
-    case memories = "Memories", workflows = "Workflows"
-    case project = "Project"
-}
 
 struct Sidebar: View {
     @State var selection: String
