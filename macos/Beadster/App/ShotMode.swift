@@ -36,6 +36,8 @@ enum ShotMode {
         "live": NSSize(width: 1100, height: 640),
         "history": NSSize(width: 1280, height: 560), "memories": NSSize(width: 1280, height: 600),
         "settings": NSSize(width: 520, height: 560),
+        "problems": NSSize(width: 1500, height: 760), "folder-lost": NSSize(width: 1100, height: 640),
+        "no-beads": NSSize(width: 1100, height: 640),
     ]
 
     /// The bd fixtures scripts/mac-screenshots.sh copies into the rig's container.
@@ -116,6 +118,43 @@ enum ShotMode {
                 // a bead with labels, a comment, an epic and work it holds up
                 let row = model.readyRows.first { $0.bead.title == "Conflicts lose a paragraph" }
                 await model.inspect(row?.id)
+            }
+        case "problems":
+            // every way a project can fail to open, as the detail pane draws it
+            let problems: [Problem] = [
+                .of(.needsMigration(dbVersion: 60, appVersion: 65)), .of(.needsNewerApp(dbVersion: 70, appVersion: 65)),
+                .of(.legacy), .of(.server), .of(.failed(.busy("database is locked by another process (pid 41)"))),
+                .of(.failed(.beads("dolt: manifest unreadable: unexpected EOF"))), .folderLost, .noBeadsYet,
+            ].compactMap { $0 }
+            Grid(horizontalSpacing: 1, verticalSpacing: 1) {
+                ForEach(0..<2, id: \.self) { r in
+                    GridRow {
+                        ForEach(0..<4, id: \.self) { c in
+                            ProblemView(problem: problems[r * 4 + c]) { _ in }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(.background)
+                        }
+                    }
+                }
+            }
+            .background(.separator)
+        case "folder-lost":
+            MainWindow(model: model).task {
+                model.sceneBusy = true
+                defer { model.sceneBusy = false }
+                model.showInspector = false
+                model.folders.addRigFolders(fixtures)
+                model.checkFolders()
+                await model.load(plainFolder: fixtures, key: "rig.fixtures")
+                model.selection = .folder("rig.gone")
+            }
+        case "no-beads":
+            MainWindow(model: model).task {
+                model.sceneBusy = true
+                defer { model.sceneBusy = false }
+                model.showInspector = false
+                await model.load(plainFolder: fixtures)
+                model.selection = model.entries.first { $0.found.name == "empty" }.map { .project($0.id) }
             }
         case "shell-empty": MainWindow(model: model)
         case "found", "found-none":

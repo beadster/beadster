@@ -102,10 +102,33 @@ public actor ProjectLibrary {
 
     /// Re-counts one project (after a change signal or a write).
     public func refresh(_ id: String) async {
-        guard let i = entries.firstIndex(where: { $0.id == id }), let ws = entries[i].workspace,
-              let (state, ready) = try? await Self.stateAndReady(of: ws) else { return }
-        entries[i].state = state
-        entries[i].ready = ready
+        guard let i = entries.firstIndex(where: { $0.id == id }), let ws = entries[i].workspace else { return }
+        do {
+            (entries[i].state, entries[i].ready) = try await Self.stateAndReady(of: ws)
+        } catch {
+            // a project that stops opening says why (busy, gone) instead of keeping old counts
+            entries[i].state = .failed(error)
+            entries[i].ready = []
+        }
+    }
+
+    /// Brings an older project up to this app's beads. Only after the person said yes.
+    public func upgrade(_ id: String) async {
+        guard let i = entries.firstIndex(where: { $0.id == id }), let ws = entries[i].workspace else { return }
+        do {
+            _ = try await ws.migrate()
+            (entries[i].state, entries[i].ready) = try await Self.stateAndReady(of: ws)
+        } catch {
+            entries[i].state = .failed(error)
+        }
+    }
+
+    /// Whether an open project has any bead at all, open or closed: "No Beads Yet" versus
+    /// "Nothing Ready". One row is asked for.
+    public func hasBeads(_ id: String) async -> Bool {
+        guard let entry = entries.first(where: { $0.id == id }), let ws = entry.workspace else { return false }
+        if !entry.ready.isEmpty { return true }
+        return !((try? await ws.list(BeadFilter(limit: 1, includeClosed: true)).beads) ?? []).isEmpty
     }
 
     public func remove(folderKey: String) async {

@@ -83,3 +83,36 @@ private func readyPage(_ items: [(String, Int, String)]) -> String {
     let folder = GrantedFolder(key: "k", path: "/d", excluded: ["b/.beads"])
     #expect(folder.included(found).map(\.name) == ["a"])
 }
+
+@Test func aProjectThatStopsOpeningSaysWhyAndAnUpgradeOpensIt() async throws {
+    let behind = #"{"error":{"code":"schema_behind","message":"m","db_version":60,"binary_version":65}}"#
+    let busy = #"{"error":{"code":"busy","message":"locked by pid 41"}}"#
+    let engine = FakeEngine(["open": [behind, busy, opened], "migrate": ["{}"],
+                             "ready": [readyPage([("wa-1", 1, "2026-10-07T10:00:00Z")])],
+                             "list": [readPageEmpty]])
+    let lib = ProjectLibrary(engine: engine)
+    await lib.add(folderKey: "dev", access: PlainFolder(URL(fileURLWithPath: "/d")), projects: [
+        FoundProject(name: "a", relativePath: "a/.beads", kind: .embedded),
+    ])
+    let id = try #require(await lib.all.first?.id)
+    #expect(await lib.all.first?.state == .needsMigration(dbVersion: 60, appVersion: 65))
+    await lib.refresh(id)
+    #expect(await lib.all.first?.state == .failed(.busy("locked by pid 41")))
+    await lib.upgrade(id)
+    #expect(await lib.all.first?.state == .ready(readyCount: 1))
+    #expect(engine.ops.contains("migrate"))
+    #expect(await lib.hasBeads(id)) // ready rows answer without asking
+}
+
+private let readPageEmpty = #"{"issues":[]}"#
+
+@Test func aProjectWithNoBeadsAtAllIsToldApartFromNothingReady() async throws {
+    let engine = FakeEngine(["open": [opened], "ready": [readyPage([])], "list": [#"{"issues":[]}"#]])
+    let lib = ProjectLibrary(engine: engine)
+    await lib.add(folderKey: "dev", access: PlainFolder(URL(fileURLWithPath: "/d")), projects: [
+        FoundProject(name: "a", relativePath: "a/.beads", kind: .embedded),
+    ])
+    let id = try #require(await lib.all.first?.id)
+    #expect(await lib.hasBeads(id) == false)
+    #expect(engine.ops.last == "list")
+}

@@ -1,5 +1,6 @@
 // The app's state: the granted folders, every project in them (BeadsKit's ProjectLibrary), and
 // what the window shows. Views read it; they compute nothing.
+import AppKit
 import BeadsKit
 import FSEventsWatcher
 import Foundation
@@ -8,6 +9,8 @@ import SwiftUI
 enum Place: Hashable {
     case needsYou, ready, agents, blocked, activity, workflows, memories
     case project(String)
+    /// A granted folder beadster can no longer reach (its key).
+    case folder(String)
 
     var title: String {
         switch self {
@@ -19,6 +22,7 @@ enum Place: Hashable {
         case .workflows: "Workflows"
         case .memories: "Memories"
         case .project: "Project"
+        case .folder: "Folder"
         }
     }
 
@@ -32,6 +36,7 @@ enum Place: Hashable {
         case .workflows: "point.3.connected.trianglepath.dotted"
         case .memories: "brain"
         case .project: "folder"
+        case .folder: "folder.badge.questionmark"
         }
     }
 }
@@ -60,6 +65,7 @@ final class AppModel {
     func load() async {
         loading = true
         defer { loading = false }
+        checkFolders()
         for folder in folders.folders {
             guard let access = folders.access(for: folder) else { continue }
             await library.add(folderKey: folder.key, access: access, projects: folder.included(folders.projects(in: folder)))
@@ -104,7 +110,56 @@ final class AppModel {
     func removeFolder(_ folder: GrantedFolder) async {
         await library.remove(folderKey: folder.key)
         folders.remove(folder)
+        checkFolders()
         await publishAll()
+    }
+
+    // MARK: Problems
+
+    /// Granted folders that are gone or whose access ended: listed in the sidebar to choose again.
+    private(set) var lostFolders: [GrantedFolder] = []
+    /// Open projects with no bead at all, told apart from "nothing ready".
+    private(set) var emptyProjects: Set<String> = []
+
+    func checkFolders() {
+        lostFolders = folders.folders.filter { folders.access(for: $0) == nil || folders.health(of: $0) == .missing }
+    }
+
+    /// What the selected place shows instead of beads, if anything.
+    func problem(for place: Place?) -> Problem? {
+        switch place {
+        case .folder: return .folderLost
+        case .project(let id):
+            if let state = entry(id)?.state, let problem = Problem.of(state) { return problem }
+            return emptyProjects.contains(id) ? .noBeadsYet : nil
+        case .ready:
+            let open = entries.filter { if case .ready = $0.state { true } else { false } }
+            return !open.isEmpty && open.allSatisfy { emptyProjects.contains($0.id) } ? .noBeadsYet : nil
+        default: return nil
+        }
+    }
+
+    func perform(_ action: Problem.Action, for place: Place?) async {
+        switch (action, place) {
+        case (.upgradeProject, .project(let id)?):
+            await library.upgrade(id)
+            await publishAll()
+        case (.tryAgain, .project(let id)?):
+            await library.refresh(id)
+            await publishAll()
+        case (.updateApp, _):
+            if let url = URL(string: "macappstore://apps.apple.com/app/id6754286462") { NSWorkspace.shared.open(url) }
+        case (.openGuide, _):
+            NSWorkspace.shared.open(BeadsVersion.upgradeGuide)
+        case (.chooseFolderAgain, .folder(let key)?):
+            // the old bookmark reaches nothing: the new folder replaces it
+            guard let new = folders.pick(), let access = folders.access(for: new) else { return }
+            if let old = folders.folders.first(where: { $0.key == key }) { await removeFolder(old) }
+            checkFolders()
+            selection = .ready
+            await present(new, access: access, found: folders.projects(in: new))
+        default: break
+        }
     }
 
     /// How many projects beadster opened from a folder.
@@ -113,6 +168,11 @@ final class AppModel {
     }
 
     func loadReady() async {
+        var empty: Set<String> = []
+        for e in entries {
+            if case .ready(0) = e.state, await !library.hasBeads(e.id) { empty.insert(e.id) }
+        }
+        emptyProjects = empty
         readyRows = await library.readyEverywhere().map {
             Row(projectID: $0.project.id, project: $0.project.found.name, bead: $0.bead)
         }
@@ -149,7 +209,7 @@ final class AppModel {
             try await change(ws, row.bead.id, actor)
             lastError = nil
         } catch {
-            lastError = "\(error)"
+            lastError = error.report
         }
         await library.refresh(row.projectID)
         await publish()
@@ -264,7 +324,7 @@ final class AppModel {
             try await ws.release(row.bead.id, heldBy: row.bead.assignee, as: actor)
             lastError = nil
         } catch {
-            lastError = "\(error)"
+            lastError = error.report
         }
         await library.refresh(row.projectID)
         await publishAll()
@@ -322,7 +382,7 @@ final class AppModel {
             try await change(ws, actor)
             lastError = nil
         } catch {
-            lastError = "\(error)"
+            lastError = error.report
         }
         await loadMemories()
     }
@@ -365,7 +425,7 @@ final class AppModel {
             try await ws.restore(target.bead.id, to: version.bead, as: actor)
             lastError = nil
         } catch {
-            lastError = "\(error)"
+            lastError = error.report
         }
         await showHistory(of: target.bead, in: target.projectID)
         await library.refresh(target.projectID)
@@ -473,7 +533,7 @@ final class AppModel {
             else { try await ws.reject(gate: gate.id, as: actor) }
             lastError = nil
         } catch {
-            lastError = "\(error)"
+            lastError = error.report
         }
         await library.refresh(projectID)
         await publishAll()

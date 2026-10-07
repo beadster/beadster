@@ -74,8 +74,11 @@ struct MainWindow: View {
             let n = model.workflows.count
             return "\(n.formatted()) \(n == 1 ? "workflow" : "workflows")"
         case .project(let id):
+            if model.problem(for: .project(id)) != nil { return "" }
             if case .ready(let n) = model.entry(id)?.state { return "\(n.formatted()) ready" }
             return ""
+        case .folder(let key):
+            return model.lostFolders.first { $0.key == key }?.path ?? ""
         default:
             let n = model.entries.count
             return "\(model.totalReady.formatted()) ready across \(n.formatted()) \(n == 1 ? "project" : "projects")"
@@ -84,6 +87,9 @@ struct MainWindow: View {
 
     private func title(for place: Place) -> String {
         if case .project(let id) = place { return model.entry(id)?.found.name ?? "Project" }
+        if case .folder(let key) = place {
+            return model.lostFolders.first { $0.key == key }.map { URL(fileURLWithPath: $0.path).lastPathComponent } ?? "Folder"
+        }
         return place.title
     }
 }
@@ -104,10 +110,16 @@ struct SidebarView: View {
                 row(.workflows)
                 row(.memories)
             }
-            if !model.entries.isEmpty {
+            if !model.entries.isEmpty || !model.lostFolders.isEmpty {
                 Section("Projects") {
                     ForEach(model.entries) { entry in
                         projectRow(entry)
+                    }
+                    ForEach(model.lostFolders, id: \.key) { folder in
+                        Label(URL(fileURLWithPath: folder.path).lastPathComponent, systemImage: Place.folder(folder.key).symbol)
+                            .foregroundStyle(.secondary)
+                            .help(Problem.folderLost.title)
+                            .tag(Place.folder(folder.key))
                     }
                 }
             }
@@ -124,24 +136,16 @@ struct SidebarView: View {
     }
 
     @ViewBuilder private func projectRow(_ entry: ProjectLibrary.Entry) -> some View {
-        let label = Label(entry.found.name, systemImage: "folder")
         if case .ready(let n) = entry.state {
-            label.badge(n).tag(Place.project(entry.id))
+            Label(entry.found.name, systemImage: "folder").badge(n).tag(Place.project(entry.id))
+        } else if let problem = Problem.of(entry.state) {
+            // the problem's own symbol, so a project that can't open is seen before it is clicked
+            Label(entry.found.name, systemImage: problem.symbol)
+                .foregroundStyle(.secondary)
+                .help(problem.title)
+                .tag(Place.project(entry.id))
         } else {
-            // states other than ready get their own drawing in U15; until then, the reason on hover
-            label.help(reason(entry.state)).tag(Place.project(entry.id))
-        }
-    }
-
-    private func reason(_ state: ProjectLibrary.State) -> String {
-        switch state {
-        case .opening: "Opening…"
-        case .ready: ""
-        case .needsMigration: "Made with an older beads."
-        case .needsNewerApp: "Made with a newer beads than this app."
-        case .legacy: "Made with beads before 1.0."
-        case .server: "Uses a Dolt server."
-        case .failed: "Could not be opened."
+            Label(entry.found.name, systemImage: "folder").tag(Place.project(entry.id))
         }
     }
 }
@@ -165,6 +169,8 @@ struct PlaceView: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
             }
+        } else if let problem = model.problem(for: model.selection) {
+            ProblemView(problem: problem) { action in Task { await model.perform(action, for: model.selection) } }
         } else if let place = model.selection {
             switch place {
             case .ready, .project: ReadyView(model: model)

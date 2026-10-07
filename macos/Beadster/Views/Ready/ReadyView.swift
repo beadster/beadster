@@ -9,8 +9,9 @@ struct ReadyView: View {
 
     var body: some View {
         let rows = model.visibleReady
-        if rows.isEmpty {
-            // the empty state gets its own drawing in U15
+        if rows.isEmpty && !model.search.isEmpty {
+            ContentUnavailableView.search(text: model.search)
+        } else if rows.isEmpty {
             ContentUnavailableView("Nothing Ready", systemImage: "checkmark.circle",
                                    description: Text("Every open bead is waiting on something, or there is nothing open."))
         } else {
