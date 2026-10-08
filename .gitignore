@@ -74,4 +74,4 @@ config.json
 *.so
 
 # SwiftPM build output next to the Xcode project
-macos/.build/
+macos/.build
