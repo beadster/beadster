@@ -1,6 +1,6 @@
 {
   "fill": {
-    "automatic-gradient": "srgb:0.90196,0.94902,1.00000,1.00000"
+    "automatic-gradient": "srgb:1.00000,1.00000,1.00000,1.00000"
   },
   "groups": [
     {
@@ -62,21 +62,8 @@
         {
           "glass": false,
           "hidden": false,
-          "image-name": "2-rows.svg",
-          "name": "rows",
-          "position": {
-            "scale": 1,
-            "translation-in-points": [
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "glass": true,
-          "hidden": false,
-          "image-name": "1-card.svg",
-          "name": "card",
+          "image-name": "1-object.svg",
+          "name": "object",
           "position": {
             "scale": 1,
             "translation-in-points": [
