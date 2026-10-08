@@ -72,3 +72,6 @@ config.json
 *.a
 *.dylib
 *.so
+
+# SwiftPM build output next to the Xcode project
+macos/.build/
