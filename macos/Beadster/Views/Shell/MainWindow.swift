@@ -24,7 +24,7 @@ struct MainWindow: View {
                     .inspectorColumnWidth(min: 280, ideal: 320)
                 }
         }
-        .navigationTitle(model.selection.map { title(for: $0) } ?? "beadster")
+        .navigationTitle(model.selection.map { title(for: $0) } ?? "Beadster")
         .navigationSubtitle(subtitle)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -168,7 +168,7 @@ struct PlaceView: View {
             ContentUnavailableView {
                 Label("Add a Folder", systemImage: "folder.badge.plus")
             } description: {
-                Text("Choose the folder that holds your projects. beadster finds every project with beads inside it and keeps access, so you choose once.")
+                Text("Choose the folder that holds your projects. Beadster finds every project with beads inside it and keeps access, so you choose once.")
             } actions: {
                 Button("Choose Folder…") { Task { await model.chooseFolder() } }
                     .buttonStyle(.borderedProminent)

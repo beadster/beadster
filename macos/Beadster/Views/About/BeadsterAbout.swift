@@ -20,7 +20,7 @@ enum BeadsterAbout {
 
     static var model: AboutCardModel {
         // not the bundle's display name: that is the store listing's "Beadster: Issue Tracking"
-        AboutCardModel(appName: "beadster", version: version, site: site)
+        AboutCardModel(appName: "Beadster", version: version, site: site)
     }
 
     static func actions() -> AboutFeedbackActions {

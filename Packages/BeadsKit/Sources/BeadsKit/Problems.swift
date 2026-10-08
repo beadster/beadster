@@ -23,7 +23,7 @@ public struct Problem: Equatable, Sendable {
         public var title: String {
             switch self {
             case .upgradeProject: "Update Project…"
-            case .updateApp: "Update beadster"
+            case .updateApp: "Update Beadster"
             case .openGuide: "Open Upgrade Guide"
             case .chooseFolderAgain: "Choose Folder…"
             case .tryAgain: "Try Again"
@@ -47,7 +47,7 @@ public struct Problem: Equatable, Sendable {
                            action: .upgradeProject, detail: nil)
         case .needsNewerApp:
             return Problem(title: "Made With a Newer beads", symbol: "arrow.down.app",
-                           message: "This project was written by a newer beads than beadster carries. Update beadster to open it.",
+                           message: "This project was written by a newer beads than beadster carries. Update Beadster to open it.",
                            action: .updateApp, detail: nil)
         case .legacy:
             return Problem(title: "Made With beads Before 1.0", symbol: "clock.arrow.trianglehead.counterclockwise.rotate.90",
@@ -55,7 +55,7 @@ public struct Problem: Equatable, Sendable {
                            action: .openGuide, detail: nil)
         case .server:
             return Problem(title: "Kept on a Dolt Server", symbol: "server.rack",
-                           message: "beadster opens projects whose beads live in their own folder.",
+                           message: "Beadster opens projects whose beads live in their own folder.",
                            action: nil, detail: nil)
         case .failed(let error):
             if case .noAccess = error { return folderLost }
@@ -70,7 +70,7 @@ public struct Problem: Equatable, Sendable {
 
     /// The folder was moved away, deleted, or its access ended.
     public static let folderLost = Problem(title: "Folder Not Found", symbol: "folder.badge.questionmark",
-                                           message: "beadster can no longer reach this folder. Choose it again where it is now.",
+                                           message: "Beadster can no longer reach this folder. Choose it again where it is now.",
                                            action: .chooseFolderAgain, detail: nil)
 
     /// A project that opened and has no beads at all, as opposed to nothing ready.
@@ -98,7 +98,7 @@ extension BeadsError {
         case .busy: "Another program is writing to this project. Try again in a moment."
         case .conflict: "Someone changed this bead first. Nothing was written."
         case .claimed: "Someone else has claimed this bead."
-        case .noAccess: "beadster can no longer reach this folder. Choose it again in Settings."
+        case .noAccess: "Beadster can no longer reach this folder. Choose it again in Settings."
         case .schemaAhead: "This project was written by a newer beads than beadster carries."
         case .schemaBehind: "This project needs an update before it can be changed here."
         case .refused(let m), .notFound(let m): m

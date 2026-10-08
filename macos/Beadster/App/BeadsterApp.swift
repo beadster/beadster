@@ -10,18 +10,18 @@ struct BeadsterApp: App {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        WindowGroup("beadster", id: "main") {
+        WindowGroup("Beadster", id: "main") {
             root
         }
         .defaultSize(width: 1280, height: 760)
         .commands {
             // About opens the family's card (AppCatalog), not AppKit's standard panel
             CommandGroup(replacing: .appInfo) {
-                Button("About beadster") { openWindow(id: "about") }
+                Button("About Beadster") { openWindow(id: "about") }
             }
             // the stock Help item asks for a Help Book beadster does not ship
             CommandGroup(replacing: .help) {
-                Button("beadster Website") { if let url = BeadsterAbout.site { NSWorkspace.shared.open(url) } }
+                Button("Beadster Website") { if let url = BeadsterAbout.site { NSWorkspace.shared.open(url) } }
                 Button("Send Feedback") { BeadsterAbout.mail("beadster feedback") }
                 Divider()
                 Button("More Apps") { openWindow(id: "apps") }
@@ -43,7 +43,7 @@ struct BeadsterApp: App {
             }
         }
 
-        Window("About beadster", id: "about") { AboutWindow() }
+        Window("About Beadster", id: "about") { AboutWindow() }
             .windowResizability(.contentSize)
             .restorationBehavior(.disabled)
 

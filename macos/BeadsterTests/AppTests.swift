@@ -33,9 +33,9 @@ import Testing
     UserDefaults.standard.removeObject(forKey: "notify.gates")
 }
 
-@Test func aboutNamesTheAppInLowercaseWithItsBuild() {
+@Test func aboutNamesTheAppWithItsBuild() {
     let model = BeadsterAbout.model
-    #expect(model.appName == "beadster")
+    #expect(model.appName == "Beadster")
     #expect(model.version.contains("("))
     #expect(BeadsterAbout.site?.host() == "beadster.ai")
 }

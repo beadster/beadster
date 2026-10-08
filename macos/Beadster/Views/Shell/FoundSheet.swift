@@ -11,7 +11,7 @@ struct FoundSheet: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text(title(pending)).font(.title2.weight(.semibold))
                 if !pending.found.isEmpty {
-                    Text("beadster reads each one in place. Nothing is copied or uploaded.")
+                    Text("Beadster reads each one in place. Nothing is copied or uploaded.")
                         .foregroundStyle(.secondary)
                 }
                 if pending.found.isEmpty {

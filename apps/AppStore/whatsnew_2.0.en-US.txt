@@ -1,7 +1,7 @@
-beadster 2.0 is rebuilt for beads 1.x.
+Beadster 2.0 is rebuilt for beads 1.x.
 - Every beads project in a folder, open side by side
 - Needs You: approve or reject gates
 - Agents: claims, last heard, Release Now
 - Activity, History, Workflows and Memories
 - Live updates, notifications, menu bar and Spotlight
-Projects made before beads 1.0 need converting with bd first; beadster links to the guide. The beadster.ai sync from 1.x is gone: your projects stay in their folders.
+Projects made before beads 1.0 need converting with bd first; Beadster links to the guide. The beadster.ai sync from 1.x is gone: your projects stay in their folders.
