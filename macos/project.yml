@@ -34,6 +34,8 @@ targets:
       - path: Beadster
         excludes:
           - "**/.DS_Store"
+      # the Icon Composer icon (docs/APP_ICONS.md): white page, issue rows, the family's glass check
+      - path: AppIcon/AppIcon.icon
     dependencies:
       - package: FSEventsWatcher
       - package: BookmarkManager
